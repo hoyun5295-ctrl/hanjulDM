@@ -1,33 +1,35 @@
 # ============================================================
-# hanjulDM nginx site config (기존 3 도메인 활용 — hanjuldm.kr 미보유)
+# hanjulDM nginx site config (기존 3 도메인 활용 + sys.hanjul-flyer.co.kr subdomain)
 # 분리: 2026-05-12 (D152)
-# 정정: 2026-05-13 (D153) — admin.hanjuldm.kr/sys.hanjuldm.kr 폐기, hanjul-flyer.com을 슈퍼관리자로 매핑
+# 정정 2: 2026-05-13 (D153) — hanjul-flyer.com을 매장 사장님으로 환원 (사용자 노출 URL 유지),
+#                              슈퍼관리자는 sys.hanjul-flyer.co.kr subdomain 신규
 # ============================================================
-# 등록: sudo cp nginx-config/hanjuldm /etc/nginx/sites-enabled/hanjul-flyer
-# 적용: sudo nginx -t && sudo systemctl reload nginx
-#
 # 도메인 매핑:
-#   - hanjul-flyer.kr / www / .co.kr / www  — 매장 사장님 (port 3001 + packages/frontend/dist)
-#   - hanjul-flyer.com / www                — 슈퍼관리자 (port 3001 + packages/admin-frontend/dist)
-#
-# SSL: /etc/letsencrypt/live/hanjul-flyer.com/ (SAN 6 도메인 모두 포함, 만료 Jun 27 2026 GMT)
-# 백엔드: 127.0.0.1:3001 (hanjulDM api, 한줄AI 3000과 완전 독립)
+#   매장 사장님 (packages/frontend/dist):
+#     - hanjul-flyer.kr / www
+#     - hanjul-flyer.com / www
+#     - hanjul-flyer.co.kr / www
+#   슈퍼관리자 (packages/admin-frontend/dist):
+#     - sys.hanjul-flyer.co.kr (subdomain 신규, Harold DNS 콘솔에서 A 레코드 박음)
+# ============================================================
+# SSL:
+#   - 매장 사장님: /etc/letsencrypt/live/hanjul-flyer.com/ (SAN 6 도메인 포함, 만료 Jun 27 2026)
+#   - 슈퍼관리자: /etc/letsencrypt/live/sys.hanjul-flyer.co.kr/ (Phase 4-2에서 certbot --webroot 발급)
+# 백엔드: 127.0.0.1:3001 (hanjulDM api)
 # ============================================================
 
 # ============================================================
-# 매장 사장님 (hanjul-flyer.kr / www / .co.kr / www)
+# 매장 사장님 — hanjul-flyer.kr/.com/.co.kr × www (6 도메인)
 # ============================================================
 server {
     listen 80;
     listen [::]:80;
-    server_name hanjul-flyer.kr www.hanjul-flyer.kr hanjul-flyer.co.kr www.hanjul-flyer.co.kr;
+    server_name hanjul-flyer.kr www.hanjul-flyer.kr hanjul-flyer.com www.hanjul-flyer.com hanjul-flyer.co.kr www.hanjul-flyer.co.kr;
 
-    # Let's Encrypt 자동 갱신 경로
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
 
-    # HTTPS 강제 리다이렉트
     location / {
         return 301 https://$host$request_uri;
     }
@@ -36,22 +38,19 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name hanjul-flyer.kr www.hanjul-flyer.kr hanjul-flyer.co.kr www.hanjul-flyer.co.kr;
+    server_name hanjul-flyer.kr www.hanjul-flyer.kr hanjul-flyer.com www.hanjul-flyer.com hanjul-flyer.co.kr www.hanjul-flyer.co.kr;
 
-    # SSL 인증서 (기존 hanjul-flyer.com 인증서 — SAN 6 도메인 모두 포함)
     ssl_certificate /etc/letsencrypt/live/hanjul-flyer.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/hanjul-flyer.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
 
     client_max_body_size 50M;
-
-    # 보안 헤더
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
 
-    # API 프록시 → hanjulDM backend (port 3001)
+    # API → hanjulDM backend (port 3001)
     location /api/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
@@ -64,13 +63,12 @@ server {
         proxy_read_timeout 600s;
     }
 
-    # 단축 URL 리라이트 — hanjul-flyer.kr/{code} → /api/flyer/p/{code}
-    # 단, /api/, /assets/, /manual/ 등 예외
+    # 단축 URL — hanjul-flyer.kr/{code} → /api/flyer/p/{code}
     location ~ ^/([A-Za-z0-9_-]+)$ {
         rewrite ^/([A-Za-z0-9_-]+)$ /api/flyer/p/$1 last;
     }
 
-    # 프론트엔드 정적 (Vite SPA — D145 SPA cache 정책)
+    # 매장 사장님 정적 (Vite SPA — D145 SPA cache 정책)
     location = /index.html {
         root /home/administrator/hanjuldm-app/packages/frontend/dist;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
@@ -88,12 +86,12 @@ server {
 }
 
 # ============================================================
-# 슈퍼관리자 (hanjul-flyer.com / www)
+# 슈퍼관리자 — sys.hanjul-flyer.co.kr (subdomain)
 # ============================================================
 server {
     listen 80;
     listen [::]:80;
-    server_name hanjul-flyer.com www.hanjul-flyer.com;
+    server_name sys.hanjul-flyer.co.kr;
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -107,21 +105,19 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name hanjul-flyer.com www.hanjul-flyer.com;
+    server_name sys.hanjul-flyer.co.kr;
 
-    ssl_certificate /etc/letsencrypt/live/hanjul-flyer.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/hanjul-flyer.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/sys.hanjul-flyer.co.kr/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sys.hanjul-flyer.co.kr/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
 
     client_max_body_size 50M;
-
-    # 보안 헤더 (슈퍼관리자 — 검색엔진 차단 + iframe 차단)
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header X-Robots-Tag "noindex, nofollow" always;
 
-    # API 프록시 → hanjulDM backend (port 3001, 매장 사장님과 동일 백엔드)
+    # API → hanjulDM backend (port 3001, 매장 사장님과 동일)
     location /api/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
