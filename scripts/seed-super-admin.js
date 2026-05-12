@@ -8,9 +8,12 @@
  */
 
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', 'packages', 'backend', '.env') });
-const bcrypt = require(path.join(__dirname, '..', 'packages', 'backend', 'node_modules', 'bcryptjs'));
-const { Pool } = require(path.join(__dirname, '..', 'packages', 'backend', 'node_modules', 'pg'));
+const backendNodeModules = path.join(__dirname, '..', 'packages', 'backend', 'node_modules');
+require(path.join(backendNodeModules, 'dotenv')).config({
+  path: path.join(__dirname, '..', 'packages', 'backend', '.env'),
+});
+const bcrypt = require(path.join(backendNodeModules, 'bcryptjs'));
+const { Pool } = require(path.join(backendNodeModules, 'pg'));
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
