@@ -36,8 +36,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name hanjul-flyer.kr www.hanjul-flyer.kr hanjul-flyer.com www.hanjul-flyer.com hanjul-flyer.co.kr www.hanjul-flyer.co.kr;
 
     ssl_certificate /etc/letsencrypt/live/hanjul-flyer.com/fullchain.pem;
@@ -57,7 +57,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $proxy_scheme;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_connect_timeout 60s;
         proxy_send_timeout 600s;
         proxy_read_timeout 600s;
@@ -103,8 +103,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name sys.hanjul-flyer.co.kr;
 
     ssl_certificate /etc/letsencrypt/live/sys.hanjul-flyer.co.kr/fullchain.pem;
@@ -124,7 +124,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $proxy_scheme;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     # 슈퍼관리자 정적 (Vite SPA — D145 SPA cache 정책)
