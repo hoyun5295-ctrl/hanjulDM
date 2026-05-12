@@ -29,6 +29,7 @@ import flyerPublicRoutes from './routes/flyer/short-urls';
 
 // ★ hanjulDM 슈퍼관리자 라우트
 import flyerAdminRoutes from './routes/admin/flyer-admin';
+import flyerSuperRoutes from './routes/flyer/super';
 
 // ★ POS 자동 전단 생성 워커
 import { startAutoFlyerWorker } from './utils/flyer/pos/flyer-pos-auto';
@@ -95,7 +96,10 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ★ hanjulDM 슈퍼관리자 (admin.hanjuldm.kr)
+// ★ hanjulDM 슈퍼관리자 인증 (admin.hanjuldm.kr 로그인)
+app.use('/api/flyer/super', flyerSuperRoutes);
+
+// ★ hanjulDM 슈퍼관리자 데이터 API (admin.hanjuldm.kr)
 app.use('/api/admin/flyer', flyerAdminRoutes);
 
 // ★ hanjulDM 전단AI 라우트

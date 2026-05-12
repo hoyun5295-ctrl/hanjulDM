@@ -9,15 +9,13 @@
 import { Request, Response, Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { query } from '../../config/database';
-import { authenticate, requireSuperAdmin } from '../../middlewares/auth';
-import { requireService } from '../../middlewares/super-service-guard';
+import { flyerSuperAuthenticate } from '../../middlewares/super-auth';
 
 const router = Router();
 
-router.use(authenticate);
-router.use(requireSuperAdmin);
-// ★ D112: requireService 가드 임시 제거 — 슈퍼관리자이면 바로 접근 허용
-// 토큰 교체 흐름 안정화 후 복원 예정
+// ★ hanjulDM 슈퍼관리자(flyer_super_admins) 인증 통과 후 데이터 API 접근
+// (한줄AI authenticate + requireSuperAdmin 의존성 제거 — D153)
+router.use(flyerSuperAuthenticate);
 
 // ══════════════════════════════════════════
 // 대시보드 통계

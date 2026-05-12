@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './index.css';
 import LoginPage from './pages/LoginPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import FlyerAdminDashboard from './pages/FlyerAdminDashboard';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import SessionTimer from './components/SessionTimer';
@@ -37,6 +38,11 @@ function App() {
     localStorage.removeItem('admin_user');
     setToken(''); setUser(null);
   };
+  const handlePasswordChanged = () => {
+    // localStorage user mustChangePassword=false 갱신은 ChangePasswordPage에서 함
+    const stored = localStorage.getItem('admin_user');
+    if (stored) setUser(JSON.parse(stored));
+  };
 
   useEffect(() => {
     const handler = () => handleLogout();
@@ -47,6 +53,9 @@ function App() {
   const session = useSessionTimeout({ onLogout: handleLogout });
 
   if (!token || !user) return <LoginPage onLogin={handleLogin} />;
+
+  // ★ 비밀번호 강제 변경 (must_change_password=TRUE)
+  if (user.mustChangePassword) return <ChangePasswordPage onChanged={handlePasswordChanged} />;
 
   return (
     <div className="min-h-screen bg-bg">
