@@ -1,0 +1,115 @@
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import { query } from '../config/database';
+import { TIMEOUTS, LIMITS } from '../config/defaults';
+
+export interface JwtPayload {
+  userId: string;
+  companyId?: string;
+  userType: 'super_admin' | 'company_admin' | 'company_user';
+  loginId: string;
+  sessionId?: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
+    }
+  }
+}
+
+// ★ 보안: JWT_SECRET 미설정 시 서버 기동 차단 (fail-fast)
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('❌ [FATAL] JWT_SECRET 환경변수가 설정되지 않았습니다. 서버를 시작할 수 없습니다.');
+  process.exit(1);
+}
+
+export const generateToken = (payload: JwtPayload): string => {
+  return jwt.sign(payload as object, JWT_SECRET, { expiresIn: LIMITS.jwtExpiry } as any);
+};
+
+// last_activity_at 갱신 주기 (5분)
+const ACTIVITY_UPDATE_INTERVAL = TIMEOUTS.activityUpdate;
+
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    req.user = decoded;
+
+    // sessionId 없는 기존 토큰은 통과 (배포 후 자연 만료)
+    if (!decoded.sessionId) {
+      return next();
+    }
+
+    // ★ 세션 유효성 체크 — is_active + expires_at 만료 여부
+    const sessionResult = await query(
+      'SELECT id, last_activity_at, expires_at FROM user_sessions WHERE id = $1 AND user_id = $2 AND is_active = true',
+      [decoded.sessionId, decoded.userId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(401).json({
+        error: '다른 곳에서 로그인되어 현재 세션이 종료되었습니다.',
+        forceLogout: true
+      });
+    }
+
+    // ★ 보안: expires_at 지났으면 세션 만료 처리 (브라우저 닫았다 열어도 서버가 차단)
+    const expiresAt = new Date(sessionResult.rows[0].expires_at);
+    const now = new Date();
+    if (now > expiresAt) {
+      // 세션 비활성화
+      query(
+        'UPDATE user_sessions SET is_active = false WHERE id = $1',
+        [decoded.sessionId]
+      ).catch(() => {});
+      return res.status(401).json({
+        error: '세션이 만료되었습니다. 다시 로그인해주세요.',
+        forceLogout: true
+      });
+    }
+
+    // last_activity_at + expires_at 갱신 (5분 간격 — DB 부하 최소화)
+    const lastActivity = new Date(sessionResult.rows[0].last_activity_at);
+    if (now.getTime() - lastActivity.getTime() > ACTIVITY_UPDATE_INTERVAL) {
+      // 활동이 있으면 expires_at도 연장
+      const timeoutMinutes = decoded.userType === 'super_admin'
+        ? TIMEOUTS.superAdminSessionMinutes
+        : 30; // 기본값, extend-session에서 정확한 값으로 갱신
+      query(
+        `UPDATE user_sessions SET last_activity_at = NOW(), expires_at = NOW() + INTERVAL '1 minute' * $2 WHERE id = $1`,
+        [decoded.sessionId, timeoutMinutes]
+      ).catch(err => console.error('세션 활동 갱신 실패:', err));
+    }
+
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+export const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user || req.user.userType !== 'super_admin') {
+    return res.status(403).json({ error: 'Super admin access required' });
+  }
+  next();
+};
+
+export const requireCompanyAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user || (req.user.userType !== 'company_admin' && req.user.userType !== 'super_admin')) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
+
+export default { authenticate, requireSuperAdmin, requireCompanyAdmin, generateToken };

@@ -1,0 +1,12 @@
+{
+  "name": "hanjuldm",
+  "version": "1.0.0",
+  "description": "hanjulDM — 한줄전단AI 마트 매출 자동화 SaaS (한줄AI와 완전 독립)",
+  "private": true,
+  "scripts": {
+    "build:safe": "bash scripts/safe-build.sh",
+    "build:backend": "cd packages/backend && npm run build:safe",
+    "build:frontend": "cd packages/frontend && npm run build",
+    "build:admin": "cd packages/admin-frontend && npm run build"
+  }
+}

@@ -1,0 +1,35 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+
+# 빌드 산출물
+dist/
+dist-new/
+dist-old/
+.vite/
+*.tsbuildinfo
+
+# 로그
+*.log
+logs/
+
+# 업로드 (운영 데이터)
+packages/backend/uploads/
+uploads/
+
+# 백업
+backups/
+_archive/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code 로컬 설정
+.claude/settings.local.json
+.claude/worktrees/
