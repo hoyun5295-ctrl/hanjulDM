@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>한줄전단 AI 슈퍼관리자</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- 검색엔진 차단 (슈퍼관리자) -->
+    <meta name="description" content="한줄전단 AI 슈퍼관리자 콘솔">
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- 소스 보호: 우클릭/개발자도구/텍스트선택 차단 -->
+    <script>
+      (function() {
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'F12') { e.preventDefault(); return; }
+          if (e.ctrlKey && e.shiftKey && e.key === 'I') { e.preventDefault(); return; }
+          if (e.ctrlKey && e.shiftKey && e.key === 'J') { e.preventDefault(); return; }
+          if (e.ctrlKey && e.shiftKey && e.key === 'C') { e.preventDefault(); return; }
+          if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return; }
+        });
+      })();
+    </script>
+    <style>
+      body {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+      input, textarea, [contenteditable="true"] {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
