@@ -22,7 +22,8 @@ router.use(flyerSuperAuthenticate);
 // ══════════════════════════════════════════
 router.get('/dashboard', async (req: Request, res: Response) => {
   try {
-    const [companies, users, campaigns, customers] = await Promise.all([
+    // ★ D155 확장: 매장수 + POS Agent 활성/전체 + 이달 청구액 추가
+    const [companies, users, campaigns, customers, stores, posAgents, billing, senderReg] = await Promise.all([
       query(`SELECT COUNT(*)::int AS cnt FROM flyer_companies WHERE deleted_at IS NULL`),
       query(`SELECT COUNT(*)::int AS cnt FROM flyer_users WHERE deleted_at IS NULL`),
       query(`SELECT
@@ -31,6 +32,18 @@ router.get('/dashboard', async (req: Request, res: Response) => {
                COALESCE(SUM(success_count), 0)::int AS total_success
              FROM flyer_campaigns WHERE status IN ('completed','sending')`),
       query(`SELECT COUNT(*)::int AS cnt FROM flyer_customers WHERE deleted_at IS NULL`),
+      query(`SELECT COUNT(*)::int AS cnt FROM flyer_users WHERE deleted_at IS NULL AND store_name IS NOT NULL`),
+      query(`SELECT
+               COUNT(*)::int AS total,
+               COUNT(*) FILTER (WHERE last_heartbeat > NOW() - INTERVAL '5 minutes')::int AS active
+             FROM flyer_pos_agents`),
+      query(`SELECT
+               COALESCE(SUM(amount), 0)::bigint AS month_total,
+               COUNT(*) FILTER (WHERE status != 'paid')::int AS unpaid_count
+             FROM flyer_billing_history
+             WHERE billing_month >= DATE_TRUNC('month', CURRENT_DATE)`),
+      // ★ D156: 발신번호 등록 신청 대기 카운트
+      query(`SELECT COUNT(*)::int AS cnt FROM flyer_sender_registrations WHERE status = 'pending'`),
     ]);
 
     return res.json({
@@ -40,6 +53,14 @@ router.get('/dashboard', async (req: Request, res: Response) => {
       totalSent: campaigns.rows[0]?.total_sent || 0,
       totalSuccess: campaigns.rows[0]?.total_success || 0,
       totalCustomers: customers.rows[0]?.cnt || 0,
+      // D155 확장
+      totalStores: stores.rows[0]?.cnt || 0,
+      posAgentsTotal: posAgents.rows[0]?.total || 0,
+      posAgentsActive: posAgents.rows[0]?.active || 0,
+      monthlyBilling: Number(billing.rows[0]?.month_total || 0),
+      unpaidCount: billing.rows[0]?.unpaid_count || 0,
+      // D156 확장
+      senderRegPending: senderReg.rows[0]?.cnt || 0,
     });
   } catch (error: any) {
     console.error('[admin/flyer] dashboard error:', error);
@@ -681,6 +702,194 @@ router.get('/audit-logs', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[flyer-admin] audit-logs error:', error);
     return res.status(500).json({ error: '감사로그 조회 실패' });
+  }
+});
+
+// ============================================================
+// ★ D156: 발신번호 등록 신청 승인 플로우 (매장 사장님 신청 → 슈퍼관리자 처리)
+// ============================================================
+import fs from 'fs';
+import path from 'path';
+
+const SENDER_CERT_DIR = path.join(process.cwd(), 'uploads', 'flyer-sender-certificates');
+
+/**
+ * GET /sender-registrations?status= — 전체 신청 목록 (회사명 + 신청자명 join)
+ */
+router.get('/sender-registrations', async (req: Request, res: Response) => {
+  try {
+    const { status } = req.query;
+    let where = '1=1';
+    const params: any[] = [];
+    if (status && typeof status === 'string') {
+      params.push(status);
+      where += ` AND sr.status = $${params.length}`;
+    }
+    const result = await query(
+      `SELECT sr.id, sr.company_id, sr.user_id, sr.phone, sr.label,
+              sr.certificate_url, sr.certificate_filename,
+              sr.carrier, sr.business_name, sr.business_number,
+              sr.status, sr.rejection_reason, sr.notes,
+              sr.requested_at, sr.processed_at,
+              c.company_name,
+              u.login_id, u.name AS user_name, u.store_name
+       FROM flyer_sender_registrations sr
+       JOIN flyer_companies c ON c.id = sr.company_id
+       LEFT JOIN flyer_users u ON u.id = sr.user_id
+       WHERE ${where}
+       ORDER BY sr.requested_at DESC
+       LIMIT 200`,
+      params
+    );
+    return res.json({ items: result.rows });
+  } catch (error: any) {
+    console.error('[flyer-admin] sender-registrations list error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * GET /sender-registrations/:id/certificate — 통신가입증명원 다운로드 (슈퍼관리자 전용)
+ */
+router.get('/sender-registrations/:id/certificate', async (req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT certificate_url, certificate_filename FROM flyer_sender_registrations WHERE id = $1`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0 || !result.rows[0].certificate_url) {
+      return res.status(404).json({ error: '증명원 없음' });
+    }
+    const certUrl = result.rows[0].certificate_url as string;
+    const filename = path.basename(certUrl);
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    const filePath = path.join(SENDER_CERT_DIR, filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
+    return res.sendFile(filePath);
+  } catch (error: any) {
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * POST /sender-registrations/:id/approve — 승인 → flyer_callback_numbers 신규 INSERT
+ */
+router.post('/sender-registrations/:id/approve', async (req: Request, res: Response) => {
+  try {
+    const superAdmin = req.flyerSuperUser!;
+    const { id } = req.params;
+
+    // 신청 조회 (pending만 처리)
+    const regRes = await query(
+      `SELECT * FROM flyer_sender_registrations WHERE id = $1 AND status = 'pending'`,
+      [id]
+    );
+    if (regRes.rows.length === 0) {
+      return res.status(404).json({ error: '대기 중인 신청이 아닙니다' });
+    }
+    const reg = regRes.rows[0];
+
+    // 같은 회사 같은 번호 이미 등록되어 있으면 거부
+    const existing = await query(
+      `SELECT id FROM flyer_callback_numbers
+       WHERE company_id = $1 AND phone = $2 AND deleted_at IS NULL`,
+      [reg.company_id, reg.phone]
+    );
+    if (existing.rows.length > 0) {
+      // 신청만 approved로 마킹하고 신규 INSERT는 skip
+      await query(
+        `UPDATE flyer_sender_registrations
+         SET status = 'approved', processed_at = NOW(), processed_by = $1, notes = COALESCE(notes,'') || '\n[승인 시 이미 등록된 발신번호로 callback row 신규 INSERT 생략]'
+         WHERE id = $2`,
+        [superAdmin.adminId, id]
+      );
+    } else {
+      // 신규 발신번호 INSERT (첫 번호면 is_default=true)
+      const cnt = await query(
+        `SELECT COUNT(*)::int AS cnt FROM flyer_callback_numbers WHERE company_id = $1 AND deleted_at IS NULL`,
+        [reg.company_id]
+      );
+      const isDefault = cnt.rows[0].cnt === 0;
+      await query(
+        `INSERT INTO flyer_callback_numbers (id, company_id, phone, label, is_default, created_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())`,
+        [reg.company_id, reg.phone, reg.label || null, isDefault]
+      );
+      // 신청 status 갱신
+      await query(
+        `UPDATE flyer_sender_registrations
+         SET status = 'approved', processed_at = NOW(), processed_by = $1
+         WHERE id = $2`,
+        [superAdmin.adminId, id]
+      );
+    }
+
+    // 감사로그
+    await logFlyerSuperAdminAudit({
+      superAdminId: superAdmin.adminId,
+      superAdminLoginId: superAdmin.loginId,
+      action: 'sender_registration_approve',
+      targetType: 'sender_registration',
+      targetId: id,
+      targetCompanyId: reg.company_id,
+      details: { phone: reg.phone, label: reg.label, carrier: reg.carrier },
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
+    });
+
+    return res.json({ message: '발신번호 등록이 승인되었습니다', phone: reg.phone });
+  } catch (error: any) {
+    console.error('[flyer-admin] sender-registrations approve error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * POST /sender-registrations/:id/reject — 반려 (rejection_reason 필수)
+ */
+router.post('/sender-registrations/:id/reject', async (req: Request, res: Response) => {
+  try {
+    const superAdmin = req.flyerSuperUser!;
+    const { id } = req.params;
+    const { rejection_reason } = req.body;
+    if (!rejection_reason || String(rejection_reason).trim().length === 0) {
+      return res.status(400).json({ error: '반려 사유 필수' });
+    }
+
+    const regRes = await query(
+      `SELECT company_id, phone FROM flyer_sender_registrations WHERE id = $1 AND status = 'pending'`,
+      [id]
+    );
+    if (regRes.rows.length === 0) {
+      return res.status(404).json({ error: '대기 중인 신청이 아닙니다' });
+    }
+    const reg = regRes.rows[0];
+
+    await query(
+      `UPDATE flyer_sender_registrations
+       SET status = 'rejected', rejection_reason = $1, processed_at = NOW(), processed_by = $2
+       WHERE id = $3`,
+      [rejection_reason, superAdmin.adminId, id]
+    );
+
+    await logFlyerSuperAdminAudit({
+      superAdminId: superAdmin.adminId,
+      superAdminLoginId: superAdmin.loginId,
+      action: 'sender_registration_reject',
+      targetType: 'sender_registration',
+      targetId: id,
+      targetCompanyId: reg.company_id,
+      details: { phone: reg.phone, rejection_reason },
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
+    });
+
+    return res.json({ message: '발신번호 등록이 반려되었습니다' });
+  } catch (error: any) {
+    console.error('[flyer-admin] sender-registrations reject error:', error);
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 

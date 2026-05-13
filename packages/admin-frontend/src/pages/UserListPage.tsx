@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import { SectionCard, Button, Select, DataTable, ConfirmModal, Toast } from '../components/ui';
+import UserFormModal from '../components/UserFormModal';
 
 interface User {
   id: string;
@@ -29,6 +30,8 @@ export default function UserListPage() {
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [resetTarget, setResetTarget] = useState<User | null>(null);
 
   const loadCompanies = useCallback(async () => {
     try {
@@ -93,12 +96,15 @@ export default function UserListPage() {
       <SectionCard
         title={`회원 목록 (${users.length})`}
         action={
-          <Select value={companyFilter} onChange={e => setCompanyFilter(e.target.value)} className="w-48">
-            <option value="">전체 회사</option>
-            {companies.map(c => (
-              <option key={c.id} value={c.id}>{c.company_name || c.id}</option>
-            ))}
-          </Select>
+          <div className="flex gap-2 items-end">
+            <Select value={companyFilter} onChange={e => setCompanyFilter(e.target.value)} className="w-48">
+              <option value="">전체 회사</option>
+              {companies.map(c => (
+                <option key={c.id} value={c.id}>{c.company_name || c.id}</option>
+              ))}
+            </Select>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>+ 신규 회원</Button>
+          </div>
         }
       >
         {error && (
@@ -118,7 +124,10 @@ export default function UserListPage() {
               { key: 'last_login_at', label: '최근 로그인', render: (v) => v ? new Date(v).toLocaleString('ko-KR') : '-' },
               { key: 'created_at', label: '가입일', render: (v) => v ? new Date(v).toLocaleDateString('ko-KR') : '-' },
               { key: 'action', label: '액션', align: 'right', render: (_, row) => (
-                <Button variant="danger" size="sm" onClick={() => setDeleteTarget(row)}>삭제</Button>
+                <div className="flex gap-1 justify-end">
+                  <Button variant="ghost" size="sm" onClick={() => setResetTarget(row)}>비번 리셋</Button>
+                  <Button variant="danger" size="sm" onClick={() => setDeleteTarget(row)}>삭제</Button>
+                </div>
               ) },
             ]}
             rows={users}
@@ -137,6 +146,32 @@ export default function UserListPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+      {createOpen && (
+        <UserFormModal
+          mode="create"
+          onClose={() => setCreateOpen(false)}
+          onSuccess={(msg) => {
+            setToast(msg);
+            setTimeout(() => setToast(''), 2500);
+            setCreateOpen(false);
+            loadUsers();
+          }}
+        />
+      )}
+
+      {resetTarget && (
+        <UserFormModal
+          mode="reset-password"
+          target={resetTarget}
+          onClose={() => setResetTarget(null)}
+          onSuccess={(msg) => {
+            setToast(msg);
+            setTimeout(() => setToast(''), 2500);
+            setResetTarget(null);
+          }}
+        />
+      )}
+
       <Toast show={!!toast} message={toast} />
     </>
   );

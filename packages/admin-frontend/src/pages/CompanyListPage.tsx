@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import { SectionCard, Button, Input, DataTable, Badge, ConfirmModal, Toast } from '../components/ui';
+import CompanyFormModal from '../components/CompanyFormModal';
 
 interface Company {
   id: string;
@@ -25,6 +26,8 @@ export default function CompanyListPage() {
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState('');
+  const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
+  const [formTargetId, setFormTargetId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,12 +80,15 @@ export default function CompanyListPage() {
       <SectionCard
         title={`매장 회사 목록 (${companies.length})`}
         action={
-          <Input
-            placeholder="회사명 검색"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-48"
-          />
+          <div className="flex gap-2 items-end">
+            <Input
+              placeholder="회사명 검색"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-48"
+            />
+            <Button size="sm" onClick={() => { setFormTargetId(null); setFormMode('create'); }}>+ 신규 회사</Button>
+          </div>
         }
       >
         {error && (
@@ -103,7 +109,10 @@ export default function CompanyListPage() {
               { key: 'payment_status', label: '상태', render: (v) => <Badge variant={v === 'paid' ? 'success' : 'neutral'}>{v || '-'}</Badge> },
               { key: 'created_at', label: '등록일', render: (v) => v ? new Date(v).toLocaleDateString('ko-KR') : '-' },
               { key: 'action', label: '액션', align: 'right', render: (_, row) => (
-                <Button variant="danger" size="sm" onClick={() => setDeleteTarget(row)}>삭제</Button>
+                <div className="flex gap-1 justify-end">
+                  <Button variant="ghost" size="sm" onClick={() => { setFormTargetId(row.id); setFormMode('edit'); }}>수정</Button>
+                  <Button variant="danger" size="sm" onClick={() => setDeleteTarget(row)}>삭제</Button>
+                </div>
               ) },
             ]}
             rows={companies}
@@ -122,6 +131,21 @@ export default function CompanyListPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+      {formMode && (
+        <CompanyFormModal
+          mode={formMode}
+          targetId={formTargetId}
+          onClose={() => { setFormMode(null); setFormTargetId(null); }}
+          onSuccess={(msg) => {
+            setToast(msg);
+            setTimeout(() => setToast(''), 2500);
+            setFormMode(null);
+            setFormTargetId(null);
+            load();
+          }}
+        />
+      )}
+
       <Toast show={!!toast} message={toast} />
     </>
   );

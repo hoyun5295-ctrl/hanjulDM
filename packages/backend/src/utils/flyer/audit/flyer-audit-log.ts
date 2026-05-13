@@ -35,7 +35,10 @@ export type FlyerAuditAction =
   | 'user_delete'
   | 'company_delete'
   | 'user_restore'
-  | 'company_restore';
+  | 'company_restore'
+  // ★ D156: 발신번호 등록 신청 승인/반려
+  | 'sender_registration_approve'
+  | 'sender_registration_reject';
 
 export interface FlyerAuditLogParams {
   userId: string;
@@ -249,6 +252,9 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   company_delete: '회사 삭제',
   user_restore: '회원 복원',
   company_restore: '회사 복원',
+  // ★ D156: 발신번호 등록 신청
+  sender_registration_approve: '발신번호 승인',
+  sender_registration_reject: '발신번호 반려',
 };
 
 // ============================================================
