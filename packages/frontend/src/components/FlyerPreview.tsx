@@ -9,8 +9,12 @@
  * 옛 미러는 unused 코드로 그대로 두고 cleanup은 PHASE 1로 미룸.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_BASE, apiFetch } from '../App';
+
+// ★ 신규 6 엔진은 모바일 393px viewport 기준 작성.
+// 미리보기 폰 프레임 콘텐츠 영역(약 248px)에 맞추기 위해 CSS transform scale 적용.
+const TARGET_VIEWPORT_WIDTH = 393;
 
 interface FlyerItem {
   name: string;
@@ -47,6 +51,26 @@ function fmtDate(d: string): string {
 export default function FlyerPreview({ title, storeName, periodStart, periodEnd, categories, template }: Props) {
   const [blobUrl, setBlobUrl] = useState<string>('');
   const [hasContent, setHasContent] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.63);
+  const [containerSize, setContainerSize] = useState({ width: 248, height: 460 });
+
+  // 컨테이너 width 자동 측정 → scale 계산 (폰 프레임 사이즈 변경 시 자동 fit)
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        const h = entry.contentRect.height;
+        if (w > 0) {
+          setScale(w / TARGET_VIEWPORT_WIDTH);
+          setContainerSize({ width: w, height: h });
+        }
+      }
+    });
+    observer.observe(wrapRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const cleanCats = categories
@@ -101,26 +125,34 @@ export default function FlyerPreview({ title, storeName, periodStart, periodEnd,
     };
   }, [title, storeName, periodStart, periodEnd, JSON.stringify(categories), template]);
 
-  if (!hasContent) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#999', fontSize: 11, marginTop: 80 }}>
-        <p style={{ fontSize: 10, color: '#999' }}>상품을 입력하면<br />미리보기가 표시됩니다</p>
-      </div>
-    );
-  }
-  if (!blobUrl) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#bbb', fontSize: 10, marginTop: 80 }}>
-        미리보기 생성 중...
-      </div>
-    );
-  }
+  // iframe 안 viewport = 393px 모바일. 컨테이너 width 자동 측정 후 scale로 fit.
+  const iframeHeight = containerSize.height / scale;
+
   return (
-    <iframe
-      src={blobUrl}
-      style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-      title="전단지 미리보기"
-      sandbox="allow-same-origin allow-scripts"
-    />
+    <div ref={wrapRef} style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
+      {!hasContent ? (
+        <div style={{ padding: 40, textAlign: 'center', color: '#999', fontSize: 11, marginTop: 80 }}>
+          <p style={{ fontSize: 10, color: '#999' }}>상품을 입력하면<br />미리보기가 표시됩니다</p>
+        </div>
+      ) : !blobUrl ? (
+        <div style={{ padding: 40, textAlign: 'center', color: '#bbb', fontSize: 10, marginTop: 80 }}>
+          미리보기 생성 중...
+        </div>
+      ) : (
+        <iframe
+          src={blobUrl}
+          style={{
+            width: TARGET_VIEWPORT_WIDTH + 'px',
+            height: iframeHeight + 'px',
+            border: 'none',
+            display: 'block',
+            transform: 'scale(' + scale + ')',
+            transformOrigin: 'top left',
+          }}
+          title="전단지 미리보기"
+          sandbox="allow-same-origin allow-scripts"
+        />
+      )}
+    </div>
   );
 }
