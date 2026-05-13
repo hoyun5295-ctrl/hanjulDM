@@ -24,7 +24,9 @@ router.get('/', async (req: Request, res: Response) => {
               address, store_hours, plan_type, monthly_fee, plan_started_at, plan_expires_at,
               payment_status, opt_out_080_number, opt_out_080_auto_sync,
               pos_type, pos_agent_key, pos_last_sync_at,
-              sms_unit_price, lms_unit_price, mms_unit_price
+              sms_unit_price, lms_unit_price, mms_unit_price,
+              -- ★ D154 PHASE 0 §7: 매장 프로필 (전단 발행 시 자동 merge)
+              store_phone, map_url, kakao_channel_url, instagram_url, band_url, blog_url, shop_url
        FROM flyer_companies WHERE id = $1 AND deleted_at IS NULL`,
       [companyId]
     );
@@ -45,6 +47,8 @@ router.put('/', requireFlyerAdmin, async (req: Request, res: Response) => {
     const {
       company_name, business_type, business_number, owner_name, owner_phone,
       address, store_hours, opt_out_080_number, opt_out_080_auto_sync,
+      // ★ D154 PHASE 0 §7: 매장 프로필 (전단 발행 시 자동 merge)
+      store_phone, map_url, kakao_channel_url, instagram_url, band_url, blog_url, shop_url,
     } = req.body;
 
     await query(
@@ -58,11 +62,19 @@ router.put('/', requireFlyerAdmin, async (req: Request, res: Response) => {
          store_hours = COALESCE($8, store_hours),
          opt_out_080_number = $9,
          opt_out_080_auto_sync = COALESCE($10, opt_out_080_auto_sync),
+         store_phone = COALESCE($11, store_phone),
+         map_url = COALESCE($12, map_url),
+         kakao_channel_url = COALESCE($13, kakao_channel_url),
+         instagram_url = COALESCE($14, instagram_url),
+         band_url = COALESCE($15, band_url),
+         blog_url = COALESCE($16, blog_url),
+         shop_url = COALESCE($17, shop_url),
          updated_at = NOW()
        WHERE id = $1`,
       [
         companyId, company_name, business_type, business_number, owner_name, owner_phone,
         address, store_hours, opt_out_080_number || null, opt_out_080_auto_sync,
+        store_phone, map_url, kakao_channel_url, instagram_url, band_url, blog_url, shop_url,
       ]
     );
     return res.json({ message: '회사 정보가 수정되었습니다' });

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import AlertModal from '../components/AlertModal';
 import { SectionCard, Button, Input, Badge } from '../components/ui';
+// ★ D154 PHASE 0 §7: 매장 프로필 (전단 발행 시 자동 merge)
+import StoreProfileSection from '../components/StoreProfileSection';
 
 interface SenderRequest { id: string; phone: string; label?: string; status: string; reject_reason?: string; created_at: string; }
 
@@ -92,6 +94,9 @@ export default function SettingsPage({ token }: { token: string }) {
       <h2 className="text-lg font-bold text-text mb-6">설정</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-4xl">
+        {/* ★ D154 PHASE 0 §7: 매장 프로필 (전단 발행 시 자동 merge) */}
+        <StoreProfileSection />
+
         {/* 기본 정보 */}
         <SectionCard title="기본 정보">
           <div className="space-y-3">

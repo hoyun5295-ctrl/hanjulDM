@@ -11,6 +11,7 @@
 import express, { Request, Response, Router } from 'express';
 import { query } from '../../config/database';
 import { renderTemplate, type FlyerRenderData } from '../../utils/flyer/product/flyer-templates';
+import { flyerAuthenticate } from '../../middlewares/flyer-auth';
 
 const router = Router();
 
@@ -20,11 +21,30 @@ const router = Router();
 // 인증 불필요 (사장님 입력 데이터 그대로 렌더, DB 변경 0)
 // ============================================================
 const previewParser = express.json({ limit: '512kb' });
-router.post('/preview-html', previewParser, async (req: Request, res: Response) => {
+router.post('/preview-html', previewParser, flyerAuthenticate, async (req: Request, res: Response) => {
   try {
     const body = req.body || {};
     if (!body.title && !body.store_name && (!body.categories || body.categories.length === 0)) {
       return res.status(400).send('Empty payload');
+    }
+
+    // ★ D154 PHASE 0 §7: 사장님 회사 매장 프로필 자동 join → externalLinks/announcements merge
+    let rawExtra = body.extra_data || {};
+    const companyId = req.flyerUser?.companyId;
+    if (companyId) {
+      try {
+        const companyResult = await query(
+          `SELECT store_phone, address, store_hours, map_url, kakao_channel_url,
+                  instagram_url, band_url, blog_url, shop_url
+           FROM flyer_companies WHERE id = $1 AND deleted_at IS NULL`,
+          [companyId]
+        );
+        if (companyResult.rows.length > 0) {
+          rawExtra = mergeCompanyProfileToExtraData(rawExtra, companyResult.rows[0]);
+        }
+      } catch (err: any) {
+        console.error('[preview-html] 회사 프로필 join 실패:', err && err.message);
+      }
     }
 
     const data: FlyerRenderData = {
@@ -34,9 +54,9 @@ router.post('/preview-html', previewParser, async (req: Request, res: Response) 
       categories: Array.isArray(body.categories) ? body.categories : [],
       periodStart: body.period_start || null,
       periodEnd: body.period_end || null,
-      externalLinks: body.extra_data?.externalLinks,
-      announcements: body.extra_data?.announcements,
-      bannerGifUrl: body.extra_data?.bannerGifUrl,
+      externalLinks: rawExtra.externalLinks,
+      announcements: rawExtra.announcements,
+      bannerGifUrl: rawExtra.bannerGifUrl,
     };
 
     const templateCode = body.template || 'grid_hero';
@@ -175,6 +195,53 @@ function renderExpiredPage(storeName: string, title: string, endDate: string): s
 }
 
 // ============================================================
+// ★ D154 PHASE 0 §7 — 회사 매장 프로필 → externalLinks/announcements 자동 merge
+// 사장님 SettingsPage 1회 입력 → 전단 발행 시점에 자동 박음 (전단별 override 우선)
+// ============================================================
+interface ExternalLink { label: string; url: string; icon: string; }
+interface Announcement { title: string; content: string; }
+
+function mergeCompanyProfileToExtraData(extra: any, profile: any): any {
+  if (!profile) return extra || {};
+  const base = extra || {};
+  const externalLinks: ExternalLink[] = Array.isArray(base.externalLinks) ? [...base.externalLinks] : [];
+  const announcements: Announcement[] = Array.isArray(base.announcements) ? [...base.announcements] : [];
+  const hasIcon = (icon: string) => externalLinks.some(l => l.icon === icon);
+  const hasAnn = (kw: string) => announcements.some(a => (a.title || '').indexOf(kw) >= 0);
+
+  if (profile.store_phone && !hasIcon('phone')) {
+    externalLinks.push({ label: profile.store_phone, url: 'tel:' + String(profile.store_phone).replace(/-/g, ''), icon: 'phone' });
+  }
+  if (profile.map_url && !hasIcon('map')) {
+    externalLinks.push({ label: profile.address || '길찾기', url: profile.map_url, icon: 'map' });
+  }
+  if (profile.kakao_channel_url && !hasIcon('link')) {
+    externalLinks.push({ label: '카카오 채널', url: profile.kakao_channel_url, icon: 'link' });
+  }
+  if (profile.instagram_url && !hasIcon('instagram')) {
+    externalLinks.push({ label: '인스타그램', url: profile.instagram_url, icon: 'instagram' });
+  }
+  if (profile.band_url && !hasIcon('band')) {
+    externalLinks.push({ label: '밴드', url: profile.band_url, icon: 'band' });
+  }
+  if (profile.blog_url && !hasIcon('blog')) {
+    externalLinks.push({ label: '블로그', url: profile.blog_url, icon: 'blog' });
+  }
+  if (profile.shop_url && !hasIcon('shop')) {
+    externalLinks.push({ label: '쇼핑몰', url: profile.shop_url, icon: 'shop' });
+  }
+
+  if (profile.store_hours && !hasAnn('영업')) {
+    announcements.unshift({ title: '영업시간', content: profile.store_hours });
+  }
+  if (profile.address && !hasAnn('주소')) {
+    announcements.push({ title: '주소', content: profile.address });
+  }
+
+  return { ...base, externalLinks, announcements };
+}
+
+// ============================================================
 // 전단지 렌더링 — CT-F14 컨트롤타워 위임
 // ============================================================
 export async function renderFlyerPage(flyer: any, trackingPhone?: string | null, shortCode?: string | null): Promise<string> {
@@ -205,9 +272,27 @@ export async function renderFlyerPage(flyer: any, trackingPhone?: string | null,
   } catch {}
 
   // extra_data 파싱 (외부링크/공지/GIF)
-  const extraData = typeof flyer.extra_data === 'string'
+  const rawExtra = typeof flyer.extra_data === 'string'
     ? JSON.parse(flyer.extra_data || '{}')
     : (flyer.extra_data || {});
+
+  // ★ D154 PHASE 0 §7: 회사 매장 프로필 → externalLinks/announcements 자동 merge (전단별 override 우선)
+  let extraData = rawExtra;
+  if (flyer.company_id) {
+    try {
+      const companyResult = await query(
+        `SELECT store_phone, address, store_hours, map_url, kakao_channel_url,
+                instagram_url, band_url, blog_url, shop_url
+         FROM flyer_companies WHERE id = $1 AND deleted_at IS NULL`,
+        [flyer.company_id]
+      );
+      if (companyResult.rows.length > 0) {
+        extraData = mergeCompanyProfileToExtraData(rawExtra, companyResult.rows[0]);
+      }
+    } catch (err: any) {
+      console.error('[short-urls] 회사 프로필 join 실패:', err && err.message);
+    }
+  }
 
   return renderTemplate(flyer.template || 'grid_hero', {
     storeName, title, period, categories, qrCodeDataUrl, qrCouponText,
