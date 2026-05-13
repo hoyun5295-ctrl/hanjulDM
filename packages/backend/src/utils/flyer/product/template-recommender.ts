@@ -24,7 +24,13 @@ import { resolveSeasonToken } from './season-resolver';
 // 타입
 // ============================================================
 
-export type EngineCode = 'story' | 'magazine' | 'deal_feed' | 'grid_hero' | 'catalog_swipe' | 'poster_promo';
+// ★ D155: STORY 제외 10 활성 엔진 (story는 옛 발행 폴백 코드 유지, 추천 대상 X)
+export type EngineCode =
+  | 'magazine' | 'magazine_zine'
+  | 'deal_feed' | 'deal_bento'
+  | 'grid_hero' | 'grid_muji'
+  | 'catalog_swipe' | 'catalog_dark'
+  | 'poster_promo' | 'poster_pop';
 
 export interface TemplateRecommendation {
   templateCode: EngineCode;
@@ -39,7 +45,13 @@ export interface TemplateRecommendation {
 // 점수 매트릭스 (휴리스틱)
 // ============================================================
 
-const ENGINES: EngineCode[] = ['story', 'magazine', 'deal_feed', 'grid_hero', 'catalog_swipe', 'poster_promo'];
+const ENGINES: EngineCode[] = [
+  'magazine', 'magazine_zine',
+  'deal_feed', 'deal_bento',
+  'grid_hero', 'grid_muji',
+  'catalog_swipe', 'catalog_dark',
+  'poster_promo', 'poster_pop',
+];
 
 interface ScoreContext {
   itemCount: number;
@@ -86,95 +98,127 @@ function buildContext(data: FlyerRenderData): ScoreContext {
   };
 }
 
-/** 각 엔진의 점수 계산 (휴리스틱 규칙 매트릭스) */
+/** 각 엔진의 점수 계산 (휴리스틱 규칙 매트릭스, D155: 10 엔진) */
 function scoreEngines(ctx: ScoreContext): { scores: Record<EngineCode, number>; reasons: Record<EngineCode, string[]> } {
   const scores: Record<EngineCode, number> = {
-    story: 0, magazine: 0, deal_feed: 0, grid_hero: 0, catalog_swipe: 0, poster_promo: 0,
+    magazine: 0, magazine_zine: 0,
+    deal_feed: 0, deal_bento: 0,
+    grid_hero: 0, grid_muji: 0,
+    catalog_swipe: 0, catalog_dark: 0,
+    poster_promo: 0, poster_pop: 0,
   };
   const reasons: Record<EngineCode, string[]> = {
-    story: [], magazine: [], deal_feed: [], grid_hero: [], catalog_swipe: [], poster_promo: [],
+    magazine: [], magazine_zine: [],
+    deal_feed: [], deal_bento: [],
+    grid_hero: [], grid_muji: [],
+    catalog_swipe: [], catalog_dark: [],
+    poster_promo: [], poster_pop: [],
   };
 
-  // === 기본 점수 (디폴트 grid_hero 우대) ===
+  // === 기본 점수 (디폴트 grid_hero 우대 + b-variant는 base 70% 정도) ===
   scores.grid_hero += 30;
+  scores.grid_muji += 22;
   reasons.grid_hero.push('기본 위클리 메인');
 
   // === 상품 수 분기 ===
   if (ctx.itemCount <= 3) {
-    scores.story += 40;
-    scores.poster_promo += 25;
-    reasons.story.push('상품 ' + ctx.itemCount + '개 — 풀스크린 집중');
-    reasons.poster_promo.push('소수 상품 — 임팩트 포스터');
+    scores.poster_promo += 35;
+    scores.poster_pop += 28;
+    reasons.poster_promo.push('상품 ' + ctx.itemCount + '개 — 임팩트 포스터');
   } else if (ctx.itemCount <= 6) {
     scores.grid_hero += 25;
+    scores.grid_muji += 22;
     scores.poster_promo += 20;
-    scores.story += 15;
+    scores.poster_pop += 18;
     reasons.grid_hero.push('상품 ' + ctx.itemCount + '개 — 그리드 적정');
   } else if (ctx.itemCount <= 12) {
     scores.grid_hero += 20;
+    scores.grid_muji += 18;
     scores.deal_feed += 25;
+    scores.deal_bento += 22;
     scores.catalog_swipe += 20;
+    scores.catalog_dark += 18;
     reasons.deal_feed.push('상품 ' + ctx.itemCount + '개 — 피드형');
   } else {
     scores.catalog_swipe += 40;
+    scores.catalog_dark += 34;
     scores.deal_feed += 30;
+    scores.deal_bento += 26;
     reasons.catalog_swipe.push('상품 ' + ctx.itemCount + '개 — 가로 카탈로그');
   }
 
   // === 카테고리 수 분기 ===
   if (ctx.categoryCount >= 4) {
     scores.catalog_swipe += 30;
+    scores.catalog_dark += 26;
     scores.grid_hero += 15;
+    scores.grid_muji += 13;
     reasons.catalog_swipe.push('카테고리 ' + ctx.categoryCount + '개 — 가로 행 분리');
   } else if (ctx.categoryCount === 1) {
     scores.magazine += 25;
-    scores.story += 15;
+    scores.magazine_zine += 22;
     reasons.magazine.push('단일 카테고리 — 스토리텔링');
   }
 
   // === 카테고리당 상품 밀도 ===
   if (ctx.maxItemsPerCategory >= 5) {
     scores.magazine += 20;
+    scores.magazine_zine += 17;
     scores.catalog_swipe += 15;
+    scores.catalog_dark += 13;
     reasons.magazine.push('카테고리당 ' + ctx.maxItemsPerCategory + '개 — 깊이 있음');
   }
 
   // === badge 패턴 ===
   if (ctx.hasUrgent) {
     scores.deal_feed += 40;
+    scores.deal_bento += 36;
     scores.poster_promo += 20;
+    scores.poster_pop += 18;
     reasons.deal_feed.push('타임세일/한정 — 카운트다운 핫딜');
   }
   if (ctx.hasBogo) {
     scores.poster_promo += 20;
+    scores.poster_pop += 22;
     scores.deal_feed += 15;
-    reasons.poster_promo.push('1+1 — 임팩트 슬랩');
+    scores.deal_bento += 13;
+    reasons.poster_pop.push('1+1 — 팝 임팩트');
   }
   if (ctx.hasPremium) {
     scores.magazine += 25;
+    scores.magazine_zine += 18;
+    scores.grid_muji += 22;
     scores.poster_promo += 10;
     reasons.magazine.push('프리미엄 — 매거진 스토리');
+    reasons.grid_muji.push('프리미엄 — 미니멀 카탈로그');
   }
 
   // === 시즌·이벤트 키워드 ===
   if (ctx.hasGrandOpen) {
     scores.poster_promo += 40;
-    reasons.poster_promo.push('그랜드 오픈 — 인쇄 전단 임팩트');
+    scores.poster_pop += 36;
+    reasons.poster_pop.push('그랜드 오픈 — 팝 아트 임팩트');
   }
   if (ctx.hasNewYear || ctx.hasChuseok) {
     scores.poster_promo += 30;
+    scores.poster_pop += 24;
+    scores.magazine_zine += 18;
     scores.magazine += 15;
     reasons.poster_promo.push('명절 — 풀블리드 포스터');
   }
   if (ctx.hasChristmas) {
     scores.deal_feed += 20;
+    scores.deal_bento += 18;
+    scores.catalog_dark += 22;
     scores.poster_promo += 15;
-    reasons.deal_feed.push('크리스마스 — 긴급 핫딜');
+    reasons.catalog_dark.push('크리스마스 — 다크 무드');
   }
 
   // === 할인율 강도 ===
   if (ctx.maxDiscount >= 50) {
     scores.deal_feed += 20;
+    scores.deal_bento += 17;
+    scores.poster_pop += 18;
     scores.poster_promo += 15;
     reasons.deal_feed.push('최대 ' + ctx.maxDiscount + '% — 강한 할인 강조');
   }
@@ -182,7 +226,9 @@ function scoreEngines(ctx: ScoreContext): { scores: Record<EngineCode, number>; 
   // === 평균 가격 ===
   if (ctx.avgPrice >= 30000) {
     scores.magazine += 15;
-    reasons.magazine.push('고가 상품 — 프리미엄 매거진');
+    scores.grid_muji += 17;
+    scores.catalog_dark += 12;
+    reasons.grid_muji.push('고가 상품 — 미니멀 프리미엄');
   }
 
   return { scores, reasons };
@@ -211,7 +257,13 @@ export function recommendTemplate(
       templateCode: opts.fixedTemplateCode,
       score: 100,
       reasons: ['사장님 수동 선택'],
-      allScores: { story: 0, magazine: 0, deal_feed: 0, grid_hero: 0, catalog_swipe: 0, poster_promo: 0 },
+      allScores: {
+        magazine: 0, magazine_zine: 0,
+        deal_feed: 0, deal_bento: 0,
+        grid_hero: 0, grid_muji: 0,
+        catalog_swipe: 0, catalog_dark: 0,
+        poster_promo: 0, poster_pop: 0,
+      },
     };
   }
 

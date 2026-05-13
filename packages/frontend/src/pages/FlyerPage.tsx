@@ -13,14 +13,18 @@ interface Flyer { id: string; title: string; store_name: string; period_start: s
 
 // D113: 하드코딩 폴백용 (API 실패 시)
 const DEFAULT_CATEGORY_PRESETS = ['청과/야채', '공산', '축산', '수산', '냉동', '유제품', '음료/주류', '생활용품'];
-// ★ D154 PHASE 0 트랙 A — 모바일 6 엔진 (Claude Design 통합). 백엔드 CT-F13 정합.
+// ★ D154 PHASE 0 + D155 확장 — 10 엔진 (STORY 제외 + b-variant 5 추가). 백엔드 CT-F13 정합.
 const DEFAULT_TEMPLATES: TemplateOption[] = [
-  { value: 'story',         label: '스토리형',      desc: '풀스크린 1상품, 5초 자동 진행 (인스타 스타일)', color: 'linear-gradient(135deg, #F97316, #EF4444)' },
-  { value: 'magazine',      label: '매거진 스크롤', desc: '패럴랙스 + 챕터 헤드 무드보드',                   color: 'linear-gradient(135deg, #292524, #C2410C)' },
-  { value: 'deal_feed',     label: '오늘의 핫딜',   desc: '카운트다운 + 잔여수량 + 좋아요·공유',              color: 'linear-gradient(135deg, #171717, #EF4444)' },
-  { value: 'grid_hero',     label: '위클리 메인',   desc: 'Hero + 카테고리 sticky + 그리드 + 단가',           color: 'linear-gradient(135deg, #7C3AED, #EC4899)' },
-  { value: 'catalog_swipe', label: '카탈로그 가로', desc: '카테고리별 가로 스와이프 + hold 확대',             color: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' },
-  { value: 'poster_promo',  label: '포스터 임팩트', desc: '인쇄 전단풍 + 6매체 정합 본진',                    color: 'linear-gradient(135deg, #1C1917, #FBBF24)' },
+  { value: 'magazine',      label: '매거진 스크롤',    desc: '패럴랙스 + 챕터 헤드 무드보드',                       color: 'linear-gradient(135deg, #292524, #C2410C)' },
+  { value: 'magazine_zine', label: '매거진 ZINE',      desc: 'Riso 인쇄 + halftone + 미스레지스트레이션 인쇄 미감', color: 'linear-gradient(135deg, #FF3D2E, #2056FF)' },
+  { value: 'deal_feed',     label: '오늘의 핫딜',      desc: '카운트다운 + 잔여수량 + 좋아요·공유',                  color: 'linear-gradient(135deg, #171717, #EF4444)' },
+  { value: 'deal_bento',    label: '핫딜 벤또',        desc: '파스텔 8 컬러 벤또 그리드 + 카운트다운 + 마감 임박',   color: 'linear-gradient(135deg, #FFC9A0, #FFE9C6)' },
+  { value: 'grid_hero',     label: '위클리 메인',      desc: 'Hero + 카테고리 sticky + 그리드 + 단가',               color: 'linear-gradient(135deg, #7C3AED, #EC4899)' },
+  { value: 'grid_muji',     label: '미니멀 카탈로그',  desc: 'MUJI 미니멀 + 카테고리 section + pgrid 2col',         color: 'linear-gradient(135deg, #FAFAFA, #C8261A)' },
+  { value: 'catalog_swipe', label: '카탈로그 가로',    desc: '카테고리별 가로 스와이프 + hold 확대',                 color: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' },
+  { value: 'catalog_dark',  label: '다크 NOW PLAYING', desc: 'Netflix 다크 모드 + 음악 스트리밍 풍 swipe row',      color: 'linear-gradient(135deg, #0A0A0B, #F97316)' },
+  { value: 'poster_promo',  label: '포스터 임팩트',    desc: '인쇄 전단풍 + 6매체 정합 본진',                        color: 'linear-gradient(135deg, #1C1917, #FBBF24)' },
+  { value: 'poster_pop',    label: '팝 아트 포스터',   desc: '한국 팝 아트 + Memphis decorations + 큰 pop sticker',  color: 'linear-gradient(135deg, #FF3D2E, #FFD300)' },
 ];
 
 interface TemplateOption { value: string; label: string; desc: string; color: string; }

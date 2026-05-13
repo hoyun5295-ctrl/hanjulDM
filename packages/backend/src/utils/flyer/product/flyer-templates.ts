@@ -2752,16 +2752,1702 @@ ${sections.join('\n')}
 }
 
 // ============================================================
-// RENDERER_MAP (신규 6)
+// ★ D155: MAGAZINE ZINE 엔진 (02b-magazine-zine.html 동적 변환)
+// Riso 인쇄 / 종이결 / halftone / 미스레지스트레이션 제목 / paper noise
+// ============================================================
+
+/** zine 제목 3 라인 미스레지스트레이션 분리 (l1/l2/l3 + ghost layer) */
+function splitTitleForZine(title: string): { l1: string; l2: string; l3: string } {
+  const parts = title.split(/[\s,·\.]+/).filter(p => p.length > 0);
+  if (parts.length >= 3) {
+    return { l1: parts[0], l2: parts[1], l3: parts.slice(2).join(' ') + '.' };
+  }
+  if (parts.length === 2) {
+    return { l1: parts[0], l2: parts[1], l3: '싸요.' };
+  }
+  const word = parts[0] || '이번 주';
+  const half = Math.ceil(word.length / 2);
+  return { l1: word.slice(0, half) || '이번', l2: word.slice(half) || '주', l3: '싸요.' };
+}
+
+/**
+ * ★ MAGAZINE ZINE 엔진 — Claude Design 02b-magazine-zine.html 동적 변환 (D155 PHASE 0 트랙 A 확장)
+ *
+ * 1 상품 / 카드. 첫 카테고리 첫 상품 = zcard.full(대형), 그 외 = 일반(홀수 = flip).
+ * Bagel Fat One + Hahmlet + IBM Plex Mono 폰트 / 시즌 토큰 7종 / paper noise + halftone.
+ */
+export function renderMagazineZineEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const total = items.length;
+  const ogTitle = d.storeName + ' · ZINE — ' + d.title;
+  const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ');
+  const ogImage = buildOgImageUrl(d, token);
+
+  // 미스레지스트레이션 제목 — 3 라인 (l1/l2/l3 + ghost)
+  const title = (d.title || '이번 주 진짜 싸요').trim();
+  const titleParts = splitTitleForZine(title);
+
+  // sticker (max 할인율 + 첫 상품 badge)
+  let stickerA = 'SPECIAL';
+  let stickerNum = '30%';
+  if (items.length > 0) {
+    const maxDisc = items.reduce((m, it) => Math.max(m, calcDisc(it.originalPrice, it.salePrice)), 0);
+    if (maxDisc > 0) stickerNum = maxDisc + '%';
+    if (items[0].badge) stickerA = items[0].badge.slice(0, 8);
+  }
+
+  // 매장 정보
+  const phoneLink = (d.externalLinks || []).find(l => l.icon === 'phone');
+  const mapLink = (d.externalLinks || []).find(l => l.icon === 'map');
+  const hoursAnn = (d.announcements || []).find(a => a.title.indexOf('영업') >= 0 || a.title.indexOf('시간') >= 0);
+  const addressAnn = (d.announcements || []).find(a => a.title.indexOf('주소') >= 0);
+
+  const issueDate = (d.periodStart && d.periodEnd)
+    ? `${d.periodStart.replace(/-/g, '.')} — ${d.periodEnd.replace(/-/g, '.')}`
+    : (d.period || '');
+
+  // section + zcard 박힘
+  let pageNum = 0;
+  const sections: string[] = [];
+  d.categories.forEach((cat, ci) => {
+    const catEn = categoryEn(cat.name);
+    sections.push(
+      '<div class="secmark' + (ci % 2 === 1 ? ' alt' : '') + '">' +
+        '<span class="no mono">' + String(ci + 1).padStart(2, '0') + ' / ' + esc(cat.name) + '</span>' +
+        '<span class="tt han">' + esc(cat.items[0]?.badge || catEn || '이번 주') + '.</span>' +
+        '<span class="ll"></span>' +
+      '</div>'
+    );
+
+    cat.items.forEach((it, ii) => {
+      pageNum++;
+      const isFirst = ci === 0 && ii === 0;
+      const isFlip = !isFirst && ii % 2 === 1;
+      const numStr = String(pageNum).padStart(2, '0');
+      const cardCls = 'zcard' + (isFirst ? ' full' : '');
+      const tapeHtml = isFlip ? '<span class="tape l"></span>' : (isFirst || ii === 0 ? '<span class="tape"></span>' : '');
+      const bodyCls = 'body' + (isFlip ? ' flip' : '');
+      const halftoneStyle = (ii % 2 === 1) ? ' style="color: var(--color-accent);"' : '';
+      const picHtml = it.imageUrl
+        ? '<img src="' + esc(toAbsUrl(it.imageUrl) || '') + '" alt="' + esc(it.name) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
+        : '<div class="ph"><span class="glyph">' + categoryEmoji(cat.name) + '</span></div>';
+      const disc = calcDisc(it.originalPrice, it.salePrice);
+      const origHtml = it.originalPrice > 0 ? '<div class="orig price-num mono">정가 ' + fmtPrice(it.originalPrice) + '원</div>' : '';
+      const specs: string[] = [];
+      if (it.unit) specs.push('<span class="s">' + esc(it.unit.toUpperCase()) + '</span>');
+      if (it.origin) specs.push('<span class="s">' + esc(it.origin) + '</span>');
+      if (disc > 0) specs.push('<span class="s alt">' + disc + '%↓</span>');
+      else if (it.badge) specs.push('<span class="s alt">' + esc(it.badge) + '</span>');
+      const aiCopyHtml = it.aiCopy
+        ? '<p class="copy">' + esc(it.aiCopy) + '</p>'
+        : '<p class="copy">' + esc(it.name) + ', 이번 주만의 가격으로 만나보세요.</p>';
+      const kicker = isFirst ? '이번 주 한 줄' : (it.badge || '주말 추천');
+      const frameLbl = (catEn + ' · ' + (it.unit || '')).toUpperCase();
+
+      sections.push(
+        '<article class="' + cardCls + '" data-num="' + numStr + '"' + productDataAttr(it, cat.name) + '>' +
+          tapeHtml +
+          '<div class="hdr">' +
+            '<span class="pip">' + esc(it.name) + (it.unit ? ' · ' + esc(it.unit) : '') + '</span>' +
+            '<span>P.' + numStr + '</span>' +
+          '</div>' +
+          '<div class="' + bodyCls + '">' +
+            '<div class="pic">' +
+              picHtml +
+              '<div class="halftoneFill"' + halftoneStyle + '></div>' +
+              '<span class="indexNum fat">' + numStr + '</span>' +
+              '<span class="frame-lbl">' + esc(frameLbl) + '</span>' +
+            '</div>' +
+            '<div class="info">' +
+              '<div class="kicker">' + esc(kicker) + '</div>' +
+              '<h3 class="han">' + esc(it.name) + (it.unit ? '<br>' + esc(it.unit) + '.' : '.') + '</h3>' +
+              '<div class="specs">' + specs.join('') + '</div>' +
+              aiCopyHtml +
+              '<div class="priceBox">' +
+                origHtml +
+                '<div class="saleRow">' +
+                  '<span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</article>'
+      );
+
+      // 첫 카테고리 첫 상품 다음에 manifesto 1회
+      if (isFirst && (cat.items.length > 1 || d.categories.length > 1)) {
+        const editorDate = d.periodStart ? d.periodStart.slice(5).replace('-', '/') : '';
+        const weekNum = Math.ceil((new Date().getTime() - new Date(new Date().getFullYear(), 0, 1).getTime()) / 604800000);
+        sections.push(
+          '<div class="manifesto">' +
+            '<span class="arrow mono">EDITOR\'S NOTE — ' + esc(editorDate) + '</span>' +
+            '<h4 class="han">"새벽에 본 것만<br>매대에 올립니다."</h4>' +
+            '<div class="signoff">' +
+              '<span class="by han">— ' + esc(d.storeName) + '</span>' +
+              '<span>WEEK ' + weekNum + ' / ' + new Date().getFullYear() + '</span>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    });
+
+    // 카테고리 사이 marquee (2번째 카테고리 후 1회)
+    if (ci === 1 && d.categories.length > 2) {
+      sections.push(
+        '<div class="stripe" aria-hidden="true">' +
+          '<div class="track">' +
+            '<span>★ ZINE · <span class="red">' + esc(d.period) + '</span> · ' + esc(d.storeName) + ' · ★ 한정 특가 ★ </span>' +
+            '<span>★ ZINE · <span class="red">' + esc(d.period) + '</span> · ' + esc(d.storeName) + ' · ★ 한정 특가 ★ </span>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+  });
+
+  const yy = String(new Date().getFullYear() % 100);
+  const yyyy = String(new Date().getFullYear());
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${esc(token)}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>${esc(ogTitle)}</title>
+<meta property="og:title" content="${esc(ogTitle)}">
+<meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:image" content="${esc(ogImage)}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Hahmlet:wght@600;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+:root {
+  --color-primary: #FF3D2E;
+  --color-accent:  #2056FF;
+  --color-on-primary: #FFF8E7;
+  --ink: #141210;
+  --paper: #FFF8E7;
+  --paper-2: #F4ECCF;
+  --rule: #141210;
+  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+${seasonStyleBlock()}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); color: var(--ink); }
+body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.han { font-family: 'Hahmlet', 'Pretendard Variable', serif; }
+.fat { font-family: 'Bagel Fat One', 'Hahmlet', sans-serif; font-weight: 400; }
+.price-num { font-variant-numeric: tabular-nums; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200; opacity: 0.55; mix-blend-mode: multiply; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.14  0 0 0 0 0.11  0 0 0 0 0.06  0 0 0 0.10 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.cover { padding: 22px 20px 28px; position: relative; border-bottom: 6px solid var(--ink); overflow: hidden; }
+.cover .nav { display: flex; justify-content: space-between; align-items: center; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; padding-bottom: 8px; border-bottom: 1.5px solid var(--ink); }
+.cover .nav .right { display: inline-flex; align-items: center; gap: 6px; }
+.cover .nav .stamp { background: var(--ink); color: var(--paper); padding: 2px 6px; font-weight: 800; }
+.cover .issueRow { display: flex; align-items: baseline; justify-content: space-between; margin-top: 14px; font-size: 11px; letter-spacing: 0.06em; }
+.cover .issueRow .vol { font-size: 48px; line-height: 0.85; letter-spacing: -0.04em; color: var(--color-primary); transform: translateY(4px); font-family: 'Bagel Fat One', cursive; }
+.cover h1 { position: relative; margin-top: 4px; font-size: 84px; line-height: 0.86; letter-spacing: -0.04em; color: var(--ink); text-wrap: balance; padding-right: 130px; word-break: keep-all; }
+.cover h1 .l1 { display: block; }
+.cover h1 .l2 { display: block; color: var(--color-primary); position: relative; }
+.cover h1 .l2::after { content: attr(data-text); position: absolute; left: 3px; top: 2px; color: var(--color-accent); z-index: -1; mix-blend-mode: multiply; opacity: 0.7; }
+.cover h1 .l3 { display: block; -webkit-text-stroke: 2px var(--ink); color: transparent; font-weight: 400; }
+.cover .stickers { position: absolute; right: -10px; top: 78px; width: 130px; height: 130px; background: var(--color-accent); color: var(--paper); border-radius: 50%; display: grid; place-items: center; text-align: center; transform: rotate(-10deg); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); z-index: 2; }
+.cover .stickers .a { font-size: 14px; font-weight: 800; letter-spacing: 0.08em; }
+.cover .stickers .b { font-size: 34px; line-height: 1; margin-top: 4px; }
+.cover .stickers .c { font-size: 11px; font-weight: 700; margin-top: 4px; opacity: 0.9; }
+.cover .credit { margin-top: 28px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: end; padding-top: 14px; border-top: 1.5px solid var(--ink); }
+.cover .credit .l { font-size: 10px; letter-spacing: 0.18em; font-weight: 700; }
+.cover .credit .v { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; margin-top: 2px; }
+.cover .credit .price { font-size: 34px; color: var(--color-primary); line-height: 1; letter-spacing: -0.04em; font-family: 'Bagel Fat One', cursive; }
+.blob { position: absolute; pointer-events: none; z-index: 0; color: var(--color-primary); opacity: 0.85; mix-blend-mode: multiply; }
+.blob.b1 { left: -40px; top: -30px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle at center, currentColor 16%, transparent 20%); background-size: 5px 5px; }
+.blob.b2 { right: -20px; bottom: -30px; width: 140px; height: 140px; color: var(--color-accent); background: radial-gradient(circle at center, currentColor 18%, transparent 22%); background-size: 4px 4px; transform: rotate(20deg); }
+.secmark { margin: 32px 20px 12px; display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: center; }
+.secmark .no { background: var(--ink); color: var(--paper); padding: 2px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; }
+.secmark .tt { font-size: 22px; letter-spacing: -0.025em; font-weight: 800; }
+.secmark .ll { height: 3px; background: var(--ink); }
+.secmark.alt .ll { background: var(--color-primary); }
+.zcard { margin: 14px 20px 0; border: 3px solid var(--ink); background: var(--paper); position: relative; overflow: hidden; box-shadow: 5px 5px 0 var(--ink); opacity: 0; transform: translateY(20px); transition: opacity 540ms ease, transform 540ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.zcard.in { opacity: 1; transform: none; }
+.zcard .tape { position: absolute; top: -8px; right: 22px; width: 72px; height: 18px; background: var(--color-accent); opacity: 0.7; transform: rotate(6deg); mix-blend-mode: multiply; z-index: 5; }
+.zcard .tape.l { right: auto; left: 22px; transform: rotate(-8deg); background: var(--color-primary); }
+.zcard .hdr { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 2.5px solid var(--ink); background: var(--paper-2); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.zcard .hdr .pip { display: inline-flex; align-items: center; gap: 6px; }
+.zcard .hdr .pip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); }
+.zcard .body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; }
+.zcard .pic { aspect-ratio: 1/1; position: relative; background: var(--paper-2); border-right: 2.5px solid var(--ink); overflow: hidden; }
+.zcard .body.flip .pic { order: 2; border-right: 0; border-left: 2.5px solid var(--ink); }
+.ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink); }
+.ph .glyph { font-size: 132px; line-height: 1; filter: drop-shadow(2px 2px 0 var(--color-primary)) drop-shadow(-2px -1px 0 var(--color-accent)); mix-blend-mode: multiply; }
+.pic .halftoneFill { position: absolute; inset: 0; color: var(--color-primary); background-image: radial-gradient(circle at center, currentColor 14%, transparent 18%); background-size: 6px 6px; opacity: 0.55; mix-blend-mode: multiply; pointer-events: none; }
+.pic .frame-lbl { position: absolute; left: 8px; bottom: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--ink); background: var(--paper); padding: 2px 6px; border: 1.5px solid var(--ink); }
+.pic .indexNum { position: absolute; right: 8px; top: 8px; font-family: 'Bagel Fat One', cursive; font-size: 38px; color: var(--paper); -webkit-text-stroke: 2px var(--ink); line-height: 1; }
+.zcard .info { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; }
+.zcard .kicker { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; color: var(--ink); opacity: 0.6; }
+.zcard h3 { font-family: 'Hahmlet', serif; font-size: 26px; font-weight: 900; line-height: 0.98; letter-spacing: -0.03em; }
+.zcard .specs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.zcard .specs .s { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 2px 6px; background: var(--ink); color: var(--paper); font-weight: 600; }
+.zcard .specs .s.alt { background: var(--color-primary); color: var(--paper); }
+.zcard .copy { margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--ink); }
+.zcard .priceBox { margin-top: auto; padding-top: 10px; border-top: 1.5px dashed var(--ink); }
+.zcard .priceBox .orig { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-decoration: line-through; text-decoration-thickness: 2px; color: var(--ink); opacity: 0.55; }
+.zcard .priceBox .saleRow { display: flex; align-items: baseline; gap: 4px; }
+.zcard .sale { font-family: 'Bagel Fat One', cursive; font-size: 42px; color: var(--color-primary); line-height: 1; letter-spacing: -0.02em; -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; }
+.zcard.in .sale { animation: priceStomp 700ms var(--motion-spring) both 240ms; }
+@keyframes priceStomp { 0% { transform: scale(0.6) rotate(-4deg); opacity: 0; } 60% { transform: scale(1.1) rotate(0); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
+.zcard .sale .won { font-size: 18px; }
+.zcard.full .body { grid-template-columns: 1fr; }
+.zcard.full .pic { aspect-ratio: 5/4; border-right: 0; border-bottom: 2.5px solid var(--ink); }
+.zcard.full .info { padding: 14px 16px 18px; }
+.zcard.full h3 { font-size: 32px; }
+.zcard.full .sale { font-size: 56px; }
+.manifesto { margin: 28px 20px 0; padding: 22px; background: var(--color-primary); color: var(--paper); border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); position: relative; }
+.manifesto .arrow { position: absolute; left: -3px; top: -16px; background: var(--ink); color: var(--paper); padding: 4px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; }
+.manifesto h4 { font-family: 'Hahmlet', serif; font-size: 36px; line-height: 0.96; letter-spacing: -0.03em; font-weight: 900; text-wrap: balance; }
+.manifesto .signoff { margin-top: 16px; display: flex; justify-content: space-between; align-items: baseline; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.manifesto .signoff .by { font-size: 18px; font-family: 'Hahmlet', serif; font-weight: 800; letter-spacing: -0.02em; }
+.stripe { margin: 26px 0 0; background: var(--ink); color: var(--paper); border-top: 4px solid var(--ink); border-bottom: 4px solid var(--ink); padding: 8px 0; overflow: hidden; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; letter-spacing: 0.12em; }
+.stripe .track { display: inline-flex; gap: 16px; animation: marquee 22s linear infinite; }
+.stripe .track .red { color: var(--color-primary); }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.foot { margin: 28px 20px 28px; padding-top: 18px; border-top: 3px solid var(--ink); }
+.foot .lockup { display: flex; align-items: baseline; justify-content: space-between; }
+.foot .lockup .h { font-family: 'Bagel Fat One', cursive; font-size: 28px; letter-spacing: -0.02em; line-height: 1; color: var(--color-primary); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; }
+.foot .lockup .no { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; }
+.foot .grid { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.foot .grid .c { border-top: 1px solid var(--ink); padding-top: 6px; }
+.foot .grid .k { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.18em; opacity: 0.6; text-transform: uppercase; }
+.foot .grid .v { font-size: 14px; font-weight: 800; margin-top: 2px; letter-spacing: -0.01em; }
+.foot .ctas { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.foot .ctas a, .foot .ctas button { height: 48px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); font-family: 'Hahmlet', serif; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.foot .ctas .fill { background: var(--ink); color: var(--paper); }
+.foot .small { margin-top: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-align: center; padding-top: 10px; border-top: 1px dashed var(--ink); opacity: 0.7; }
+@media (prefers-reduced-motion: reduce) {
+  .zcard.in .sale { animation: none; }
+  .stripe .track { animation: none; }
+}
+</style>
+</head>
+<body>
+<section class="cover">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <nav class="nav">
+    <span>HANJUL · ZINE</span>
+    <span class="right"><span class="stamp">VOL.${esc(yy)}</span> <span>WEEKLY</span></span>
+  </nav>
+  <div class="issueRow">
+    <span class="mono">${esc(issueDate)}</span>
+    <span class="vol">${total}</span>
+  </div>
+  <h1 class="han">
+    <span class="l1">${esc(titleParts.l1)}</span>
+    <span class="l2" data-text="${esc(titleParts.l2)}">${esc(titleParts.l2)}</span>
+    <span class="l3">${esc(titleParts.l3)}</span>
+  </h1>
+  <div class="stickers" aria-hidden="true">
+    <div>
+      <div class="a">${esc(stickerA)}</div>
+      <div class="b">${esc(stickerNum)}</div>
+      <div class="c">OFF · TODAY</div>
+    </div>
+  </div>
+  <div class="credit">
+    <div>
+      <div class="l mono">EDITED BY</div>
+      <div class="v">${esc(d.storeName)}</div>
+    </div>
+    <div>
+      <div class="l mono">PAGES</div>
+      <div class="v">P. 01 — ${String(total).padStart(2, '0')}</div>
+    </div>
+    <div class="price">₩0<span style="font-size:11px; display:block; color:var(--ink); letter-spacing:0.04em;" class="mono">FREE</span></div>
+  </div>
+</section>
+${sections.join('\n')}
+<footer class="foot">
+  <div class="lockup">
+    <span class="h">${esc(d.storeName)}</span>
+    <span class="no mono">VOL.${esc(yy)} / ${esc(yyyy)}</span>
+  </div>
+  <div class="grid">
+    <div class="c"><div class="k">영업</div><div class="v">${esc(hoursAnn ? hoursAnn.content : '문의 매장')}</div></div>
+    <div class="c"><div class="k">전화</div><div class="v">${esc(phoneLink ? phoneLink.label : '문의 매장')}</div></div>
+    <div class="c"><div class="k">주소</div><div class="v">${esc(addressAnn ? addressAnn.content : (mapLink ? mapLink.label : '매장 위치'))}</div></div>
+    <div class="c"><div class="k">기간</div><div class="v">${esc(d.period)}</div></div>
+  </div>
+  <div class="ctas">
+    ${mapLink
+      ? `<a href="${esc(mapLink.url)}" target="_blank" rel="noopener noreferrer">길찾기</a>`
+      : `<button disabled style="opacity:0.5;cursor:not-allowed;">길찾기</button>`}
+    ${phoneLink
+      ? `<a href="${esc(phoneLink.url)}" class="fill">전화 걸기</a>`
+      : `<button class="fill" disabled style="opacity:0.5;cursor:not-allowed;">전화 걸기</button>`}
+  </div>
+  <div class="small">PRINTED VIA HANJUL · 한 줄 전단 · ${esc(d.storeName)} · ZINE STYLE</div>
+</footer>
+<script>
+(function(){
+  var io = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.zcard').forEach(function(z) { io.observe(z); });
+  var seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', function(ev) {
+    var msg = ev.data || {};
+    if (msg.type === 'season' && msg.value) document.documentElement.setAttribute('data-season', msg.value);
+  });
+})();
+</script>
+</body>
+</html>`;
+}
+
+// ============================================================
+// ★ D155: DEAL BENTO 엔진 (03b-deal-bento.html 동적 변환)
+// 무신사/29CM 핫딜 bento 그리드 / 6 컬럼 dense flow / 8 컬러 cycle / 마감 카운트다운
+// ============================================================
+
+const BENTO_COLORS = ['t-cream', 't-rose', 't-mint', 't-lemon', 't-sky', 't-lilac', 't-peach', 't-coal'];
+const BENTO_SIZES = ['span-tall', 'span-half', 'span-large', 'span-thin', 'span-mid', 'span-half', 'span-tall', 'span-half'];
+
+/**
+ * ★ DEAL BENTO 엔진 — Claude Design 03b-deal-bento.html 동적 변환 (D155 PHASE 0 트랙 A 확장)
+ *
+ * bento 그리드 6 컬럼 dense flow. 첫 상품 = HERO(span-hero) / 나머지 = 사이즈 rotation + 8 컬러 cycle.
+ * 특수 타일: countdown(마감 임박 max disc), stats(total + avg disc), card(cardDiscount), more.
+ * 시즌 토큰 7종.
+ */
+export function renderDealBentoEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const total = items.length;
+  const ogTitle = '오늘의 핫딜 · ' + d.storeName;
+  const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ') + ' · 마감 임박';
+  const ogImage = buildOgImageUrl(d, token);
+
+  // max disc 상품 (countdown 타일용)
+  const urgentItem = items.length > 0
+    ? items.reduce((max, it) => calcDisc(it.originalPrice, it.salePrice) > calcDisc(max.originalPrice, max.salePrice) ? it : max, items[0])
+    : null;
+
+  // avg disc
+  const avgDisc = items.length > 0
+    ? Math.round(items.reduce((sum, it) => sum + calcDisc(it.originalPrice, it.salePrice), 0) / items.length)
+    : 0;
+
+  // 카드 할인 (모든 상품 cardDiscount 통합)
+  const cardDiscounts = Array.from(new Set(items.map(i => i.cardDiscount).filter(c => c && c !== '—'))).slice(0, 3);
+
+  // 매장 정보
+  const phoneLink = (d.externalLinks || []).find(l => l.icon === 'phone');
+  const mapLink = (d.externalLinks || []).find(l => l.icon === 'map');
+  const hoursAnn = (d.announcements || []).find(a => a.title.indexOf('영업') >= 0 || a.title.indexOf('시간') >= 0);
+  const addressAnn = (d.announcements || []).find(a => a.title.indexOf('주소') >= 0);
+
+  // 필터 chips (전체 + 카테고리별 + 마감 임박)
+  const chips: string[] = [];
+  chips.push('<button class="chip active">전체 <span class="em">' + total + '</span></button>');
+  d.categories.forEach(c => {
+    chips.push('<button class="chip">' + esc(c.name) + ' ' + c.items.length + '</button>');
+  });
+  if (urgentItem && calcDisc(urgentItem.originalPrice, urgentItem.salePrice) >= 30) {
+    chips.push('<button class="chip">마감 임박 <span class="em">1</span></button>');
+  }
+
+  // bento 타일 박힘 — HERO + 일반 sale + 특수 타일 mix
+  const tiles: string[] = [];
+
+  // HERO 타일 (items[0])
+  if (items.length > 0) {
+    const it = items[0];
+    const sold = 62; // 시뮬레이션 (실제 limit/sold 데이터 박힘 가능)
+    tiles.push(
+      '<article class="tile hero span-hero" style="--em: \'' + categoryEmoji(it.category) + '\'; --sold: ' + sold + '%;"' + productDataAttr(it, it.category) + '>' +
+        '<span class="kicker"><span class="d"></span>WEEK PICK · NO.1</span>' +
+        '<div class="pic"></div>' +
+        '<div class="name">' + esc(it.name) + (it.unit ? '<br>' + esc(it.unit) : '') + '</div>' +
+        '<div class="spec">' + esc(it.origin || '') + (it.unit ? ' · ' + esc(it.unit) : '') + (it.badge ? ' · ' + esc(it.badge) : '') + '</div>' +
+        '<div class="priceBlock">' +
+          (it.originalPrice > 0 ? '<span class="orig price-num">' + fmtPrice(it.originalPrice) + '원</span>' : '') +
+          '<span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span>' +
+        '</div>' +
+        '<div class="footer">' +
+          '<div class="progress"><div class="fill"></div></div>' +
+          '<span>' + sold + '% · 잔여 표시</span>' +
+        '</div>' +
+        '<button class="cta">담기' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>' +
+        '</button>' +
+      '</article>'
+    );
+  }
+
+  // countdown 타일 (max disc item)
+  if (urgentItem) {
+    const disc = calcDisc(urgentItem.originalPrice, urgentItem.salePrice);
+    const saved = urgentItem.originalPrice > 0 ? urgentItem.originalPrice - urgentItem.salePrice : 0;
+    tiles.push(
+      '<article class="tile countdown span-half" style="grid-column: span 3; grid-row: span 4;">' +
+        '<div>' +
+          '<div class="lbl">마감 카운트다운</div>' +
+          '<div class="meta">' + esc(urgentItem.name) + '</div>' +
+        '</div>' +
+        '<div class="clock" id="cdBox"><em>00</em>:<em id="cmm">49</em>:<em id="css">12</em></div>' +
+        '<div class="meta" style="opacity:0.75;">' + (disc > 0 ? disc + '%↓' : '특가') + (saved > 0 ? ' · ' + fmtPrice(saved) + '원 ↓' : '') + '</div>' +
+      '</article>'
+    );
+  }
+
+  // stats 타일 (total + avg disc)
+  tiles.push(
+    '<article class="tile stats span-half t-tile" style="grid-column: span 3; grid-row: span 4;">' +
+      '<div>' +
+        '<div class="lbl">오늘 행사</div>' +
+        '<div class="num">' + total + '<small>건</small></div>' +
+      '</div>' +
+      '<div class="meta">' + (avgDisc > 0 ? '평균 ' + avgDisc + '% 할인' : '한정 특가') + ' · 카테고리 ' + d.categories.length + '종</div>' +
+    '</article>'
+  );
+
+  // 일반 sale 타일 (items[1...], 8 컬러 cycle + 사이즈 rotation)
+  items.slice(1).forEach((it, idx) => {
+    const colorCls = BENTO_COLORS[idx % BENTO_COLORS.length];
+    const sizeCls = BENTO_SIZES[idx % BENTO_SIZES.length];
+    const isFlash = it === urgentItem || (it.badge && (it.badge.indexOf('한정') >= 0 || it.badge.indexOf('마감') >= 0));
+    const flashCls = isFlash ? ' flash' : '';
+    const largeCls = sizeCls === 'span-large' ? ' large' : '';
+    const disc = calcDisc(it.originalPrice, it.salePrice);
+    const saved = it.originalPrice > 0 ? it.originalPrice - it.salePrice : 0;
+    const offText = it.badge && it.badge.indexOf('1+1') >= 0 ? '1+1'
+      : (disc > 0 ? disc + '%' : (saved > 0 ? fmtPrice(saved) + '원↓' : '특가'));
+    const emojiSize = sizeCls === 'span-thin' ? ' style="font-size:44px;"' : '';
+    const nameSize = sizeCls === 'span-thin' ? ' style="font-size:14px;"' : '';
+    const picHtml = it.imageUrl
+      ? '<span class="productEmoji" style="background-image:url(\'' + esc(toAbsUrl(it.imageUrl) || '') + '\');background-size:cover;background-position:center;width:64px;height:64px;display:inline-block;border-radius:12px;align-self:flex-end;margin:-8px -8px 0 0;"></span>'
+      : '<span class="productEmoji"' + emojiSize + '>' + categoryEmoji(it.category) + '</span>';
+
+    tiles.push(
+      '<article class="tile ' + colorCls + ' ' + sizeCls + largeCls + flashCls + '"' + productDataAttr(it, it.category) + '>' +
+        '<span class="badge">' + esc(it.badge || (disc > 0 ? disc + '%↓' : '특가')) + '</span>' +
+        picHtml +
+        '<div class="name"' + nameSize + '>' + esc(it.name) + (it.unit ? '<br>' + esc(it.unit) : '') + '</div>' +
+        (it.origin || it.unit ? '<div class="spec">' + esc(it.origin || it.unit || '') + '</div>' : '') +
+        '<div class="priceLine">' +
+          (offText !== '특가' ? '<span class="off">' + esc(offText) + '</span>' : '') +
+          '<span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span>' +
+        '</div>' +
+        (it.originalPrice > 0 ? '<div class="orig price-num">' + fmtPrice(it.originalPrice) + '원</div>' : '') +
+      '</article>'
+    );
+
+    // 4번째 일반 타일 후 ctaWide (카드 또는 매장) 박음
+    if (idx === 3 && cardDiscounts.length > 0) {
+      tiles.push(
+        '<article class="tile ctaWide span-wide">' +
+          '<div class="l">' +
+            '<span class="t1">카드 추가 할인 진행 중</span>' +
+            '<span class="t2">' + esc(cardDiscounts.join(' · ')) + '</span>' +
+          '</div>' +
+          '<div class="r">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>' +
+          '</div>' +
+        '</article>'
+      );
+    }
+  });
+
+  // card 타일 (cardDiscount 통합)
+  if (cardDiscounts.length > 0) {
+    tiles.push(
+      '<article class="tile card span-wide">' +
+        '<div class="lbl">카드 추가 할인</div>' +
+        '<div class="v">' + cardDiscounts.map(c => esc(c)).join(' <em>+</em> ') + '</div>' +
+      '</article>'
+    );
+  }
+
+  // more 타일 (전체 보기)
+  tiles.push(
+    '<article class="tile more span-wide">' +
+      '<span class="ic">+</span>' +
+      '<span>이번 주 행사 전체 ' + total + '건 보기</span>' +
+    '</article>'
+  );
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${esc(token)}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>${esc(ogTitle)}</title>
+<meta property="og:title" content="${esc(ogTitle)}">
+<meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:image" content="${esc(ogImage)}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+:root {
+  --color-primary: #F97316;
+  --color-accent: #EF4444;
+  --color-on-primary: #FFFFFF;
+  --ink: #0E0D0C;
+  --ink-soft: #5B5752;
+  --bg: #F5F2EC;
+  --tile: #FFFFFF;
+  --rule: #E7E2D7;
+  --discount: #DC2626;
+  --t-cream:  #FFE9C6;
+  --t-rose:   #FFD7D2;
+  --t-mint:   #CDEACB;
+  --t-lemon:  #FCEF8E;
+  --t-sky:    #C9DDF8;
+  --t-lilac:  #D9D2F2;
+  --t-peach:  #FFC9A0;
+  --t-coal:   #1A1916;
+  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+${seasonStyleBlock()}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 96px; }
+.price-num { font-variant-numeric: tabular-nums; }
+button { font-family: inherit; cursor: pointer; }
+.topbar { position: sticky; top: 0; z-index: 30; padding: 14px 16px 12px; background: rgba(245,242,236,0.92); backdrop-filter: blur(14px); border-bottom: 1px solid var(--rule); }
+.topbar .row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 0.04em; font-weight: 700; color: var(--ink-soft); }
+.topbar .row1 .live { display: inline-flex; align-items: center; gap: 5px; background: var(--ink); color: #fff; padding: 3px 8px; border-radius: 999px; font-size: 10px; letter-spacing: 0.08em; }
+.topbar .row1 .live .d { width: 5px; height: 5px; border-radius: 50%; background: #ff4d4d; animation: blink 1200ms ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.2; } }
+.topbar h1 { margin-top: 6px; font-size: 28px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.05; display: flex; align-items: baseline; gap: 8px; }
+.topbar h1 .cd { margin-left: auto; font-size: 16px; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; background: var(--ink); color: var(--bg); padding: 4px 10px; border-radius: 8px; }
+.topbar .sub { margin-top: 4px; font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+.filterRow { display: flex; gap: 6px; padding: 10px 16px 6px; overflow-x: auto; scrollbar-width: none; }
+.filterRow::-webkit-scrollbar { display: none; }
+.filterRow .chip { flex: 0 0 auto; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--tile); border: 1px solid var(--rule); font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.filterRow .chip.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filterRow .chip .em { color: var(--discount); }
+.bento { padding: 10px 14px 28px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; grid-auto-rows: 80px; grid-auto-flow: dense; }
+.tile { border-radius: 22px; padding: 14px; position: relative; overflow: hidden; display: flex; flex-direction: column; transition: transform 200ms ease; opacity: 0; transform: translateY(14px); }
+.tile.in { opacity: 1; transform: none; transition: opacity 420ms ease, transform 420ms ease; }
+.tile:active { transform: scale(0.97); }
+.span-hero { grid-column: span 6; grid-row: span 5; }
+.span-large { grid-column: span 4; grid-row: span 4; }
+.span-tall { grid-column: span 3; grid-row: span 5; }
+.span-half { grid-column: span 3; grid-row: span 4; }
+.span-mid { grid-column: span 3; grid-row: span 3; }
+.span-wide { grid-column: span 6; grid-row: span 2; }
+.span-thin { grid-column: span 2; grid-row: span 3; }
+.t-cream { background: var(--t-cream); }
+.t-rose { background: var(--t-rose); }
+.t-mint { background: var(--t-mint); }
+.t-lemon { background: var(--t-lemon); }
+.t-sky { background: var(--t-sky); }
+.t-lilac { background: var(--t-lilac); }
+.t-peach { background: var(--t-peach); }
+.t-coal { background: var(--t-coal); color: var(--bg); }
+.t-tile { background: var(--tile); border: 1px solid var(--rule); }
+.tile.hero { background: radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--t-peach), white 35%), transparent 60%), linear-gradient(135deg, var(--t-peach) 0%, var(--t-cream) 100%); padding: 18px 18px 16px; }
+.tile.hero .kicker { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; background: var(--ink); color: var(--bg); padding: 4px 10px; border-radius: 999px; align-self: flex-start; }
+.tile.hero .kicker .d { width: 5px; height: 5px; border-radius: 50%; background: #ff4d4d; }
+.tile.hero .pic { position: absolute; right: -14px; top: 30px; width: 200px; height: 200px; border-radius: 24px; background: rgba(255,255,255,0.5); backdrop-filter: blur(8px); transform: rotate(-6deg); display: grid; place-items: center; overflow: hidden; }
+.tile.hero .pic::after { content: var(--em, "🛒"); font-size: 130px; line-height: 1; filter: drop-shadow(0 12px 24px rgba(0,0,0,0.18)); }
+.tile.hero .name { margin-top: 14px; font-size: 30px; font-weight: 900; letter-spacing: -0.035em; line-height: 1; }
+.tile.hero .spec { margin-top: 4px; font-size: 12px; color: var(--ink); opacity: 0.65; font-weight: 600; }
+.tile.hero .priceBlock { margin-top: auto; display: flex; align-items: baseline; gap: 8px; }
+.tile.hero .orig { font-size: 13px; opacity: 0.55; text-decoration: line-through; }
+.tile.hero .sale { font-size: 44px; font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
+.tile.hero .sale .won { font-size: 18px; font-weight: 800; margin-left: 1px; }
+.tile.hero .footer { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 11px; font-weight: 700; }
+.tile.hero .progress { flex: 1; height: 6px; border-radius: 4px; background: rgba(14,13,12,0.12); overflow: hidden; }
+.tile.hero .progress .fill { height: 100%; background: var(--ink); width: var(--sold, 60%); border-radius: 4px; }
+.tile.hero .cta { align-self: flex-start; margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px 0 16px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 800; letter-spacing: -0.01em; border: 0; }
+.tile.hero .cta svg { width: 14px; height: 14px; }
+.tile .badge { display: inline-flex; align-items: center; align-self: flex-start; background: var(--ink); color: var(--bg); padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; }
+.tile.t-coal .badge { background: var(--bg); color: var(--ink); }
+.tile .productEmoji { align-self: flex-end; font-size: 56px; line-height: 1; margin: -8px -8px 0 0; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.12)); }
+.tile.large .productEmoji { font-size: 72px; }
+.tile .name { margin-top: 4px; font-size: 16px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.tile .spec { margin-top: 2px; font-size: 10px; opacity: 0.6; font-weight: 600; }
+.tile .priceLine { margin-top: auto; display: flex; align-items: baseline; gap: 4px; }
+.tile .priceLine .off { font-size: 13px; font-weight: 900; color: var(--discount); }
+.tile.t-coal .priceLine .off { color: var(--t-lemon); }
+.tile .priceLine .sale { font-size: 22px; font-weight: 900; letter-spacing: -0.025em; }
+.tile .priceLine .sale .won { font-size: 11px; font-weight: 800; }
+.tile .orig { font-size: 11px; opacity: 0.55; text-decoration: line-through; }
+.tile.countdown { background: var(--ink); color: var(--bg); display: flex; flex-direction: column; justify-content: space-between; }
+.tile.countdown .lbl { font-size: 10px; letter-spacing: 0.18em; opacity: 0.65; font-weight: 700; text-transform: uppercase; }
+.tile.countdown .clock { font-size: 32px; font-weight: 900; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tile.countdown .clock em { font-style: normal; color: var(--color-accent); }
+.tile.countdown .meta { font-size: 11px; opacity: 0.85; font-weight: 600; }
+.tile.stats .num { font-size: 38px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; color: var(--color-primary); }
+.tile.stats .num small { font-size: 14px; font-weight: 800; color: var(--ink); margin-left: 1px; }
+.tile.stats .lbl { font-size: 10px; letter-spacing: 0.16em; opacity: 0.55; font-weight: 700; text-transform: uppercase; }
+.tile.stats .meta { font-size: 12px; opacity: 0.7; font-weight: 600; }
+.tile.card { background: var(--t-coal); color: var(--bg); justify-content: space-between; }
+.tile.card .lbl { font-size: 9px; letter-spacing: 0.2em; opacity: 0.55; font-weight: 700; text-transform: uppercase; }
+.tile.card .v { font-size: 17px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; }
+.tile.card .v em { font-style: normal; color: var(--color-accent); }
+.tile.ctaWide { background: var(--ink); color: var(--bg); flex-direction: row; align-items: center; gap: 12px; justify-content: space-between; }
+.tile.ctaWide .l { display: flex; flex-direction: column; gap: 2px; }
+.tile.ctaWide .l .t1 { font-size: 16px; font-weight: 900; letter-spacing: -0.02em; }
+.tile.ctaWide .l .t2 { font-size: 11px; opacity: 0.6; font-weight: 600; }
+.tile.ctaWide .r { width: 44px; height: 44px; border-radius: 50%; background: var(--color-primary); color: var(--color-on-primary); display: grid; place-items: center; }
+.tile.ctaWide .r svg { width: 20px; height: 20px; }
+.tile.more { background: transparent; border: 2px dashed var(--rule); justify-content: center; align-items: center; color: var(--ink-soft); font-weight: 700; font-size: 13px; gap: 6px; flex-direction: row; }
+.tile.more .ic { font-size: 22px; line-height: 1; }
+.tile.flash { animation: flashPulse 1600ms ease-in-out infinite; }
+@keyframes flashPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
+@media (max-width: 360px) {
+  .bento { grid-template-columns: repeat(4, 1fr); }
+  .span-hero, .span-large, .span-wide { grid-column: span 4; }
+  .span-tall, .span-half, .span-mid, .span-thin { grid-column: span 2; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="row1"><span class="live"><span class="d"></span>LIVE</span> 오늘의 핫딜 · ${esc(d.storeName)}</div>
+  <h1>지금만 이 가격<span class="cd" id="cdMain">02:14:33</span></h1>
+  <div class="sub">${esc(d.period)} · 카드 ${total}장</div>
+</header>
+<nav class="filterRow" aria-label="카테고리">${chips.join('')}</nav>
+<main class="bento" id="bento">
+${tiles.join('\n')}
+</main>
+<script>
+(function(){
+  var tiles = document.querySelectorAll('.tile');
+  var io = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.05 });
+  tiles.forEach(function(t, i) { t.style.transitionDelay = (i * 35) + 'ms'; io.observe(t); });
+  function pad(n) { return String(n).padStart(2, '0'); }
+  var totalSec = 49 * 60 + 12, mainSec = 2 * 3600 + 14 * 60 + 33;
+  setInterval(function() {
+    totalSec = Math.max(0, totalSec - 1);
+    var cmm = document.getElementById('cmm'), css = document.getElementById('css');
+    if (cmm) cmm.textContent = pad(Math.floor(totalSec / 60));
+    if (css) css.textContent = pad(totalSec % 60);
+    mainSec = Math.max(0, mainSec - 1);
+    var h = Math.floor(mainSec / 3600), m = Math.floor((mainSec % 3600) / 60), s = mainSec % 60;
+    var cdMain = document.getElementById('cdMain');
+    if (cdMain) cdMain.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+  }, 1000);
+  document.querySelectorAll('.filterRow .chip').forEach(function(c) {
+    c.addEventListener('click', function() {
+      document.querySelectorAll('.filterRow .chip').forEach(function(x) { x.classList.remove('active'); });
+      c.classList.add('active');
+    });
+  });
+  var seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', function(ev) {
+    var msg = ev.data || {};
+    if (msg.type === 'season' && msg.value) document.documentElement.setAttribute('data-season', msg.value);
+  });
+})();
+</script>
+</body>
+</html>`;
+}
+
+// ============================================================
+// ★ D155: GRID MUJI 엔진 (04b-grid-muji.html 동적 변환)
+// MUJI 미니멀 / Hahmlet serif + JetBrains Mono / red sparingly / 카테고리 section + pgrid 2col
+// ============================================================
+
+/**
+ * ★ GRID MUJI 엔진 — Claude Design 04b-grid-muji.html 동적 변환 (D155 PHASE 0 트랙 A 확장)
+ *
+ * 매우 조용한(quiet) 톤. featureCard(NO.01 큰 카드) + 카테고리별 cat section + pgrid 2col.
+ * scrollspy catnav + secDivider 큰 quiet 숫자 + about block + dock.
+ * 시즌 토큰 7종.
+ */
+export function renderGridMujiEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const total = items.length;
+  const featured = items.length > 0 ? items[0] : null;
+  const ogTitle = d.storeName + ' · 위클리 카탈로그';
+  const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ');
+  const ogImage = buildOgImageUrl(d, token);
+
+  // 매장 정보
+  const phoneLink = (d.externalLinks || []).find(l => l.icon === 'phone');
+  const mapLink = (d.externalLinks || []).find(l => l.icon === 'map');
+  const hoursAnn = (d.announcements || []).find(a => a.title.indexOf('영업') >= 0 || a.title.indexOf('시간') >= 0);
+  const addressAnn = (d.announcements || []).find(a => a.title.indexOf('주소') >= 0);
+
+  // hero stand (카테고리 분포)
+  const catSummary = d.categories.map(c => esc(c.name) + ' ' + c.items.length + '종').join(' · ');
+
+  // catnav chips
+  const catChips = d.categories.map((c, ci) => {
+    return '<button class="chip' + (ci === 0 ? ' active' : '') + '" data-target="sec-' + ci + '">' + esc(c.name) + '<span class="num">' + String(c.items.length).padStart(2, '0') + '</span></button>';
+  }).join('');
+
+  // 카테고리별 section + pgrid
+  let cardIdx = featured ? 1 : 0; // featured는 NO.01, 일반 grid는 NO.02부터
+  const catSections: string[] = [];
+  d.categories.forEach((cat, ci) => {
+    // 첫 카테고리 첫 상품은 featured에 박힘 — pgrid에서 제외
+    const gridItems = ci === 0 ? cat.items.slice(1) : cat.items;
+    if (gridItems.length === 0 && ci === 0 && cat.items.length === 1) {
+      // featured만 있고 grid 0건 — section skip
+      return;
+    }
+
+    const lede = ci === 0
+      ? '주말 가족 한 끼를 위한 ' + cat.items.length + '가지.'
+      : '이번 주 새벽에 도착한 ' + cat.items.length + '가지.';
+
+    const grid: string[] = [];
+    gridItems.forEach((it) => {
+      cardIdx++;
+      const idStr = String(cardIdx).padStart(2, '0');
+      const disc = calcDisc(it.originalPrice, it.salePrice);
+      const badgeText = it.badge || (disc > 0 ? disc + '%↓' : '특가');
+      const tagOnly = it.badge && (it.badge.indexOf('한정') >= 0 || it.badge.indexOf('1+1') >= 0);
+      const phStyle = it.imageUrl
+        ? 'background:url(\'' + esc(toAbsUrl(it.imageUrl) || '') + '\') center/cover;'
+        : '--ph-bg:' + categoryBg(cat.name) + '; --ph-emoji:\'' + categoryEmoji(cat.name) + '\';';
+      grid.push(
+        '<article class="pcard"' + productDataAttr(it, cat.name) + '>' +
+          '<div class="pic">' +
+            '<span class="id">No.' + idStr + '</span>' +
+            '<div class="ph" style="' + phStyle + '"></div>' +
+            '<button class="add" aria-label="담기">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
+            '</button>' +
+          '</div>' +
+          '<div class="nameRow">' +
+            '<span class="badge' + (tagOnly ? ' tag' : '') + '">' + esc(badgeText) + '</span>' +
+          '</div>' +
+          '<div class="nm">' + esc(it.name) + '</div>' +
+          '<div class="specs">' + esc(it.unit || '') + (it.unit && it.origin ? ' · ' : '') + esc(it.origin || '') + '</div>' +
+          '<div class="price">' +
+            (it.originalPrice > 0 ? '<span class="orig price-num">' + fmtPrice(it.originalPrice) + '</span>' : '') +
+            '<span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span>' +
+          '</div>' +
+          (it.aiCopy ? '<div class="unitp">' + esc(it.aiCopy) + '</div>' : '') +
+          (it.cardDiscount && it.cardDiscount !== '—' ? '<div class="cardDisc">' + esc(it.cardDiscount) + '</div>' : '') +
+        '</article>'
+      );
+    });
+
+    if (grid.length === 0) return;
+    catSections.push(
+      '<section class="cat" id="sec-' + ci + '">' +
+        '<div class="head">' +
+          '<span class="no">No. ' + String(ci + 1).padStart(2, '0') + '</span>' +
+          '<h3 class="ser">' + esc(cat.name) + '</h3>' +
+          '<span class="ct">' + String(cat.items.length).padStart(2, '0') + ' ITEMS</span>' +
+        '</div>' +
+        '<p class="lede">' + esc(lede) + '</p>' +
+        '<div class="pgrid">' + grid.join('') + '</div>' +
+      '</section>'
+    );
+  });
+
+  const issuePeriod = d.periodStart && d.periodEnd
+    ? esc(d.periodStart.replace(/-/g, '.').slice(5).replace(/^0/, '')) + ' — ' + esc(d.periodEnd.replace(/-/g, '.').slice(5).replace(/^0/, ''))
+    : esc(d.period || '');
+  const weekNum = Math.ceil((new Date().getTime() - new Date(new Date().getFullYear(), 0, 1).getTime()) / 604800000);
+  const yyyy = String(new Date().getFullYear());
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${esc(token)}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>${esc(ogTitle)}</title>
+<meta property="og:title" content="${esc(ogTitle)}">
+<meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:image" content="${esc(ogImage)}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+:root {
+  --color-primary: #C8261A;
+  --color-accent:  #1E1E1E;
+  --color-on-primary: #FFFFFF;
+  --ink: #1A1A1A;
+  --ink-2: #2E2E2E;
+  --ink-3: #6E6E6E;
+  --ink-4: #9E9E9E;
+  --paper: #FAFAFA;
+  --paper-2: #F1EFEB;
+  --rule: #E2E0DB;
+  --rule-strong: #1A1A1A;
+}
+${seasonStyleBlock()}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); color: var(--ink); }
+body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 96px; }
+button { font-family: inherit; cursor: pointer; }
+.price-num { font-variant-numeric: tabular-nums; }
+.mono { font-family: 'JetBrains Mono', monospace; font-weight: 400; }
+.ser { font-family: 'Hahmlet', serif; }
+.topbar { position: sticky; top: 0; z-index: 30; background: rgba(250,250,250,0.95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--rule); height: 44px; display: flex; align-items: center; padding: 0 8px; }
+.topbar .btn { width: 36px; height: 36px; border: 0; background: transparent; color: var(--ink); display: grid; place-items: center; }
+.topbar svg { width: 18px; height: 18px; }
+.topbar .crumbs { flex: 1; display: flex; flex-direction: column; padding: 0 6px; }
+.topbar .crumbs .a { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase; }
+.topbar .crumbs .b { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; margin-top: -1px; }
+.hero { padding: 40px 22px 0; }
+.hero .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--ink-3); font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.hero .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--ink-3); }
+.hero h1 { margin-top: 14px; font-family: 'Hahmlet', serif; font-size: 44px; font-weight: 400; line-height: 1.12; letter-spacing: -0.025em; color: var(--ink); max-width: 320px; }
+.hero h1 em { font-style: normal; font-weight: 700; }
+.hero .stand { margin-top: 22px; font-size: 14px; line-height: 1.7; color: var(--ink-2); max-width: 320px; }
+.hero .info { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--ink); padding-top: 14px; }
+.hero .info .c { display: flex; flex-direction: column; gap: 2px; }
+.hero .info .k { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase; }
+.hero .info .v { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+.featureCard { margin: 22px 22px 0; display: grid; grid-template-columns: 1fr; gap: 14px; padding-top: 22px; border-top: 1px solid var(--ink); }
+.featureCard .pic { aspect-ratio: 4/3; background: var(--paper-2); position: relative; overflow: hidden; }
+.ph { position: absolute; inset: 0; display: grid; place-items: center; background: var(--ph-bg, var(--paper-2)); }
+.ph::after { content: var(--ph-emoji, ""); font-size: 130px; line-height: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.10)); }
+.featureCard .pic .id { position: absolute; left: 14px; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--ink-3); }
+.featureCard .info { display: flex; flex-direction: column; gap: 6px; }
+.featureCard .id2 { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+.featureCard h2 { font-family: 'Hahmlet', serif; font-size: 26px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; }
+.featureCard .specs { margin-top: 4px; font-size: 12px; color: var(--ink-3); line-height: 1.6; }
+.featureCard .specs .sep { color: var(--ink-4); margin: 0 6px; }
+.featureCard .priceRow { margin-top: 12px; display: flex; align-items: baseline; gap: 12px; }
+.featureCard .priceRow .orig { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-decoration: line-through; color: var(--ink-3); }
+.featureCard .priceRow .sale { font-family: 'Hahmlet', serif; font-size: 32px; font-weight: 700; letter-spacing: -0.025em; color: var(--color-primary); }
+.featureCard .priceRow .sale .won { font-size: 14px; font-weight: 500; margin-left: 1px; }
+.featureCard .unitp { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-3); }
+.featureCard .add { margin-top: 16px; height: 48px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font-weight: 700; font-size: 14px; letter-spacing: -0.01em; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background 200ms; }
+.featureCard .add:hover { background: var(--ink); color: var(--paper); }
+.featureCard .add svg { width: 14px; height: 14px; }
+.catnav { position: sticky; top: 44px; z-index: 25; background: rgba(250,250,250,0.95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); margin-top: 36px; }
+.catnav .scroll { display: flex; overflow-x: auto; scrollbar-width: none; padding: 0 12px; }
+.catnav .scroll::-webkit-scrollbar { display: none; }
+.catnav .chip { flex: 0 0 auto; padding: 14px 12px; background: transparent; border: 0; font-size: 13px; font-weight: 500; color: var(--ink-3); position: relative; letter-spacing: -0.01em; }
+.catnav .chip .num { font-family: 'JetBrains Mono', monospace; font-size: 10px; opacity: 0.6; margin-left: 4px; }
+.catnav .chip.active { color: var(--ink); font-weight: 700; }
+.catnav .chip.active::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: var(--ink); }
+.cat { padding: 30px 22px 0; }
+.cat .head { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid var(--ink); padding-bottom: 6px; }
+.cat .head .no { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-3); }
+.cat .head h3 { font-family: 'Hahmlet', serif; font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+.cat .head .ct { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-3); }
+.cat .lede { margin-top: 12px; font-size: 13px; color: var(--ink-2); line-height: 1.65; max-width: 300px; }
+.pgrid { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--rule); }
+.pgrid .pcard { padding: 16px 0 20px; display: flex; flex-direction: column; position: relative; }
+.pgrid .pcard:nth-child(odd) { padding-right: 12px; border-right: 1px solid var(--rule); }
+.pgrid .pcard:nth-child(even) { padding-left: 12px; }
+.pgrid .pcard:not(:nth-last-child(-n+2)) { border-bottom: 1px solid var(--rule); }
+.pcard .pic { aspect-ratio: 1/1; background: var(--paper-2); position: relative; overflow: hidden; }
+.pcard .pic .id { position: absolute; left: 8px; top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--ink-3); letter-spacing: 0.1em; }
+.pcard .pic .add { position: absolute; right: 8px; bottom: 8px; width: 30px; height: 30px; border-radius: 50%; background: var(--paper); border: 1px solid var(--ink); color: var(--ink); display: grid; place-items: center; cursor: pointer; transition: background 200ms; }
+.pcard .pic .add svg { width: 12px; height: 12px; }
+.pcard .nameRow { margin-top: 12px; display: flex; align-items: baseline; gap: 6px; }
+.pcard .badge { flex: 0 0 auto; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: var(--color-primary); font-weight: 500; line-height: 1; margin-top: 2px; }
+.pcard .badge.tag { color: var(--ink); }
+.pcard .nm { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 35px; }
+.pcard .specs { margin-top: 4px; font-size: 11px; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; line-height: 1.5; }
+.pcard .price { margin-top: 10px; display: flex; align-items: baseline; gap: 6px; }
+.pcard .price .orig { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-decoration: line-through; color: var(--ink-3); }
+.pcard .price .sale { font-family: 'Hahmlet', serif; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.pcard .price .sale .won { font-size: 10px; font-weight: 500; margin-left: 1px; }
+.pcard .unitp { margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-3); }
+.pcard .cardDisc { margin-top: 6px; font-size: 10px; color: var(--ink-3); font-style: italic; }
+.secDivider { margin: 60px 22px 0; padding: 28px 0; border-top: 1px solid var(--ink); display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: end; }
+.secDivider .big { font-family: 'Hahmlet', serif; font-size: 96px; line-height: 0.8; font-weight: 400; letter-spacing: -0.04em; color: var(--ink); }
+.secDivider .right { padding-bottom: 6px; display: flex; flex-direction: column; gap: 4px; font-family: 'JetBrains Mono', monospace; }
+.secDivider .right .lbl { font-size: 10px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+.secDivider .right .v { font-size: 14px; font-weight: 500; color: var(--ink); }
+.about { margin: 50px 22px 0; padding: 28px 0 0; border-top: 1px solid var(--ink); }
+.about .lbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+.about h4 { margin-top: 10px; font-family: 'Hahmlet', serif; font-size: 24px; font-weight: 400; letter-spacing: -0.02em; line-height: 1.3; max-width: 320px; }
+.about p { margin-top: 16px; font-size: 13px; line-height: 1.75; color: var(--ink-2); max-width: 320px; }
+.ft { margin: 50px 22px 0; padding-top: 22px; border-top: 1px solid var(--ink); }
+.ft .row { display: grid; grid-template-columns: 88px 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--rule); align-items: baseline; }
+.ft .k { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; color: var(--ink-3); text-transform: uppercase; }
+.ft .v { font-size: 13px; font-weight: 500; }
+.ft .small { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: var(--ink-3); text-align: center; padding: 12px 0; border-top: 1px solid var(--ink); }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); background: rgba(250,250,250,0.97); backdrop-filter: blur(14px); border-top: 1px solid var(--ink); }
+.dock .bar { height: 48px; background: var(--ink); color: var(--paper); display: flex; align-items: center; gap: 12px; padding: 0 12px 0 14px; }
+.dock .ct { width: 24px; height: 24px; background: var(--paper); color: var(--ink); font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 12px; display: grid; place-items: center; }
+.dock .tt { display: flex; flex-direction: column; line-height: 1.1; }
+.dock .tt .a { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+.dock .tt .b { font-size: 10px; opacity: 0.6; font-family: 'JetBrains Mono', monospace; }
+.dock .arr { margin-left: auto; }
+.dock .arr svg { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn" aria-label="메뉴"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <div class="crumbs">
+    <div class="a">${esc(issuePeriod)}</div>
+    <div class="b">${esc(d.storeName)}</div>
+  </div>
+  <button class="btn" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+  <button class="btn" aria-label="찜"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
+</header>
+<section class="hero">
+  <div class="eyebrow">${esc(d.period || issuePeriod)}</div>
+  <h1 class="ser">이번 주<br><em>${total}가지</em>를<br>골랐습니다.</h1>
+  <p class="stand">${esc(d.storeName)}이 새벽 시장에서 직접 본 것만 매대에 올립니다.${catSummary ? ' 이번 주는 ' + esc(catSummary) + '.' : ''}</p>
+  <div class="info">
+    <div class="c"><div class="k">기간</div><div class="v">${esc(d.period || '')}</div></div>
+    <div class="c"><div class="k">총 행사 수</div><div class="v">${total} 품목</div></div>
+  </div>
+</section>
+${featured ? `
+<article class="featureCard"${productDataAttr(featured, featured.category || '')}>
+  <div class="pic">
+    <span class="id">NO.01 · FEATURE</span>
+    <div class="ph" style="${featured.imageUrl ? `background:url('${esc(toAbsUrl(featured.imageUrl) || '')}') center/cover;` : `--ph-bg:${categoryBg(featured.category || '')}; --ph-emoji:'${categoryEmoji(featured.category || '')}';`}"></div>
+  </div>
+  <div class="info">
+    <div class="id2 mono">No. 01 · ${esc(featured.category || '')}${featured.unit ? ' · ' + esc(featured.unit) : ''}</div>
+    <h2 class="ser">${esc(featured.name)}${featured.aiCopy ? ', ' + esc(featured.aiCopy) : '.'}</h2>
+    <div class="specs">${esc(featured.origin || '')}${featured.unit ? ' <span class="sep">/</span> ' + esc(featured.unit) : ''}${featured.badge ? ' <span class="sep">/</span> ' + esc(featured.badge) : ''}</div>
+    <div class="priceRow">
+      ${featured.originalPrice > 0 ? `<span class="orig price-num">${fmtPrice(featured.originalPrice)}원</span>` : ''}
+      <span class="sale price-num">${fmtPrice(featured.salePrice)}<span class="won">원</span></span>
+    </div>
+    ${featured.cardDiscount && featured.cardDiscount !== '—' ? `<div class="unitp">${esc(featured.cardDiscount)}</div>` : ''}
+    <button class="add" aria-label="담기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      카트에 담기
+    </button>
+  </div>
+</article>` : ''}
+<nav class="catnav" aria-label="카테고리">
+  <div class="scroll" id="catnav">${catChips}</div>
+</nav>
+<main id="main">
+${catSections.join('\n')}
+</main>
+<section class="secDivider">
+  <span class="big ser">${String(total).padStart(2, '0')}</span>
+  <div class="right">
+    <div class="lbl">total items</div>
+    <div class="v">${yyyy} · ${weekNum}주차</div>
+  </div>
+</section>
+<section class="about">
+  <div class="lbl">about this week</div>
+  <h4 class="ser">매주 다르지만,<br>고르는 기준은 같습니다.</h4>
+  <p>이번 주에 어떤 상품이 좋은지 결정할 때, 우리는 가격이 가장 싼 것보다 그 가격으로 살 가치가 있는 것을 먼저 봅니다. 산지 · 신선도 · 손질 상태 — 사장님이 새벽 도매 시장에서 직접 본 후 매대에 올립니다.</p>
+</section>
+<footer class="ft">
+  <div class="row"><div class="k">store</div><div class="v">${esc(d.storeName)}</div></div>
+  <div class="row"><div class="k">hours</div><div class="v">${esc(hoursAnn ? hoursAnn.content : '문의 매장')}</div></div>
+  <div class="row"><div class="k">tel</div><div class="v">${esc(phoneLink ? phoneLink.label : '문의 매장')}</div></div>
+  <div class="row"><div class="k">addr</div><div class="v">${esc(addressAnn ? addressAnn.content : (mapLink ? mapLink.label : '매장 위치'))}</div></div>
+  <div class="row"><div class="k">period</div><div class="v">${esc(d.period)}</div></div>
+  <div class="small mono">PUBLISHED VIA HANJUL · ${esc(d.storeName)} / ${yyyy}</div>
+</footer>
+<div class="dock">
+  <div class="bar">
+    <span class="ct">00</span>
+    <div class="tt">
+      <span class="a">장바구니</span>
+      <span class="b">담은 상품 없음</span>
+    </div>
+    <div class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+  </div>
+</div>
+<script>
+(function(){
+  document.querySelectorAll('.catnav .chip').forEach(function(c) {
+    c.addEventListener('click', function() {
+      var t = document.getElementById(c.dataset.target);
+      if (t) window.scrollTo({ top: t.offsetTop - 92, behavior: 'smooth' });
+    });
+  });
+  var sections = [].slice.call(document.querySelectorAll('.cat'));
+  function spy() {
+    var y = window.scrollY + 110;
+    var active = sections[0] ? sections[0].id : '';
+    sections.forEach(function(s) { if (s.offsetTop <= y) active = s.id; });
+    document.querySelectorAll('.catnav .chip').forEach(function(c) { c.classList.toggle('active', c.dataset.target === active); });
+  }
+  document.addEventListener('scroll', spy, { passive: true });
+  var seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', function(ev) {
+    var msg = ev.data || {};
+    if (msg.type === 'season' && msg.value) document.documentElement.setAttribute('data-season', msg.value);
+  });
+})();
+</script>
+</body>
+</html>`;
+}
+
+// ============================================================
+// ★ D155: CATALOG DARK 엔진 (05b-catalog-dark.html 동적 변환)
+// Netflix NOW PLAYING 다크 모드 / hero featured + 카테고리별 swipe row + album cover
+// ============================================================
+
+const DARK_ALBUM_BGS = ['#3a1818', '#4a1a1a', '#3e2c10', '#0e2540', '#162a1a', '#2e1d10', '#3f2f10', '#222226', '#3a1414', '#1a2540'];
+
+/**
+ * ★ CATALOG DARK 엔진 — Claude Design 05b-catalog-dark.html 동적 변환 (D155 PHASE 0 트랙 A 확장)
+ *
+ * 다크 모드 + 음악 스트리밍 풍. hero featured(NO.1 큰 카드) + storeNow + 카테고리별 swipe row.
+ * 첫 row = large 사이즈(220px album), 나머지 = 일반 168px.
+ * 시즌 토큰 다크 정합 7종.
+ */
+export function renderCatalogDarkEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const total = items.length;
+  const featured = items.length > 0 ? items[0] : null;
+  const ogTitle = d.storeName + ' · NOW PLAYING';
+  const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ');
+  const ogImage = buildOgImageUrl(d, token);
+
+  // 매장 정보
+  const phoneLink = (d.externalLinks || []).find(l => l.icon === 'phone');
+  const mapLink = (d.externalLinks || []).find(l => l.icon === 'map');
+
+  const issuePeriod = d.periodStart && d.periodEnd
+    ? d.periodStart.replace(/-/g, '.').slice(5) + ' — ' + d.periodEnd.replace(/-/g, '.').slice(5)
+    : (d.period || '');
+
+  // 카테고리별 row + 첫 row = Editor's Pick(전체 top N max disc)
+  const editorsPickItems = items
+    .map(it => ({ it, disc: calcDisc(it.originalPrice, it.salePrice) }))
+    .sort((a, b) => b.disc - a.disc)
+    .slice(0, Math.min(5, items.length))
+    .map(x => x.it);
+
+  function buildPCard(it: FlyerRenderItem & { category: string }, idx: number, isFirst: boolean, allCount: number): string {
+    const disc = calcDisc(it.originalPrice, it.salePrice);
+    const tagOnly = it.badge && (it.badge.indexOf('한정') >= 0 || it.badge.indexOf('1+1') >= 0);
+    const badgeText = it.badge || (disc > 0 ? disc + '%↓' : '특가');
+    const bgColor = DARK_ALBUM_BGS[idx % DARK_ALBUM_BGS.length];
+    const albumStyle = it.imageUrl
+      ? `background:url('${esc(toAbsUrl(it.imageUrl) || '')}') center/cover;`
+      : `--ph-bg:${bgColor}; --ph-emoji:'${categoryEmoji(it.category)}';`;
+    const duration = it.badge && it.badge.indexOf('오늘') >= 0 ? '오늘' : '7일';
+    const playingCls = isFirst && allCount > 1 ? ' playing' : '';
+    const offText = disc > 0 ? disc + '%' : (it.badge || '특가');
+
+    return (
+      '<article class="pcard' + playingCls + '"' + productDataAttr(it, it.category) + '>' +
+        '<div class="album" style="' + albumStyle + '">' +
+          '<div class="grain"></div>' +
+          '<span class="badge' + (tagOnly ? '' : ' hot') + '">' + esc(badgeText) + '</span>' +
+          '<span class="duration">' + esc(duration) + ' 남음</span>' +
+          '<div class="eq" aria-hidden="true"><i></i><i></i><i></i></div>' +
+          '<button class="playOverlay" aria-label="담기">' +
+            '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="info">' +
+          '<div class="nm">' + esc(it.name) + '</div>' +
+          '<div class="by">' + esc(it.category) + (it.unit ? ' · ' + esc(it.unit) : '') + (it.origin ? ' · ' + esc(it.origin) : '') + '</div>' +
+          '<div class="priceRow">' +
+            (disc > 0 ? '<span class="off">' + offText + '</span>' : '') +
+            '<span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span>' +
+          '</div>' +
+          (it.originalPrice > 0 ? '<div class="orig price-num">' + fmtPrice(it.originalPrice) + '원</div>' : '') +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  const rows: string[] = [];
+
+  // Editor's Pick row (전체 max disc Top 5) — large
+  if (editorsPickItems.length > 0 && items.length > 1) {
+    const cards = editorsPickItems.map((it, idx) => buildPCard(it as any, idx, idx === 0, editorsPickItems.length)).join('');
+    rows.push(
+      '<section class="row large">' +
+        '<div class="head">' +
+          '<div>' +
+            '<div class="h"><span class="tt">Editor\'s Pick</span><span class="nn">' + editorsPickItems.length + '곡</span></div>' +
+            '<div class="sub">이번 주 사장님이 직접 고른 ' + editorsPickItems.length + '가지</div>' +
+          '</div>' +
+          '<button class="more">SHOW ALL</button>' +
+        '</div>' +
+        '<div class="swipe">' + cards + '</div>' +
+      '</section>'
+    );
+  }
+
+  // 카테고리별 row
+  d.categories.forEach((cat, ci) => {
+    const cards = cat.items.map((it, idx) => buildPCard({ ...it, category: cat.name } as any, idx, false, cat.items.length)).join('');
+    const sub = ci === 0 ? '주말 한 끼, 두툼하게' : (ci === 1 ? '햇과일이 도착했어요' : '새벽 활어차 직접 입고');
+    rows.push(
+      '<section class="row">' +
+        '<div class="head">' +
+          '<div>' +
+            '<div class="h"><span class="tt">' + esc(cat.name) + '</span><span class="nn">' + cat.items.length + '곡</span></div>' +
+            '<div class="sub">' + esc(sub) + '</div>' +
+          '</div>' +
+          '<button class="more">SHOW ALL</button>' +
+        '</div>' +
+        '<div class="swipe">' + cards + '</div>' +
+      '</section>'
+    );
+  });
+
+  const storeInitial = (d.storeName || '?').trim()[0] || '?';
+  const featuredDisc = featured ? calcDisc(featured.originalPrice, featured.salePrice) : 0;
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${esc(token)}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>${esc(ogTitle)}</title>
+<meta property="og:title" content="${esc(ogTitle)}">
+<meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:image" content="${esc(ogImage)}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+:root {
+  --color-primary: #F97316;
+  --color-accent: #EF4444;
+  --color-on-primary: #FFFFFF;
+  --bg: #0A0A0B;
+  --bg-2: #131316;
+  --bg-3: #1B1B20;
+  --bg-elev: #232328;
+  --text: #F4F4F5;
+  --text-soft: #A8A8AE;
+  --text-dim: #6C6C72;
+  --rule: rgba(255,255,255,0.08);
+  --rule-strong: rgba(255,255,255,0.18);
+  --discount: #FF6B5B;
+}
+html[data-season="newyear"]   { --color-primary:#FF4D4D; --color-accent:#FFB020; }
+html[data-season="chuseok"]   { --color-primary:#5B8DEF; --color-accent:#FFB020; }
+html[data-season="christmas"] { --color-primary:#34D399; --color-accent:#FF6B5B; }
+html[data-season="summer"]    { --color-primary:#22D3EE; --color-accent:#06B6D4; }
+html[data-season="winter"]    { --color-primary:#F472B6; --color-accent:#FB7185; }
+html[data-season="grand_open"]{ --color-primary:#FBBF24; --color-accent:#F4F4F5; }
+html[data-season="urgent"]    { --color-primary:#F4F4F5; --color-accent:#EF4444; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text); }
+body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 96px; }
+button { font-family: inherit; cursor: pointer; }
+.price-num { font-variant-numeric: tabular-nums; }
+.topbar { position: sticky; top: 0; z-index: 40; height: 56px; padding: 0 12px; background: linear-gradient(180deg, var(--bg) 60%, transparent); display: flex; align-items: center; gap: 8px; }
+.topbar.scrolled { background: rgba(10,10,11,0.94); backdrop-filter: blur(14px); border-bottom: 1px solid var(--rule); }
+.topbar .btn { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 0; color: var(--text); display: grid; place-items: center; }
+.topbar svg { width: 18px; height: 18px; }
+.topbar .title { flex: 1; padding: 0 6px; display: flex; flex-direction: column; line-height: 1.1; }
+.topbar .title .t1 { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.topbar .title .t2 { font-size: 11px; color: var(--text-soft); font-weight: 500; margin-top: 1px; }
+.hero { margin: 8px 16px 0; border-radius: 20px; background: radial-gradient(120% 80% at 0% 0%, color-mix(in oklab, var(--color-primary), black 30%), transparent 60%), linear-gradient(135deg, color-mix(in oklab, var(--color-primary), black 30%) 0%, color-mix(in oklab, var(--color-accent), black 50%) 100%); padding: 18px 18px 16px; position: relative; overflow: hidden; }
+.hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(40% 30% at 100% 0%, rgba(255,255,255,0.18), transparent 60%); }
+.hero .lbl { position: relative; z-index: 1; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; opacity: 0.85; }
+.hero h1 { position: relative; z-index: 1; margin-top: 8px; font-size: 28px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.05; max-width: 220px; }
+.hero .meta { position: relative; z-index: 1; margin-top: 6px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; opacity: 0.85; }
+.hero .meta .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+.hero .albumArt { position: absolute; right: -8px; top: 14px; width: 130px; height: 130px; border-radius: 18px; overflow: hidden; box-shadow: 0 18px 40px -10px rgba(0,0,0,0.6); background: rgba(0,0,0,0.3); display: grid; place-items: center; }
+.hero .albumArt::after { content: var(--em, "🛒"); font-size: 80px; line-height: 1; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4)); }
+.hero .actions { margin-top: 16px; display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
+.hero .play { width: 52px; height: 52px; border-radius: 50%; background: var(--text); color: var(--bg); border: 0; display: grid; place-items: center; box-shadow: 0 8px 18px rgba(0,0,0,0.3); }
+.hero .play svg { width: 18px; height: 18px; transform: translateX(1px); }
+.hero .iconbtn { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.14); backdrop-filter: blur(6px); border: 0; color: var(--text); display: grid; place-items: center; }
+.hero .iconbtn svg { width: 18px; height: 18px; }
+.row { margin-top: 30px; }
+.row .head { padding: 0 16px 12px; display: flex; align-items: baseline; justify-content: space-between; }
+.row .head .h { display: flex; align-items: baseline; gap: 8px; }
+.row .head .h .tt { font-size: 20px; font-weight: 900; letter-spacing: -0.025em; }
+.row .head .h .nn { font-size: 11px; color: var(--text-dim); font-weight: 600; }
+.row .head .sub { font-size: 11px; color: var(--text-soft); font-weight: 500; margin-top: 2px; }
+.row .head .more { background: transparent; border: 0; color: var(--text-soft); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.swipe { display: flex; gap: 12px; overflow-x: auto; padding: 0 16px 12px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.swipe::-webkit-scrollbar { display: none; }
+.pcard { flex: 0 0 168px; scroll-snap-align: start; display: flex; flex-direction: column; position: relative; }
+.pcard .album { aspect-ratio: 1/1; border-radius: 14px; position: relative; overflow: hidden; background: var(--bg-3); box-shadow: 0 8px 18px -8px rgba(0,0,0,0.6); background-color: var(--ph-bg, #2a2a30); transition: transform 200ms; }
+.pcard:active .album { transform: scale(0.98); }
+.album::after { content: var(--ph-emoji, ""); position: absolute; inset: 0; display: grid; place-items: center; font-size: 80px; line-height: 1; filter: drop-shadow(0 10px 18px rgba(0,0,0,0.5)); }
+.album .grain { position: absolute; inset: 0; background: radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,0.18), transparent 50%), radial-gradient(80% 60% at 100% 100%, rgba(0,0,0,0.4), transparent 60%); mix-blend-mode: overlay; }
+.album .badge { position: absolute; left: 8px; top: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); font-size: 10px; font-weight: 800; letter-spacing: 0.02em; color: var(--text); }
+.album .badge.hot { background: var(--color-accent); }
+.album .duration { position: absolute; right: 8px; bottom: 8px; padding: 3px 7px; border-radius: 6px; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); font-size: 10px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.album .playOverlay { position: absolute; right: 8px; bottom: 8px; width: 36px; height: 36px; border-radius: 50%; background: var(--color-primary); color: var(--color-on-primary); display: grid; place-items: center; opacity: 0; transform: translateY(6px); transition: opacity 180ms, transform 180ms; box-shadow: 0 4px 10px rgba(0,0,0,0.35); }
+.pcard:hover .album .playOverlay, .pcard:active .album .playOverlay { opacity: 1; transform: translateY(0); }
+.album .playOverlay svg { width: 14px; height: 14px; transform: translateX(1px); }
+.pcard .info { margin-top: 10px; padding: 0 2px; }
+.pcard .info .nm { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.pcard .info .by { margin-top: 2px; font-size: 11px; color: var(--text-soft); font-weight: 500; }
+.pcard .priceRow { margin-top: 8px; display: flex; align-items: baseline; gap: 6px; }
+.pcard .off { font-size: 11px; font-weight: 800; color: var(--discount); }
+.pcard .sale { font-size: 15px; font-weight: 900; letter-spacing: -0.02em; }
+.pcard .sale .won { font-size: 10px; font-weight: 800; }
+.pcard .orig { font-size: 10px; color: var(--text-dim); text-decoration: line-through; }
+.pcard.playing .album { box-shadow: 0 0 0 2px var(--color-primary), 0 8px 18px -8px rgba(0,0,0,0.6); }
+.pcard.playing .nm { color: var(--color-primary); }
+.pcard .eq { position: absolute; left: 8px; top: 8px; display: flex; align-items: end; gap: 2px; height: 16px; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); padding: 3px 6px; border-radius: 999px; }
+.pcard:not(.playing) .eq { display: none; }
+.pcard .eq i { width: 2px; height: 10px; background: var(--color-primary); animation: eqBounce 800ms ease-in-out infinite; border-radius: 1px; }
+.pcard .eq i:nth-child(2) { animation-delay: 120ms; }
+.pcard .eq i:nth-child(3) { animation-delay: 240ms; }
+@keyframes eqBounce { 0%, 100% { height: 4px; } 50% { height: 12px; } }
+.row.large .swipe .pcard { flex-basis: 220px; }
+.row.large .swipe .pcard .album { border-radius: 16px; }
+.row.large .swipe .pcard .nm { font-size: 16px; }
+.storeNow { margin: 30px 16px 0; padding: 14px; background: var(--bg-2); border: 1px solid var(--rule); border-radius: 18px; display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; }
+.storeNow .crest { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); display: grid; place-items: center; font-weight: 900; font-size: 22px; color: var(--color-on-primary); }
+.storeNow .l { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.storeNow .l .a { font-size: 10px; letter-spacing: 0.18em; color: var(--text-soft); text-transform: uppercase; font-weight: 700; }
+.storeNow .l .b { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+.storeNow .l .c { font-size: 11px; color: var(--text-soft); margin-top: 2px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.storeNow .l .c .live { display: inline-flex; align-items: center; gap: 4px; color: #4ADE80; font-weight: 700; }
+.storeNow .l .c .live .d { width: 6px; height: 6px; border-radius: 50%; background: #4ADE80; box-shadow: 0 0 6px #4ADE80; }
+.storeNow .actions { display: flex; gap: 6px; }
+.storeNow .actions a, .storeNow .actions button { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 0; color: var(--text); display: grid; place-items: center; text-decoration: none; }
+.storeNow .actions a svg, .storeNow .actions button svg { width: 14px; height: 14px; }
+.storeNow .actions .pr { background: var(--color-primary); color: var(--color-on-primary); }
+.brand { margin: 36px 16px 18px; padding: 14px 0; border-top: 1px solid var(--rule); display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--text-dim); letter-spacing: 0.16em; text-transform: uppercase; }
+.brand strong { color: var(--text); font-weight: 800; letter-spacing: -0.01em; text-transform: none; font-size: 13px; }
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <button class="btn" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="title">
+    <div class="t1">${esc(d.storeName)}</div>
+    <div class="t2">이번 주 카탈로그 · ${esc(issuePeriod)}</div>
+  </div>
+  <button class="btn" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+  <button class="btn" aria-label="더보기"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+</header>
+${featured ? `
+<section class="hero" style="--em: '${categoryEmoji(featured.category || '')}';"${productDataAttr(featured, featured.category || '')}>
+  <div class="lbl">FEATURED · NO.1 THIS WEEK</div>
+  <h1>${esc(featured.name)}${featured.unit ? '<br>' + esc(featured.unit) : ''}</h1>
+  <div class="meta">
+    <span>${esc(featured.category || '')}</span><span class="dot"></span>
+    <span>${esc(featured.origin || '국산')}</span><span class="dot"></span>
+    <span>${featuredDisc > 0 ? featuredDisc + '%↓ · ' : ''}${fmtPrice(featured.salePrice)}원</span>
+  </div>
+  <div class="albumArt"></div>
+  <div class="actions">
+    <button class="play" aria-label="담기">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="iconbtn save" id="heroSave" aria-label="찜">
+      <svg class="heart" viewBox="0 0 24 24" stroke-width="2" fill="none" stroke="currentColor"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+    </button>
+  </div>
+</section>` : ''}
+<aside class="storeNow">
+  <div class="crest">${esc(storeInitial)}</div>
+  <div class="l">
+    <div class="a">NOW PLAYING IN STORE</div>
+    <div class="b">${esc(d.storeName)}</div>
+    <div class="c"><span class="live"><span class="d"></span>영업 중</span>${total > 0 ? ' · 이번 주 ' + total + '개' : ''}</div>
+  </div>
+  <div class="actions">
+    ${phoneLink ? `<a href="${esc(phoneLink.url)}" aria-label="전화"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.97.37 1.92.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.33 1.84.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
+    ${mapLink ? `<a href="${esc(mapLink.url)}" class="pr" target="_blank" rel="noopener noreferrer" aria-label="길찾기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></a>` : ''}
+  </div>
+</aside>
+<main id="main">
+${rows.join('\n')}
+</main>
+<div class="brand">
+  <strong>HANJUL</strong>
+  <span>· 한 줄 전단 · NIGHT MODE</span>
+</div>
+<script>
+(function(){
+  document.addEventListener('scroll', function() {
+    document.getElementById('topbar').classList.toggle('scrolled', window.scrollY > 20);
+  }, { passive: true });
+  var heroSave = document.getElementById('heroSave');
+  if (heroSave) {
+    heroSave.addEventListener('click', function(e) {
+      e.currentTarget.classList.toggle('on');
+    });
+  }
+  var seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', function(ev) {
+    var msg = ev.data || {};
+    if (msg.type === 'season' && msg.value) document.documentElement.setAttribute('data-season', msg.value);
+  });
+})();
+</script>
+</body>
+</html>`;
+}
+
+// ============================================================
+// ★ D155: POSTER POP 엔진 (06b-poster-pop.html 동적 변환)
+// 한국 팝 아트 / Bagel Fat One + Black Han Sans + Gaegu / Memphis decorations / 큰 pop sticker
+// ============================================================
+
+/** pop 제목 3 라인 분리 (l1 + l2 박스 + l3 + bang) */
+function splitTitleForPop(title: string): { l1: string; l2: string; l3: string } {
+  const parts = title.split(/[\s,·\.]+/).filter(p => p.length > 0);
+  if (parts.length >= 3) {
+    return { l1: parts[0] + '!', l2: parts[1], l3: parts.slice(2).join(' ') };
+  }
+  if (parts.length === 2) {
+    return { l1: '이번 주!', l2: parts[0], l3: parts[1] };
+  }
+  return { l1: '이번 주!', l2: '진짜', l3: parts[0] || '싸요' };
+}
+
+const POP_SPEC_COLS = ['col-y', 'col-b', 'col-m', 'col-p'];
+const POP_STAMP_PALETTE = [
+  { bg: 'var(--color-primary)', color: 'var(--paper)', a: 'SAVE', getB: (it: any, disc: number, saved: number) => saved > 0 ? Math.floor(saved / 1000) + 'K' : (disc > 0 ? disc + '%' : '특가') },
+  { bg: 'var(--pop-blue)', color: 'var(--paper)', a: 'PREMIUM', getB: (it: any) => it.badge || '★' },
+  { bg: 'var(--pop-pink)', color: 'var(--ink)', a: 'HOT!', getB: (_it: any, disc: number) => disc > 0 ? disc + '%' : '특가' },
+  { bg: 'var(--color-accent)', color: 'var(--ink)', a: 'TODAY!', getB: (it: any) => it.badge || '한정' },
+  { bg: 'var(--pop-mint)', color: 'var(--ink)', a: 'DEAL', getB: (it: any) => it.badge && it.badge.indexOf('1+1') >= 0 ? '1+1' : (it.badge || 'NEW') },
+];
+
+/**
+ * ★ POSTER POP 엔진 — Claude Design 06b-poster-pop.html 동적 변환 (D155 PHASE 0 트랙 A 확장)
+ *
+ * 한국 팝 아트 미감. hero slogan(l1/l2 박스/l3 bang circle) + Memphis shapes 6개 + secmark + slab + pair.
+ * 카테고리별 secmark blob 컬러 cycle. slab tilt 회전 + stamp pop sticker.
+ * 시즌 토큰 7종.
+ */
+export function renderPosterPopEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const total = items.length;
+  const ogTitle = d.storeName + ' · POP! — ' + d.title;
+  const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ');
+  const ogImage = buildOgImageUrl(d, token);
+
+  const title = (d.title || '이번 주 진짜 싸요').trim();
+  const titleParts = splitTitleForPop(title);
+
+  // 매장 정보
+  const phoneLink = (d.externalLinks || []).find(l => l.icon === 'phone');
+  const mapLink = (d.externalLinks || []).find(l => l.icon === 'map');
+  const hoursAnn = (d.announcements || []).find(a => a.title.indexOf('영업') >= 0 || a.title.indexOf('시간') >= 0);
+  const addressAnn = (d.announcements || []).find(a => a.title.indexOf('주소') >= 0);
+
+  const issuePeriod = d.periodStart && d.periodEnd
+    ? d.periodStart.replace(/-/g, '/').slice(5) + ' — ' + d.periodEnd.replace(/-/g, '/').slice(5)
+    : (d.period || '');
+
+  // 카테고리별 secmark + slab/pair
+  let slabIdx = 0;
+  const sections: string[] = [];
+  d.categories.forEach((cat, ci) => {
+    const markCls = ci === 0 ? '' : (ci === 1 ? ' alt' : ' b');
+    sections.push(
+      '<div class="secmark' + markCls + '">' +
+        '<span class="blob fat">' + String(ci + 1).padStart(2, '0') + '</span>' +
+        '<span class="tt">' + esc(cat.name) + '</span>' +
+        '<span class="ll"></span>' +
+      '</div>'
+    );
+
+    // 카테고리 안 상품: 첫 2개는 일반 slab, 그 외는 pair (2 묶음씩)
+    const allItems = cat.items;
+    let i = 0;
+    // 첫 상품 = 일반 slab (큰 사이즈)
+    if (allItems.length > 0) {
+      sections.push(buildPopSlab(allItems[0], cat.name, ++slabIdx, false));
+      i = 1;
+    }
+
+    // 두 번째 상품 = pair 또는 단독
+    if (allItems.length === 2) {
+      sections.push(buildPopSlab(allItems[1], cat.name, ++slabIdx, false));
+      i = 2;
+    } else if (allItems.length > 2) {
+      // pair 묶음 (2개씩)
+      const remaining = allItems.slice(1);
+      for (let j = 0; j < remaining.length; j += 2) {
+        if (j + 1 < remaining.length) {
+          const a = buildPopSlab(remaining[j], cat.name, ++slabIdx, true);
+          const b = buildPopSlab(remaining[j + 1], cat.name, ++slabIdx, true);
+          sections.push('<div class="pair">' + a + b + '</div>');
+        } else {
+          sections.push(buildPopSlab(remaining[j], cat.name, ++slabIdx, false));
+        }
+      }
+      i = allItems.length;
+    }
+
+    // 첫 카테고리 후 megaStrip 1회
+    if (ci === 0 && d.categories.length > 1) {
+      sections.push(
+        '<div class="megaStrip" aria-hidden="true">' +
+          '<div class="track fat">' +
+            '<span><span class="star">★</span> 진짜 싸요 <span class="yel">·</span> ' + esc(d.period) + ' <span class="star">★</span> 한정 특가 <span class="yel">·</span> 카드 추가할인 <span class="star">★</span></span>' +
+            '<span><span class="star">★</span> 진짜 싸요 <span class="yel">·</span> ' + esc(d.period) + ' <span class="star">★</span> 한정 특가 <span class="yel">·</span> 카드 추가할인 <span class="star">★</span></span>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+  });
+
+  function buildPopSlab(it: any, catName: string, num: number, isPair: boolean): string {
+    const disc = calcDisc(it.originalPrice, it.salePrice);
+    const saved = it.originalPrice > 0 ? it.originalPrice - it.salePrice : 0;
+    const numStr = String(num).padStart(2, '0');
+    const tiltCls = num % 2 === 1 ? ' tilt' : ' tilt2';
+    const stampPalette = POP_STAMP_PALETTE[(num - 1) % POP_STAMP_PALETTE.length];
+    const stampA = stampPalette.a;
+    const stampB = stampPalette.getB(it, disc, saved);
+    const phStyle = it.imageUrl
+      ? `background:url('${esc(toAbsUrl(it.imageUrl) || '')}') center/cover;`
+      : `--ph-bg:${categoryBg(catName)}; --ph-emoji:'${categoryEmoji(catName)}';`;
+    const specs: string[] = [];
+    if (it.unit) specs.push('<span class="' + POP_SPEC_COLS[0] + '">' + esc(it.unit.toUpperCase()) + '</span>');
+    if (it.origin) specs.push('<span class="' + POP_SPEC_COLS[1] + '">' + esc(it.origin) + '</span>');
+    if (it.badge && !isPair) specs.push('<span class="' + POP_SPEC_COLS[2] + '">' + esc(it.badge) + '</span>');
+    if (disc > 0 && !isPair) specs.push('<span class="' + POP_SPEC_COLS[3] + '">' + disc + '%↓</span>');
+    const bangHtml = disc >= 30 ? '<span class="bang">!!</span>' : '';
+    const unitpText = it.aiCopy || (it.unit && it.salePrice > 0
+      ? '단위 ' + esc(it.unit) + ' · 한정 특가!'
+      : '한정 특가야!');
+
+    return (
+      '<article class="slab' + tiltCls + '" data-num="' + numStr + '"' + productDataAttr(it, catName) + '>' +
+        '<div class="pic">' +
+          '<div class="ph" style="' + phStyle + '"></div>' +
+          '<span class="deco-1"></span>' +
+          '<span class="deco-2"></span>' +
+          '<div class="stamp fat" style="background:' + stampPalette.bg + ';color:' + stampPalette.color + ';">' +
+            '<div class="a">' + esc(stampA) + '</div>' +
+            '<div class="b">' + esc(stampB) + '</div>' +
+          '</div>' +
+          '<div class="stripe"></div>' +
+        '</div>' +
+        '<div class="body">' +
+          '<span class="id">NO. ' + numStr + ' · ' + esc(catName) + '</span>' +
+          '<h3>' + esc(it.name) + (it.unit ? ' ' + esc(it.unit) : '') + '</h3>' +
+          '<div class="specs">' + specs.join('') + '</div>' +
+          '<div class="priceRow">' +
+            (it.originalPrice > 0 ? '<span class="orig price-num">' + fmtPrice(it.originalPrice) + '원</span>' : '') +
+            '<span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span>' + bangHtml + '</span>' +
+          '</div>' +
+          '<div class="unitp">' + esc(unitpText) + '</div>' +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  const yy = String(new Date().getFullYear() % 100);
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${esc(token)}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>${esc(ogTitle)}</title>
+<meta property="og:title" content="${esc(ogTitle)}">
+<meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:image" content="${esc(ogImage)}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Black+Han+Sans&family=Gaegu:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+:root {
+  --color-primary: #FF3D2E;
+  --color-accent: #FFD300;
+  --pop-blue: #2056FF;
+  --pop-mint: #00D6A2;
+  --pop-pink: #FF7AB6;
+  --pop-purple: #7B4DFF;
+  --ink: #131110;
+  --paper: #FFF7E8;
+  --paper-2: #FFEBC4;
+  --rule: #131110;
+  --color-on-primary: #FFFFFF;
+}
+${seasonStyleBlock()}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); color: var(--ink); }
+body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; padding-bottom: 32px; }
+.price-num { font-variant-numeric: tabular-nums; }
+.han { font-family: 'Black Han Sans', sans-serif; font-weight: 400; }
+.fat { font-family: 'Bagel Fat One', cursive; font-weight: 400; }
+.geu { font-family: 'Gaegu', cursive; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200; opacity: 0.42; mix-blend-mode: multiply; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.hero { position: relative; padding: 28px 22px 60px; border-bottom: 4px solid var(--ink); overflow: hidden; }
+.hero .topline { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid var(--ink); font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; }
+.shape { position: absolute; pointer-events: none; z-index: 0; }
+.shape.s-zigzag { top: 56px; right: 12px; width: 70px; height: 14px; background: linear-gradient(135deg, transparent 33%, var(--pop-blue) 33% 66%, transparent 66%) 0 0/16px 16px; transform: rotate(-8deg); }
+.shape.s-dots { bottom: 8px; left: -16px; width: 130px; height: 130px; background-image: radial-gradient(var(--ink) 22%, transparent 24%); background-size: 12px 12px; transform: rotate(8deg); }
+.shape.s-disc { top: 230px; left: 12px; width: 56px; height: 56px; border-radius: 50%; background: var(--pop-mint); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+.shape.s-ring { top: 320px; right: 14px; width: 72px; height: 72px; border-radius: 50%; border: 6px solid var(--pop-blue); transform: rotate(-10deg); }
+.shape.s-blob { top: 30%; left: 35%; width: 50px; height: 50px; background: var(--pop-pink); border-radius: 60% 40% 35% 65% / 55% 60% 40% 45%; transform: rotate(20deg); border: 3px solid var(--ink); }
+.shape.s-cross { top: 200px; right: 28%; width: 40px; height: 40px; background: var(--pop-purple); clip-path: polygon(40% 0, 60% 0, 60% 40%, 100% 40%, 100% 60%, 60% 60%, 60% 100%, 40% 100%, 40% 60%, 0 60%, 0 40%, 40% 40%); transform: rotate(15deg); }
+.hero .slogan { position: relative; z-index: 2; margin-top: 18px; font-size: 70px; line-height: 0.86; letter-spacing: -0.04em; padding-right: 100px; word-break: keep-all; }
+.hero .slogan .l1 { display: block; color: var(--ink); }
+.hero .slogan .l2 { display: inline-block; background: var(--color-primary); color: var(--paper); padding: 4px 14px 10px; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); transform: rotate(-2deg); margin-top: 8px; line-height: 0.85; }
+.hero .slogan .l3 { display: inline-block; margin-top: 14px; color: var(--ink); transform: rotate(-1deg); }
+.hero .slogan .l3 .bang { display: inline-block; background: var(--color-accent); border: 3px solid var(--ink); width: 68px; height: 68px; border-radius: 50%; text-align: center; line-height: 68px; vertical-align: middle; margin-left: 6px; color: var(--ink); box-shadow: 4px 4px 0 var(--ink); transform: rotate(8deg); font-size: 52px; }
+.hero .info { position: relative; z-index: 2; margin-top: 60px; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.hero .info .store { display: flex; flex-direction: column; }
+.hero .info .store .by { font-family: 'Gaegu', cursive; font-size: 18px; color: var(--ink); line-height: 1; }
+.hero .info .store .nm { margin-top: 6px; font-family: 'Black Han Sans', sans-serif; font-size: 26px; line-height: 1; color: var(--ink); }
+.hero .info .period { background: var(--ink); color: var(--paper); padding: 6px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; transform: rotate(2deg); }
+.secmark { margin: 36px 22px 14px; display: flex; align-items: center; gap: 10px; }
+.secmark .blob { width: 36px; height: 36px; border-radius: 50%; background: var(--pop-mint); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); display: grid; place-items: center; font-family: 'Bagel Fat One', cursive; font-size: 16px; color: var(--ink); }
+.secmark .tt { font-family: 'Black Han Sans', sans-serif; font-size: 26px; letter-spacing: -0.025em; color: var(--ink); }
+.secmark .ll { flex: 1; height: 3px; background: var(--ink); }
+.secmark.alt .blob { background: var(--color-accent); }
+.secmark.b .blob { background: var(--pop-pink); }
+.slab { margin: 0 22px 18px; background: var(--paper-2); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); position: relative; overflow: hidden; opacity: 0; transform: translateY(16px); transition: opacity 540ms ease, transform 540ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.slab.in { opacity: 1; transform: none; }
+.slab.tilt { transform: rotate(-1deg); }
+.slab.tilt.in { transform: rotate(-0.8deg); }
+.slab.tilt2 { transform: rotate(1.2deg); }
+.slab.tilt2.in { transform: rotate(0.8deg); }
+.slab .pic { aspect-ratio: 16/10; position: relative; background: var(--paper); border-bottom: 3px solid var(--ink); overflow: hidden; }
+.ph { position: absolute; inset: 0; display: grid; place-items: center; background: var(--ph-bg, var(--paper)); }
+.ph::after { content: var(--ph-emoji, ""); font-size: 130px; line-height: 1; filter: drop-shadow(2px 2px 0 var(--ink)) drop-shadow(0 6px 12px rgba(0,0,0,0.18)); }
+.pic .deco-1 { position: absolute; left: 12px; top: 12px; width: 32px; height: 32px; border-radius: 50%; background: var(--pop-blue); border: 2px solid var(--ink); }
+.pic .deco-2 { position: absolute; right: 12px; top: 12px; width: 36px; height: 36px; background: var(--color-accent); border: 2px solid var(--ink); transform: rotate(20deg); }
+.pic .stripe { position: absolute; left: 0; right: 0; bottom: 0; height: 16px; background: repeating-linear-gradient(45deg, var(--ink) 0 6px, var(--paper) 6px 12px); }
+.pic .stamp { position: absolute; right: 12px; bottom: 24px; transform: rotate(-10deg); width: 90px; height: 90px; background: var(--color-primary); color: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); border-radius: 50%; display: grid; place-items: center; text-align: center; font-family: 'Bagel Fat One', cursive; line-height: 0.95; z-index: 2; }
+.pic .stamp .a { font-size: 11px; font-weight: 400; letter-spacing: 0.02em; }
+.pic .stamp .b { font-size: 28px; }
+.slab .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
+.slab .id { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; background: var(--ink); color: var(--paper); padding: 3px 8px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; }
+.slab h3 { font-family: 'Black Han Sans', sans-serif; font-size: 26px; letter-spacing: -0.025em; color: var(--ink); line-height: 1.05; }
+.slab .specs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.slab .specs span { font-size: 11px; font-weight: 700; padding: 3px 8px; background: var(--paper); border: 1.5px solid var(--ink); }
+.slab .specs .col-y { background: var(--color-accent); }
+.slab .specs .col-b { background: var(--pop-blue); color: var(--paper); }
+.slab .specs .col-m { background: var(--pop-mint); }
+.slab .specs .col-p { background: var(--pop-pink); }
+.slab .priceRow { margin-top: 8px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.slab .orig { font-size: 14px; color: var(--ink); opacity: 0.55; text-decoration: line-through; text-decoration-thickness: 2.5px; }
+.slab .sale { font-family: 'Bagel Fat One', cursive; font-size: 52px; line-height: 0.9; color: var(--color-primary); -webkit-text-stroke: 2.5px var(--ink); paint-order: stroke fill; letter-spacing: -0.02em; }
+.slab.in .sale { animation: pricePop 800ms cubic-bezier(0.34, 1.56, 0.64, 1) both 220ms; }
+@keyframes pricePop { 0% { transform: scale(0.5) rotate(-8deg); opacity: 0; } 60% { transform: scale(1.15) rotate(2deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
+.slab .sale .won { font-size: 22px; }
+.slab .sale .bang { color: var(--color-accent); }
+.slab .unitp { font-family: 'Gaegu', cursive; font-size: 16px; color: var(--ink); margin-top: 2px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 22px 18px; }
+.pair .slab { margin: 0; box-shadow: 4px 4px 0 var(--ink); }
+.pair .slab .pic { aspect-ratio: 1/1; }
+.pair .slab h3 { font-size: 18px; }
+.pair .slab .sale { font-size: 36px; }
+.pair .slab .sale .won { font-size: 14px; }
+.pair .slab .unitp { font-size: 13px; }
+.pair .slab .specs span { font-size: 10px; padding: 2px 6px; }
+.pair .slab .pic .stamp { width: 60px; height: 60px; right: 8px; bottom: 14px; }
+.pair .slab .pic .stamp .a { font-size: 9px; }
+.pair .slab .pic .stamp .b { font-size: 18px; }
+.megaStrip { margin: 24px 0; background: var(--ink); color: var(--paper); padding: 14px 0; border-top: 4px solid var(--ink); border-bottom: 4px solid var(--ink); overflow: hidden; white-space: nowrap; font-family: 'Bagel Fat One', cursive; font-size: 22px; letter-spacing: 0.04em; }
+.megaStrip .track { display: inline-flex; gap: 24px; animation: marquee 18s linear infinite; }
+.megaStrip .track .red { color: var(--color-primary); }
+.megaStrip .track .yel { color: var(--color-accent); }
+.megaStrip .track .star { color: var(--color-accent); }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.foot { margin: 24px 22px 0; padding: 18px; background: var(--ink); color: var(--paper); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--color-primary); position: relative; }
+.foot .ribbon { position: absolute; top: -14px; left: 14px; background: var(--color-accent); color: var(--ink); padding: 3px 10px; border: 2px solid var(--ink); font-size: 10px; font-weight: 800; letter-spacing: 0.1em; }
+.foot .nameRow { display: flex; align-items: baseline; justify-content: space-between; margin-top: 4px; }
+.foot .nameRow .h { font-family: 'Black Han Sans', sans-serif; font-size: 26px; letter-spacing: -0.02em; }
+.foot .nameRow .vol { font-family: 'Bagel Fat One', cursive; color: var(--color-accent); font-size: 18px; }
+.foot .lines { margin-top: 12px; display: grid; gap: 6px; font-size: 13px; }
+.foot .lines .ln { display: grid; grid-template-columns: 60px 1fr; gap: 10px; align-items: baseline; }
+.foot .lines .k { font-family: 'Bagel Fat One', cursive; color: var(--color-accent); font-size: 11px; letter-spacing: 0.06em; }
+.foot .lines .v { font-weight: 600; }
+.foot .ctas { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.foot .ctas a, .foot .ctas button { height: 48px; border: 3px solid var(--paper); background: transparent; color: var(--paper); font-family: 'Bagel Fat One', cursive; font-size: 16px; cursor: pointer; letter-spacing: 0.02em; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.foot .ctas .fill { background: var(--color-primary); border-color: var(--color-primary); color: var(--paper); }
+.foot .small { margin-top: 14px; font-family: 'Gaegu', cursive; font-size: 13px; opacity: 0.7; text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  .slab.in .sale { animation: none; }
+  .megaStrip .track { animation: none; }
+}
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="topline">
+    <span>HANJUL · POP NO.${esc(yy)}</span>
+    <span>${esc(issuePeriod)}</span>
+  </div>
+  <div class="shape s-zigzag" aria-hidden="true"></div>
+  <div class="shape s-disc" aria-hidden="true"></div>
+  <div class="shape s-ring" aria-hidden="true"></div>
+  <div class="shape s-blob" aria-hidden="true"></div>
+  <div class="shape s-cross" aria-hidden="true"></div>
+  <div class="shape s-dots" aria-hidden="true"></div>
+  <h1 class="slogan han">
+    <span class="l1">${esc(titleParts.l1)}</span>
+    <span class="l2">${esc(titleParts.l2)}</span>
+    <span class="l3">${esc(titleParts.l3)}<span class="bang fat">!</span></span>
+  </h1>
+  <div class="info">
+    <div class="store">
+      <div class="by">우리 동네</div>
+      <div class="nm">${esc(d.storeName)}</div>
+    </div>
+    <div class="period">${esc(d.period || (total + '품목'))}</div>
+  </div>
+</section>
+${sections.join('\n')}
+<footer class="foot">
+  <span class="ribbon">★ STORE INFO ★</span>
+  <div class="nameRow">
+    <span class="h">${esc(d.storeName)}</span>
+    <span class="vol fat">NO. ${esc(yy)}</span>
+  </div>
+  <div class="lines">
+    <div class="ln"><span class="k fat">OPEN</span><span class="v">${esc(hoursAnn ? hoursAnn.content : '문의 매장')}</span></div>
+    <div class="ln"><span class="k fat">CALL</span><span class="v">${esc(phoneLink ? phoneLink.label : '문의 매장')}</span></div>
+    <div class="ln"><span class="k fat">ADDR</span><span class="v">${esc(addressAnn ? addressAnn.content : (mapLink ? mapLink.label : '매장 위치'))}</span></div>
+    <div class="ln"><span class="k fat">DATE</span><span class="v">${esc(d.period)}</span></div>
+  </div>
+  <div class="ctas">
+    ${mapLink
+      ? `<a href="${esc(mapLink.url)}" target="_blank" rel="noopener noreferrer">길찾기</a>`
+      : `<button disabled style="opacity:0.5;cursor:not-allowed;">길찾기</button>`}
+    ${phoneLink
+      ? `<a href="${esc(phoneLink.url)}" class="fill">전화 걸기</a>`
+      : `<button class="fill" disabled style="opacity:0.5;cursor:not-allowed;">전화 걸기</button>`}
+  </div>
+  <div class="small">매장에서 직접 보고 가세요 — 사장님이 골랐어요</div>
+</footer>
+<script>
+(function(){
+  var io = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.slab').forEach(function(s) { io.observe(s); });
+  var seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', function(ev) {
+    var msg = ev.data || {};
+    if (msg.type === 'season' && msg.value) document.documentElement.setAttribute('data-season', msg.value);
+  });
+})();
+</script>
+</body>
+</html>`;
+}
+
+// ============================================================
+// RENDERER_MAP (신규 6 + D155 추가 5 — 02b/03b/04b/05b/06b 모두 박힘)
+// STORY 함수는 코드 유지(옛 발행 폴백) but REGISTRY/DEFAULT에서 제거 예정
 // ============================================================
 
 const RENDERERS: Record<string, (d: FlyerRenderData, token: SeasonToken) => string> = {
   story:         renderStoryEngine,
   magazine:      renderMagazineEngine,
+  magazine_zine: renderMagazineZineEngine,
   deal_feed:     renderDealFeedEngine,
+  deal_bento:    renderDealBentoEngine,
   grid_hero:     renderGridHeroEngine,
+  grid_muji:     renderGridMujiEngine,
   catalog_swipe: renderCatalogSwipeEngine,
+  catalog_dark:  renderCatalogDarkEngine,
   poster_promo:  renderPosterPromoEngine,
+  poster_pop:    renderPosterPopEngine,
 };
 
 // ============================================================
