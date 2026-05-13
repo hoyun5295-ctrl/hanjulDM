@@ -1,7 +1,7 @@
 # hanjulDM 프로젝트 현황
 
-> **업데이트:** 2026-05-13 (D154)
-> **상태:** ★ PHASE 0 트랙 A + B + 6매체 디자인 토큰 + 매장 프로필 자동 merge 100% 종결. D155+ 블라인드 검증 + PHASE 1 진입 준비.
+> **업데이트:** 2026-05-13 (D156)
+> **상태:** ★ D155+D156 슈퍼관리자 고도화 + 발신번호 등록 신청 승인 플로우 + 5 신규 V4 엔진(10 엔진 매트릭스) 종결. D157+ POS Agent 연구 + 슈퍼관리자 잔여 9 영역.
 
 ## 현재 단계 (CURRENT_TASK)
 
@@ -21,14 +21,58 @@
 | **6** 미리보기 V4 | POST /api/flyer/p/preview-html 라우트 신규 + FlyerPreview.tsx iframe(ResizeObserver scale 자동) + 옛 V3 React 미러 export 처리(unused 회피) | hdm-push 재배포 검증 |
 | **7A~7E** 매장 프로필 자동 merge | flyer_companies 7 컬럼 ALTER TABLE / GET-PUT /api/flyer/companies/ 7 컬럼 SELECT-UPDATE / StoreProfileSection.tsx 신규(SettingsPage 최상단) / short-urls.ts mergeCompanyProfileToExtraData 헬퍼(전단 발행 자동 join, address fallback 카카오맵) / preview-html flyerAuthenticate 추가(인증 토큰 → companyId 자동 식별) | hdm-push 재배포 검증 |
 
-## D155+ 인계 — PHASE 0 검증 + PHASE 1 진입 준비
+## D155+D156 종결 매트릭스 (2026-05-13 오전~저녁)
 
-1. **PHASE 0 현장 검증 (master plan §1-4)**:
-   - Harold 4.0/5.0 + 비토 4.0/5.0 + 인비토 직원 3인 평균 4.0/5.0 + 마트 사장 1인 블라인드 "외주보다 낫다" + 고객 5인 중 4인 "보고 싶다"
-   - 6 엔진 × 시즌 토큰 8종 = 48 조합 + 사장님 입력 다양성 검증
-   - 6매체 정합 (URL/PDF/POP/MMS/알림톡/랜딩) 통합 검증
-2. **사고 fix 발생 시 hotfix** (D154 코드 기반)
-3. **PHASE 1 진입 준비 (D158~)**: 7대 무기 — POS Agent 직접연결 + CT-F10 RFM 실구현 + Campaign Autopilot + ROI Closed Loop + Outside DB + 정부 결제 모듈
+자세한 비토 메모리 = `project_d156_super_admin_고도화.md` 참조.
+
+| Phase | 작업 | 결과 |
+|-------|------|------|
+| **D155-1** POSTER PROMO h1 fix | `.hero h1 padding-right:140px` (sticker 132+8 gap reserve) | 제목 가림 차단 ✓ |
+| **D155-2** AI 카피 자동 enrich 비동기 | POST/PUT /flyers `setImmediate` 백그라운드 + skipExisting:true | 사장님 응답 즉시 + ~5초 후 자동 채움 ✓ |
+| **D155-3** 회원/회사 soft delete + 감사로그 | flyer-audit-log.ts FlyerAuditAction 4 추가 + logFlyerSuperAdminAudit 신규(user_id NULL FK 회피) + 회사 DELETE cascade + 회원 DELETE 신규 | audit 통합 ✓ |
+| **D155-4** 5 신규 V4 엔진 | magazine_zine/deal_bento/grid_muji/catalog_dark/poster_pop — 각 ~700~900줄 + RENDERERS 11키(story 폴백 유지) | tsc 0 ✓ |
+| **D155-5** REGISTRY 6→10 | TEMPLATE_REGISTRY/DEFAULT_TEMPLATES/template-recommender b-variant 점수 매트릭스 | tsc 0 ✓ |
+| **D155-6** safe-build.sh 누락 fix | root scripts/safe-build.sh 3 패키지 atomic + admin-frontend/scripts/safe-build.sh 신규 | 빌드 통과 ✓ |
+| **D155-7** 자동 이미지 매핑 | **Harold 보류** (저작권 침해 명확 + 정확도 부족) | 대안 = AI 생성/공공 저작물/자체 촬영 별건 |
+| **D155-8** 슈퍼관리자 고도화 | StoreListPage/PosAgentListPage/BillingPage/CompanyFormModal/UserFormModal 신규 + Dashboard 통계 4→11 + 탭 3→6 | admin-frontend 9 화면 신규 ✓ |
+| **D156-1** DB 신규 테이블 | `flyer_sender_registrations` + 2 인덱스 (Harold psql 직접 실행) | 마이그레이션 ✓ |
+| **D156-2** sender-registration.ts 재작성 | 즉시 등록 → 승인 플로우 + multer 10MB(PDF/이미지) + 본인 GET/POST/cert/DELETE | 승인 플로우 박힘 ✓ |
+| **D156-3** flyer-admin.ts 슈퍼관리자 라우트 4 | list/cert 다운/approve(flyer_callback_numbers 자동 INSERT)/reject + audit-log sender_registration_* | 슈퍼관리자 처리 ✓ |
+| **D156-4** frontend SenderRegistrationPage | 신청 폼 + 증명원 업로드 + 신청 이력 + 본인 취소 + App.tsx 📞 발신번호 메뉴 | 매장 사장님 화면 ✓ |
+| **D156-5** admin-frontend SenderRegistrationListPage | 상태 필터 + 상세 모달(인증서 다운로드) + 반려 사유 모달 + Dashboard 탭 6→7 + 카드 6→7(senderRegPending) | 슈퍼관리자 화면 ✓ |
+
+## 현재 슈퍼관리자 매트릭스 (sys.hanjul-flyer.co.kr)
+
+- **통계 카드 7**: 총판/회원/매장/POS Agent(활성/전체)/발신번호 대기/총 발송량/이달 청구액
+- **탭 7**: 회사(총판)/회원/매장/POS Agent/발신번호/결제/감사 로그
+- **회사 탭**: 검색+신규 등록(사업자등록증+세금계산서+관리자 통합 5 섹션)+수정+소프트 삭제(cascade)
+- **회원 탭**: 회사 필터+신규 등록+비번 리셋+소프트 삭제
+- **매장 탭**: 다중 필터+페이징+신규+수정+충전(잔액/activate 분기, 0~20만원 monthly_fee)
+- **POS Agent 탭**: heartbeat 자동 계산+키 발급+결과 복사
+- **발신번호 탭**: 상태 필터+상세 모달(인증서 다운로드)+승인/반려
+- **결제 탭**: 회사 필터+요약 카드 3+청구월별
+- **감사 로그 탭**: 액션/날짜 필터+페이징+actor 슈퍼관리자/회원 구분
+
+## D157+ 인계 — POS Agent 연구 + 슈퍼관리자 잔여 영역
+
+**Harold 명시 우선순위**:
+
+1. **POS Agent 연구** (master plan §3 PHASE 1 1번 무기) — `packages/pos-agent/` 폴더 D152 이관 후 미점검. CT-F16 AI 스키마 자동 매핑 + 어떤 POS여도 점주 동의 하나로 즉시 연결. 비토 메모리 = `project_next_pos_agent_research.md`
+
+2. **슈퍼관리자 잔여 누락 9 영역**:
+   - alimtalk_senders(알림톡 발신프로필 등록 신청 + 대행 처리 IMC API) — 우선
+   - deposits(무통장입금 확인 + 잔액 변동 이력) — 우선
+   - allCampaigns(flyer 캠페인 통합 모니터링)
+   - stats(발송 통계 상세 + 월별 사용금액 자동 표시)
+   - templates(알림톡 IMC 검수 결과 모니터링)
+   - scheduled(예약 캠페인 모니터링)
+   - loginBlocks(로그인 차단)
+   - 본인 계정 관리(비번/TOTP 재설정/백업코드 재발급)
+   - 사이드바 nav 도입 (탭 7 → 영역 15+ 가로 공간 부족)
+
+3. **PHASE 0 정성 평가** (master plan §1-4): Harold 4.0/5.0 + 비토 4.0/5.0 + 인비토 직원 3인 + 마트 사장 1인 블라인드 + 고객 5인 중 4인
+
+4. **PHASE 1 7대 무기** (D158~ PHASE 0 통과 후): POS Agent 직접연결 + CT-F10 RFM 실구현 + Campaign Autopilot + ROI Closed Loop + Outside DB + 정부 결제 모듈
 
 **D152 + D153 누적 매트릭스**:
 
