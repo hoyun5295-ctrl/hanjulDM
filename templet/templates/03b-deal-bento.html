@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 · 오늘의 핫딜 · BENTO</title>
+<meta property="og:title" content="오늘의 핫딜 · 벤또 그리드">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #F97316;
+    --color-accent: #EF4444;
+    --color-on-primary: #FFFFFF;
+    --ink: #0E0D0C;
+    --ink-soft: #5B5752;
+    --bg: #F5F2EC;
+    --tile: #FFFFFF;
+    --rule: #E7E2D7;
+    --discount: #DC2626;
+
+    /* tile pastels */
+    --t-cream:  #FFE9C6;
+    --t-rose:   #FFD7D2;
+    --t-mint:   #CDEACB;
+    --t-lemon:  #FCEF8E;
+    --t-sky:    #C9DDF8;
+    --t-lilac:  #D9D2F2;
+    --t-peach:  #FFC9A0;
+    --t-coal:   #1A1916;
+
+    --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; }
+  html[data-season="summer"]    { --color-primary:#06B6D4; --color-accent:#0891B2; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased;
+    padding-bottom: 32px;
+  }
+  .price-num { font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ===== top ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    padding: 14px 16px 12px;
+    background: rgba(245, 242, 236, 0.92);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .topbar .row1 {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; letter-spacing: 0.04em; font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .topbar .row1 .live {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--ink); color: #fff;
+    padding: 3px 8px; border-radius: 999px;
+    font-size: 10px; letter-spacing: 0.08em;
+  }
+  .topbar .row1 .live .d { width: 5px; height: 5px; border-radius: 50%; background: #ff4d4d;
+    animation: blink 1200ms ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: 0.2; } }
+  .topbar h1 {
+    margin-top: 6px;
+    font-size: 28px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.05;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .topbar h1 .cd {
+    margin-left: auto; font-size: 16px; font-weight: 800; letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    background: var(--ink); color: var(--bg);
+    padding: 4px 10px; border-radius: 8px;
+  }
+  .topbar .sub {
+    margin-top: 4px;
+    font-size: 12px; color: var(--ink-soft); font-weight: 600;
+  }
+
+  /* filter row */
+  .filterRow {
+    display: flex; gap: 6px; padding: 10px 16px 6px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .filterRow::-webkit-scrollbar { display: none; }
+  .filterRow .chip {
+    flex: 0 0 auto;
+    height: 32px; padding: 0 14px; border-radius: 999px;
+    background: var(--tile); border: 1px solid var(--rule);
+    font-size: 12px; font-weight: 700; color: var(--ink-soft);
+  }
+  .filterRow .chip.active {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .filterRow .chip .em { color: var(--discount); }
+
+  /* ===== BENTO GRID ===== */
+  .bento {
+    padding: 10px 14px 28px;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    grid-auto-rows: 80px;
+    grid-auto-flow: dense;
+  }
+  .tile {
+    border-radius: 22px;
+    padding: 14px;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: transform 200ms ease;
+    opacity: 0; transform: translateY(14px);
+  }
+  .tile.in { opacity: 1; transform: none; transition: opacity 420ms ease, transform 420ms ease; }
+  .tile:active { transform: scale(0.97); }
+  .tile .body { display: flex; flex-direction: column; height: 100%; }
+
+  /* sizes */
+  .span-hero  { grid-column: span 6; grid-row: span 5; }
+  .span-large { grid-column: span 4; grid-row: span 4; }
+  .span-tall  { grid-column: span 3; grid-row: span 5; }
+  .span-half  { grid-column: span 3; grid-row: span 4; }
+  .span-mid   { grid-column: span 3; grid-row: span 3; }
+  .span-wide  { grid-column: span 6; grid-row: span 2; }
+  .span-thin  { grid-column: span 2; grid-row: span 3; }
+
+  /* tile colors */
+  .t-cream { background: var(--t-cream); }
+  .t-rose  { background: var(--t-rose); }
+  .t-mint  { background: var(--t-mint); }
+  .t-lemon { background: var(--t-lemon); }
+  .t-sky   { background: var(--t-sky); }
+  .t-lilac { background: var(--t-lilac); }
+  .t-peach { background: var(--t-peach); }
+  .t-coal  { background: var(--t-coal); color: var(--bg); }
+  .t-tile  { background: var(--tile); border: 1px solid var(--rule); }
+
+  /* ===== HERO tile (big featured deal) ===== */
+  .tile.hero {
+    background:
+      radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--t-peach), white 35%), transparent 60%),
+      linear-gradient(135deg, var(--t-peach) 0%, var(--t-cream) 100%);
+    padding: 18px 18px 16px;
+  }
+  .tile.hero .kicker {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
+    background: var(--ink); color: var(--bg);
+    padding: 4px 10px; border-radius: 999px;
+    align-self: flex-start;
+  }
+  .tile.hero .kicker .d { width: 5px; height: 5px; border-radius: 50%; background: #ff4d4d; }
+  .tile.hero .pic {
+    position: absolute; right: -14px; top: 30px;
+    width: 200px; height: 200px;
+    border-radius: 24px; background: rgba(255,255,255,0.5);
+    backdrop-filter: blur(8px);
+    transform: rotate(-6deg);
+    display: grid; place-items: center;
+    overflow: hidden;
+  }
+  .tile.hero .pic::after {
+    content: var(--em, "🥓");
+    font-size: 130px; line-height: 1;
+    filter: drop-shadow(0 12px 24px rgba(0,0,0,0.18));
+  }
+  .tile.hero .name {
+    margin-top: 14px;
+    font-size: 30px; font-weight: 900; letter-spacing: -0.035em; line-height: 1;
+  }
+  .tile.hero .spec {
+    margin-top: 4px;
+    font-size: 12px; color: var(--ink); opacity: 0.65; font-weight: 600;
+  }
+  .tile.hero .priceBlock {
+    margin-top: auto;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .tile.hero .orig {
+    font-size: 13px; opacity: 0.55; text-decoration: line-through;
+  }
+  .tile.hero .sale {
+    font-size: 44px; font-weight: 900; letter-spacing: -0.04em; line-height: 1;
+  }
+  .tile.hero .sale .won { font-size: 18px; font-weight: 800; margin-left: 1px; }
+  .tile.hero .footer {
+    display: flex; align-items: center; gap: 8px; margin-top: 12px;
+    font-size: 11px; font-weight: 700;
+  }
+  .tile.hero .progress {
+    flex: 1; height: 6px; border-radius: 4px;
+    background: rgba(14,13,12,0.12); overflow: hidden;
+  }
+  .tile.hero .progress .fill {
+    height: 100%; background: var(--ink);
+    width: var(--sold, 60%); border-radius: 4px;
+  }
+  .tile.hero .cta {
+    align-self: flex-start;
+    margin-top: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 38px; padding: 0 14px 0 16px; border-radius: 999px;
+    background: var(--ink); color: var(--bg);
+    font-size: 13px; font-weight: 800; letter-spacing: -0.01em;
+    border: 0;
+  }
+  .tile.hero .cta svg { width: 14px; height: 14px; }
+
+  /* sale tile (smaller) */
+  .tile .badge {
+    display: inline-flex; align-items: center;
+    align-self: flex-start;
+    background: var(--ink); color: var(--bg);
+    padding: 3px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+  }
+  .tile.t-coal .badge { background: var(--bg); color: var(--ink); }
+  .tile .productEmoji {
+    align-self: flex-end; font-size: 56px; line-height: 1;
+    margin: -8px -8px 0 0;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.12));
+  }
+  .tile.large .productEmoji { font-size: 72px; }
+  .tile .name {
+    margin-top: 4px;
+    font-size: 16px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1;
+  }
+  .tile .spec {
+    margin-top: 2px;
+    font-size: 10px; opacity: 0.6; font-weight: 600;
+  }
+  .tile .priceLine {
+    margin-top: auto;
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .tile .priceLine .off {
+    font-size: 13px; font-weight: 900; color: var(--discount);
+  }
+  .tile.t-coal .priceLine .off { color: var(--t-lemon); }
+  .tile .priceLine .sale {
+    font-size: 22px; font-weight: 900; letter-spacing: -0.025em;
+  }
+  .tile .priceLine .sale .won { font-size: 11px; font-weight: 800; }
+  .tile .orig {
+    font-size: 11px; opacity: 0.55; text-decoration: line-through;
+  }
+
+  /* SPECIAL TILE: countdown */
+  .tile.countdown {
+    background: var(--ink); color: var(--bg);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .tile.countdown .lbl {
+    font-size: 10px; letter-spacing: 0.18em; opacity: 0.65; font-weight: 700; text-transform: uppercase;
+  }
+  .tile.countdown .clock {
+    font-size: 32px; font-weight: 900; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile.countdown .clock em { font-style: normal; color: var(--color-accent); }
+  .tile.countdown .meta {
+    font-size: 11px; opacity: 0.85; font-weight: 600;
+  }
+
+  /* SPECIAL TILE: stats */
+  .tile.stats { background: var(--t-tile); border: 1px solid var(--rule); justify-content: space-between; }
+  .tile.stats .num {
+    font-size: 38px; font-weight: 900; letter-spacing: -0.03em; line-height: 1;
+    color: var(--color-primary);
+  }
+  .tile.stats .num small { font-size: 14px; font-weight: 800; color: var(--ink); margin-left: 1px; }
+  .tile.stats .lbl {
+    font-size: 10px; letter-spacing: 0.16em; opacity: 0.55; font-weight: 700; text-transform: uppercase;
+  }
+  .tile.stats .meta { font-size: 12px; opacity: 0.7; font-weight: 600; }
+
+  /* SPECIAL TILE: progress (stock) */
+  .tile.stock {
+    background: var(--t-tile); border: 1px solid var(--rule);
+    justify-content: space-between;
+  }
+  .tile.stock .lbl { font-size: 10px; letter-spacing: 0.16em; opacity: 0.55; font-weight: 700; text-transform: uppercase; }
+  .tile.stock .name { font-size: 14px; }
+  .tile.stock .bar {
+    height: 28px; border-radius: 10px;
+    background: var(--rule); overflow: hidden;
+    position: relative;
+  }
+  .tile.stock .bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    width: var(--sold, 60%); border-radius: 10px;
+    display: flex; align-items: center; padding-left: 8px;
+    color: #fff; font-size: 11px; font-weight: 800;
+  }
+
+  /* SPECIAL TILE: card discount */
+  .tile.card {
+    background: var(--t-coal); color: var(--bg);
+    justify-content: space-between;
+  }
+  .tile.card .lbl { font-size: 9px; letter-spacing: 0.2em; opacity: 0.55; font-weight: 700; text-transform: uppercase; }
+  .tile.card .v {
+    font-size: 17px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1;
+  }
+  .tile.card .v em { font-style: normal; color: var(--color-accent); }
+
+  /* SPECIAL: share / like row tile */
+  .tile.likes {
+    background: var(--t-rose); justify-content: space-between;
+  }
+  .tile.likes .meta {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 800;
+  }
+  .tile.likes .heartIcon {
+    font-size: 28px; line-height: 1;
+  }
+  .tile.likes .num {
+    font-size: 24px; font-weight: 900; letter-spacing: -0.02em;
+  }
+
+  /* SPECIAL: cta wide */
+  .tile.ctaWide {
+    background: var(--ink); color: var(--bg);
+    flex-direction: row; align-items: center; gap: 12px;
+    justify-content: space-between;
+  }
+  .tile.ctaWide .l {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .tile.ctaWide .l .t1 {
+    font-size: 16px; font-weight: 900; letter-spacing: -0.02em;
+  }
+  .tile.ctaWide .l .t2 { font-size: 11px; opacity: 0.6; font-weight: 600; }
+  .tile.ctaWide .r {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--color-primary); color: var(--color-on-primary);
+    display: grid; place-items: center;
+  }
+  .tile.ctaWide .r svg { width: 20px; height: 20px; }
+
+  /* a "more" link tile */
+  .tile.more {
+    background: transparent; border: 2px dashed var(--rule);
+    justify-content: center; align-items: center;
+    color: var(--ink-soft); font-weight: 700; font-size: 13px;
+    gap: 6px;
+  }
+  .tile.more .ic { font-size: 22px; line-height: 1; }
+
+  /* shimmer flash highlight on hot tile */
+  .tile.flash {
+    animation: flashPulse 1600ms ease-in-out infinite;
+  }
+  @keyframes flashPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+  }
+
+  /* sticky bottom dock */
+  .dock {
+    position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 40;
+    background: var(--ink); color: var(--bg);
+    border-radius: 18px;
+    padding: 10px 12px 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 12px 28px -10px rgba(0,0,0,0.4);
+  }
+  .dock .dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--color-primary); color: var(--color-on-primary);
+    display: grid; place-items: center; font-weight: 900; font-size: 12px;
+  }
+  .dock .text { display: flex; flex-direction: column; }
+  .dock .a { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
+  .dock .b { font-size: 10px; opacity: 0.6; font-weight: 600; }
+  .dock .go {
+    margin-left: auto; height: 38px; padding: 0 16px 0 18px; border-radius: 999px;
+    background: var(--color-primary); color: var(--color-on-primary); border: 0;
+    font-size: 13px; font-weight: 800; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .dock .go svg { width: 14px; height: 14px; }
+
+  /* responsive small adjustments */
+  @media (max-width: 360px) {
+    .bento { grid-template-columns: repeat(4, 1fr); }
+    .span-hero { grid-column: span 4; }
+    .span-large { grid-column: span 4; }
+    .span-tall { grid-column: span 2; }
+    .span-half { grid-column: span 2; }
+    .span-mid { grid-column: span 2; }
+    .span-wide { grid-column: span 4; }
+    .span-thin { grid-column: span 2; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="row1"><span class="live"><span class="d"></span>LIVE</span> 오늘의 핫딜 · 동네마트 강남점</div>
+  <h1>지금만 이 가격<span class="cd" id="cdMain">02:14:33</span></h1>
+  <div class="sub" id="cdSub">가장 빠른 마감: 제주 감귤 주스 · 49분</div>
+</header>
+
+<nav class="filterRow" aria-label="카테고리">
+  <button class="chip active">전체 <span class="em">7</span></button>
+  <button class="chip">축산 2</button>
+  <button class="chip">청과 2</button>
+  <button class="chip">수산 1</button>
+  <button class="chip">공산 1</button>
+  <button class="chip">음료 1</button>
+  <button class="chip">마감 임박 <span class="em">2</span></button>
+</nav>
+
+<main class="bento" id="bento">
+
+  <!-- HERO: 6 cols x 5 rows -->
+  <article class="tile hero span-hero" style="--em: '🥓'; --sold: 62%;">
+    <span class="kicker"><span class="d"></span>WEEK PICK · NO.1</span>
+    <div class="pic"></div>
+    <div class="name">국산 삼겹살<br>600g 한 팩</div>
+    <div class="spec">국산 · 600g · 1.5cm 컷 · 한정 50팩</div>
+    <div class="priceBlock">
+      <span class="orig price-num">14,900원</span>
+      <span class="sale price-num">9,900<span class="won">원</span></span>
+    </div>
+    <div class="footer">
+      <div class="progress"><div class="fill"></div></div>
+      <span>62% · 잔여 19팩</span>
+    </div>
+    <button class="cta">담기
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </button>
+  </article>
+
+  <!-- Countdown 3x4 -->
+  <article class="tile countdown span-half" style="grid-column: span 3; grid-row: span 4;">
+    <div>
+      <div class="lbl">마감 카운트다운</div>
+      <div class="meta">제주 감귤 주스</div>
+    </div>
+    <div class="clock" id="clockBox">
+      <em>00</em>:<em id="cmm">49</em>:<em id="css">12</em>
+    </div>
+    <div class="meta" style="opacity:0.75;">38%↓ · 1,500원 ↓</div>
+  </article>
+
+  <!-- Stats tile 3x4 -->
+  <article class="tile stats span-half t-tile" style="grid-column: span 3; grid-row: span 4;">
+    <div>
+      <div class="lbl">오늘 행사</div>
+      <div class="num">7<small>건</small></div>
+    </div>
+    <div class="meta">평균 28% 할인 · 누적 462명 담음</div>
+  </article>
+
+  <!-- Premium beef 3x5 tall -->
+  <article class="tile t-rose span-tall flash" style="grid-column: span 3;">
+    <span class="badge">한정 20개</span>
+    <span class="productEmoji">🥩</span>
+    <div class="name">한우 등심 1++<br>300g</div>
+    <div class="spec">국산 1++ · 진공포장</div>
+    <div class="priceLine">
+      <span class="off">20%</span>
+      <span class="sale price-num">39,900<span class="won">원</span></span>
+    </div>
+    <div class="orig price-num">49,900원</div>
+  </article>
+
+  <!-- Hallabong 3x5 tall -->
+  <article class="tile t-cream span-tall">
+    <span class="badge">20%↓</span>
+    <span class="productEmoji">🍊</span>
+    <div class="name">제주 한라봉<br>5kg 박스</div>
+    <div class="spec">제주산 · 13Brix↑</div>
+    <div class="priceLine">
+      <span class="off">5,000원↓</span>
+      <span class="sale price-num">19,900<span class="won">원</span></span>
+    </div>
+    <div class="orig price-num">24,900원</div>
+  </article>
+
+  <!-- Card discount wide 6x2 -->
+  <article class="tile ctaWide span-wide">
+    <div class="l">
+      <span class="t1">카드 추가 할인 진행 중</span>
+      <span class="t2">삼성 · 현대 · 신한 · BC 카드</span>
+    </div>
+    <div class="r">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </div>
+  </article>
+
+  <!-- Like tile 3x3 -->
+  <article class="tile likes span-mid">
+    <div class="lbl" style="font-size:10px; letter-spacing:0.16em; opacity:0.55; font-weight:700; text-transform:uppercase;">이번 주 인기</div>
+    <div class="meta">
+      <span class="heartIcon">♥</span>
+      <span class="num">208</span>
+    </div>
+    <div class="spec" style="font-size:11px; opacity:0.7;">제주 한라봉이 1위</div>
+  </article>
+
+  <!-- Mini stock tile 3x3 -->
+  <article class="tile stock span-mid">
+    <div class="lbl">잔여 수량</div>
+    <div class="name">완도 활전복</div>
+    <div class="bar"><div class="fill" style="--sold:50%; width:50%;">50%</div></div>
+  </article>
+
+  <!-- Abalone 4x4 -->
+  <article class="tile t-sky span-large large">
+    <span class="badge">한정 12박스</span>
+    <span class="productEmoji">🐚</span>
+    <div class="name">완도 활전복 · 10미</div>
+    <div class="spec">완도산 · 새벽 4시 입고</div>
+    <div class="priceLine">
+      <span class="off">20%</span>
+      <span class="sale price-num">39,900<span class="won">원</span></span>
+    </div>
+    <div class="orig price-num">49,900원</div>
+  </article>
+
+  <!-- Chili thin 2x3 -->
+  <article class="tile t-mint span-thin">
+    <span class="badge">33%↓</span>
+    <span class="productEmoji" style="font-size:44px;">🌶️</span>
+    <div class="name" style="font-size:14px;">청양고추</div>
+    <div class="priceLine">
+      <span class="sale price-num">1,990<span class="won">원</span></span>
+    </div>
+    <div class="orig price-num">2,990원</div>
+  </article>
+
+  <!-- Milk 3x4 -->
+  <article class="tile t-lemon span-half" style="grid-column: span 3; grid-row: span 4;">
+    <span class="badge">1+1</span>
+    <span class="productEmoji">🥛</span>
+    <div class="name">가족 우유 1.8L</div>
+    <div class="spec">한 개 가격 → 두 개</div>
+    <div class="priceLine">
+      <span class="sale price-num">4,290<span class="won">원</span></span>
+    </div>
+    <div class="orig price-num">5,290원</div>
+  </article>
+
+  <!-- Juice 3x4 (urgent) -->
+  <article class="tile t-peach span-half flash" style="grid-column: span 3; grid-row: span 4;">
+    <span class="badge">38%↓ 마감 임박</span>
+    <span class="productEmoji">🧃</span>
+    <div class="name">제주 감귤 주스 1L</div>
+    <div class="spec">49분 후 종료</div>
+    <div class="priceLine">
+      <span class="off">1,500원↓</span>
+      <span class="sale price-num">2,490<span class="won">원</span></span>
+    </div>
+    <div class="orig price-num">3,990원</div>
+  </article>
+
+  <!-- Card disc tile 6x2 -->
+  <article class="tile card span-wide">
+    <div class="lbl">카드 추가 할인</div>
+    <div class="v">삼성 5% <em>+</em> 현대 7% <em>+</em> 신한 5%</div>
+  </article>
+
+  <!-- More button 6x2 -->
+  <article class="tile more span-wide">
+    <span class="ic">+</span>
+    <span>이번 주 행사 전체 7건 보기</span>
+  </article>
+</main>
+
+<div class="dock">
+  <span class="dot">3</span>
+  <div class="text">
+    <span class="a">장바구니 보기</span>
+    <span class="b">담은 상품 3개 · 53,790원</span>
+  </div>
+  <button class="go">
+    매장으로
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+</div>
+
+<script>
+  // staggered tile reveal
+  const tiles = document.querySelectorAll('.tile');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.05 });
+  tiles.forEach((t, i) => {
+    t.style.transitionDelay = (i * 35) + 'ms';
+    io.observe(t);
+  });
+
+  // countdown
+  function pad(n) { return String(n).padStart(2, '0'); }
+  let totalSec = 49 * 60 + 12;
+  let mainSec = 2 * 3600 + 14 * 60 + 33;
+  setInterval(() => {
+    totalSec = Math.max(0, totalSec - 1);
+    document.getElementById('cmm').textContent = pad(Math.floor(totalSec / 60));
+    document.getElementById('css').textContent = pad(totalSec % 60);
+    mainSec = Math.max(0, mainSec - 1);
+    const h = Math.floor(mainSec / 3600);
+    const m = Math.floor((mainSec % 3600) / 60);
+    const s = mainSec % 60;
+    document.getElementById('cdMain').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }, 1000);
+
+  // filter chip toggle (purely visual)
+  document.querySelectorAll('.filterRow .chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.filterRow .chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+
+  // season
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>

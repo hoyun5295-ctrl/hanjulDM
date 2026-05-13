@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 · NOW PLAYING</title>
+<meta property="og:title" content="동네마트 강남점 · 이번 주 카탈로그">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #F97316;
+    --color-accent: #EF4444;
+    --color-on-primary: #FFFFFF;
+    --bg: #0A0A0B;
+    --bg-2: #131316;
+    --bg-3: #1B1B20;
+    --bg-elev: #232328;
+    --text: #F4F4F5;
+    --text-soft: #A8A8AE;
+    --text-dim: #6C6C72;
+    --rule: rgba(255,255,255,0.08);
+    --rule-strong: rgba(255,255,255,0.18);
+    --discount: #FF6B5B;
+  }
+  html[data-season="newyear"]   { --color-primary:#FF4D4D; --color-accent:#FFB020; }
+  html[data-season="chuseok"]   { --color-primary:#5B8DEF; --color-accent:#FFB020; }
+  html[data-season="christmas"] { --color-primary:#34D399; --color-accent:#FF6B5B; }
+  html[data-season="summer"]    { --color-primary:#22D3EE; --color-accent:#06B6D4; }
+  html[data-season="winter"]    { --color-primary:#F472B6; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#FBBF24; --color-accent:#F4F4F5; }
+  html[data-season="urgent"]    { --color-primary:#F4F4F5; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: 'Pretendard Variable', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 96px;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  .price-num { font-variant-numeric: tabular-nums; }
+
+  /* ===== top bar ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 40;
+    height: 56px; padding: 0 12px;
+    background: linear-gradient(180deg, var(--bg) 60%, transparent);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .topbar.scrolled { background: rgba(10,10,11,0.94); backdrop-filter: blur(14px); border-bottom: 1px solid var(--rule); }
+  .topbar .btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.06); border: 0;
+    color: var(--text); display: grid; place-items: center;
+  }
+  .topbar svg { width: 18px; height: 18px; }
+  .topbar .title {
+    flex: 1; padding: 0 6px;
+    display: flex; flex-direction: column; line-height: 1.1;
+  }
+  .topbar .title .t1 { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+  .topbar .title .t2 { font-size: 11px; color: var(--text-soft); font-weight: 500; margin-top: 1px; }
+
+  /* ===== hero — featured weekly ===== */
+  .hero {
+    margin: 8px 16px 0;
+    border-radius: 20px;
+    background:
+      radial-gradient(120% 80% at 0% 0%, color-mix(in oklab, var(--color-primary), black 30%), transparent 60%),
+      linear-gradient(135deg, color-mix(in oklab, var(--color-primary), black 30%) 0%, color-mix(in oklab, var(--color-accent), black 50%) 100%);
+    padding: 18px 18px 16px;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(40% 30% at 100% 0%, rgba(255,255,255,0.18), transparent 60%);
+  }
+  .hero .lbl {
+    position: relative; z-index: 1;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    font-weight: 700; opacity: 0.85;
+  }
+  .hero h1 {
+    position: relative; z-index: 1;
+    margin-top: 8px;
+    font-size: 28px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.05;
+    max-width: 220px;
+  }
+  .hero .meta {
+    position: relative; z-index: 1;
+    margin-top: 6px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+    opacity: 0.85;
+  }
+  .hero .meta .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+  .hero .albumArt {
+    position: absolute; right: -8px; top: 14px;
+    width: 130px; height: 130px;
+    border-radius: 18px; overflow: hidden;
+    box-shadow: 0 18px 40px -10px rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.3); display: grid; place-items: center;
+  }
+  .hero .albumArt::after {
+    content: var(--em, "🥓"); font-size: 80px; line-height: 1;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4));
+  }
+  .hero .actions {
+    margin-top: 16px;
+    display: flex; align-items: center; gap: 10px;
+    position: relative; z-index: 1;
+  }
+  .hero .play {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--text); color: var(--bg);
+    border: 0; display: grid; place-items: center;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+  }
+  .hero .play svg { width: 18px; height: 18px; transform: translateX(1px); }
+  .hero .iconbtn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.14); backdrop-filter: blur(6px);
+    border: 0; color: var(--text); display: grid; place-items: center;
+  }
+  .hero .iconbtn svg { width: 18px; height: 18px; }
+  .hero .save .heart { fill: none; stroke: currentColor; }
+  .hero .save.on .heart { fill: var(--color-accent); stroke: var(--color-accent); }
+
+  /* ===== category row ===== */
+  .row { margin-top: 30px; }
+  .row .head {
+    padding: 0 16px 12px;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .row .head .h {
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .row .head .h .tt {
+    font-size: 20px; font-weight: 900; letter-spacing: -0.025em;
+  }
+  .row .head .h .nn {
+    font-size: 11px; color: var(--text-dim); font-weight: 600;
+  }
+  .row .head .sub {
+    font-size: 11px; color: var(--text-soft); font-weight: 500;
+    margin-top: 2px;
+  }
+  .row .head .more {
+    background: transparent; border: 0; color: var(--text-soft);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .swipe {
+    display: flex; gap: 12px;
+    overflow-x: auto; padding: 0 16px 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .swipe::-webkit-scrollbar { display: none; }
+
+  /* ===== card (album-cover style) ===== */
+  .pcard {
+    flex: 0 0 168px;
+    scroll-snap-align: start;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .pcard .album {
+    aspect-ratio: 1/1; border-radius: 14px;
+    position: relative; overflow: hidden;
+    background: var(--bg-3);
+    box-shadow: 0 8px 18px -8px rgba(0,0,0,0.6);
+    background-color: var(--ph-bg, #2a2a30);
+    transition: transform 200ms;
+  }
+  .pcard:active .album { transform: scale(0.98); }
+  .album::after {
+    content: var(--ph-emoji, "");
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    font-size: 80px; line-height: 1;
+    filter: drop-shadow(0 10px 18px rgba(0,0,0,0.5));
+  }
+  .album .grain {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,0.18), transparent 50%),
+      radial-gradient(80% 60% at 100% 100%, rgba(0,0,0,0.4), transparent 60%);
+    mix-blend-mode: overlay;
+  }
+  .album .badge {
+    position: absolute; left: 8px; top: 8px;
+    padding: 4px 8px; border-radius: 999px;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+    font-size: 10px; font-weight: 800; letter-spacing: 0.02em;
+    color: var(--text);
+  }
+  .album .badge.hot { background: var(--color-accent); }
+  .album .duration {
+    position: absolute; right: 8px; bottom: 8px;
+    padding: 3px 7px; border-radius: 6px;
+    background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+    font-size: 10px; font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  }
+  .album .playOverlay {
+    position: absolute; right: 8px; bottom: 8px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--color-primary); color: var(--color-on-primary);
+    display: grid; place-items: center;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 180ms, transform 180ms;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+  }
+  .pcard:hover .album .playOverlay,
+  .pcard:active .album .playOverlay { opacity: 1; transform: translateY(0); }
+  .album .playOverlay svg { width: 14px; height: 14px; transform: translateX(1px); }
+
+  .pcard .info { margin-top: 10px; padding: 0 2px; }
+  .pcard .info .nm {
+    font-size: 14px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+  }
+  .pcard .info .by {
+    margin-top: 2px;
+    font-size: 11px; color: var(--text-soft); font-weight: 500;
+  }
+  .pcard .priceRow {
+    margin-top: 8px;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .pcard .off {
+    font-size: 11px; font-weight: 800; color: var(--discount);
+  }
+  .pcard .sale {
+    font-size: 15px; font-weight: 900; letter-spacing: -0.02em;
+  }
+  .pcard .sale .won { font-size: 10px; font-weight: 800; }
+  .pcard .orig {
+    font-size: 10px; color: var(--text-dim); text-decoration: line-through;
+  }
+
+  /* "now playing" indicator on a card */
+  .pcard.playing .album {
+    box-shadow: 0 0 0 2px var(--color-primary), 0 8px 18px -8px rgba(0,0,0,0.6);
+  }
+  .pcard.playing .nm { color: var(--color-primary); }
+  .pcard .eq {
+    position: absolute; left: 8px; top: 8px;
+    display: flex; align-items: end; gap: 2px; height: 16px;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+    padding: 3px 6px; border-radius: 999px;
+  }
+  .pcard:not(.playing) .eq { display: none; }
+  .pcard .eq i {
+    width: 2px; height: 10px; background: var(--color-primary);
+    animation: eqBounce 800ms ease-in-out infinite;
+    border-radius: 1px;
+  }
+  .pcard .eq i:nth-child(2) { animation-delay: 120ms; }
+  .pcard .eq i:nth-child(3) { animation-delay: 240ms; }
+  @keyframes eqBounce {
+    0%, 100% { height: 4px; }
+    50% { height: 12px; }
+  }
+
+  /* large feature row (artist style) — first card bigger */
+  .row.large .swipe .pcard { flex-basis: 220px; }
+  .row.large .swipe .pcard .album { border-radius: 16px; }
+  .row.large .swipe .pcard .nm { font-size: 16px; }
+
+  /* "Made for you" alternating shape */
+  .row.circle .swipe .pcard .album { border-radius: 50%; }
+  .row.circle .swipe .pcard { text-align: center; }
+  .row.circle .swipe .pcard .info { padding: 0 4px; }
+  .row.circle .swipe .pcard .priceRow { justify-content: center; }
+
+  /* store card "now playing in store" */
+  .storeNow {
+    margin: 30px 16px 0;
+    padding: 14px;
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-radius: 18px;
+    display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center;
+  }
+  .storeNow .crest {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    display: grid; place-items: center; font-weight: 900; font-size: 22px;
+    color: var(--color-on-primary);
+  }
+  .storeNow .l {
+    display: flex; flex-direction: column; line-height: 1.2;
+    min-width: 0;
+  }
+  .storeNow .l .a {
+    font-size: 10px; letter-spacing: 0.18em; color: var(--text-soft); text-transform: uppercase; font-weight: 700;
+  }
+  .storeNow .l .b {
+    font-size: 16px; font-weight: 800; letter-spacing: -0.02em;
+    margin-top: 2px;
+  }
+  .storeNow .l .c {
+    font-size: 11px; color: var(--text-soft); margin-top: 2px; font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .storeNow .l .c .live {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: #4ADE80; font-weight: 700;
+  }
+  .storeNow .l .c .live .d { width: 6px; height: 6px; border-radius: 50%; background: #4ADE80; box-shadow: 0 0 6px #4ADE80; }
+  .storeNow .actions { display: flex; gap: 6px; }
+  .storeNow .actions button {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.08); border: 0; color: var(--text);
+    display: grid; place-items: center;
+  }
+  .storeNow .actions button svg { width: 14px; height: 14px; }
+  .storeNow .actions .pr {
+    background: var(--color-primary); color: var(--color-on-primary);
+  }
+
+  /* ===== mini player (cart) ===== */
+  .player {
+    position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60;
+    background: var(--bg-elev); border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 8px 10px 8px 10px;
+    display: grid; grid-template-columns: 44px 1fr auto auto; gap: 10px; align-items: center;
+    box-shadow: 0 12px 28px -10px rgba(0,0,0,0.6);
+  }
+  .player .art {
+    width: 44px; height: 44px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    display: grid; place-items: center; font-size: 22px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  }
+  .player .meta { min-width: 0; }
+  .player .meta .nm {
+    font-size: 13px; font-weight: 800; letter-spacing: -0.01em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .player .meta .by { font-size: 11px; color: var(--text-soft); font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player .like {
+    width: 34px; height: 34px; border-radius: 50%; border: 0; background: transparent;
+    color: var(--text); display: grid; place-items: center;
+  }
+  .player .like svg { width: 18px; height: 18px; }
+  .player .like.on svg { fill: var(--color-accent); stroke: var(--color-accent); }
+  .player .pause {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--text); color: var(--bg-2);
+    border: 0; display: grid; place-items: center;
+  }
+  .player .pause svg { width: 14px; height: 14px; }
+  .player .progress {
+    grid-column: 1 / -1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.08);
+    margin: 8px 0 0; overflow: hidden;
+  }
+  .player .progress .fill {
+    height: 100%; width: 40%;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    border-radius: 2px;
+  }
+
+  /* footer brand */
+  .brand {
+    margin: 36px 16px 18px;
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10px; color: var(--text-dim);
+    letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  .brand strong { color: var(--text); font-weight: 800; letter-spacing: -0.01em; text-transform: none; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header class="topbar" id="topbar">
+  <button class="btn" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="title">
+    <div class="t1">동네마트 강남점</div>
+    <div class="t2">이번 주 카탈로그 · 5/13 — 5/19</div>
+  </div>
+  <button class="btn" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+  <button class="btn" aria-label="더보기"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+</header>
+
+<!-- HERO: featured -->
+<section class="hero" style="--em: '🥓';">
+  <div class="lbl">FEATURED · NO.1 THIS WEEK</div>
+  <h1>국산 삼겹살<br>600g 한 팩</h1>
+  <div class="meta">
+    <span>축산</span><span class="dot"></span>
+    <span>국산</span><span class="dot"></span>
+    <span>30%↓ · 9,900원</span>
+  </div>
+  <div class="albumArt"></div>
+  <div class="actions">
+    <button class="play" aria-label="담기">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="iconbtn save" id="heroSave" aria-label="찜">
+      <svg class="heart" viewBox="0 0 24 24" stroke-width="2"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+    </button>
+    <button class="iconbtn" aria-label="공유">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+    </button>
+    <button class="iconbtn" aria-label="더보기">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+    </button>
+  </div>
+</section>
+
+<aside class="storeNow">
+  <div class="crest">동</div>
+  <div class="l">
+    <div class="a">NOW PLAYING IN STORE</div>
+    <div class="b">동네마트 강남점</div>
+    <div class="c"><span class="live"><span class="d"></span>영업 중</span> · 도보 3분 · ★ 4.7</div>
+  </div>
+  <div class="actions">
+    <button aria-label="전화"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.97.37 1.92.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.33 1.84.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+    <button class="pr" aria-label="길찾기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+  </div>
+</aside>
+
+<main id="main"></main>
+
+<div class="brand">
+  <strong>HANJUL</strong>
+  <span>· 한 줄 전단 · NIGHT MODE</span>
+</div>
+
+<!-- Mini player (cart bar) -->
+<aside class="player" id="player">
+  <div class="art">🥓</div>
+  <div class="meta">
+    <div class="nm">국산 삼겹살 600g</div>
+    <div class="by">축산 · 9,900원 · 외 2개</div>
+  </div>
+  <button class="like" id="likeBtn" aria-label="찜">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+  </button>
+  <button class="pause" aria-label="장바구니 열기">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <div class="progress"><div class="fill"></div></div>
+</aside>
+
+<script>
+  const DATA = [
+    {
+      name: "Editor's Pick", count: 5,
+      sub: "이번 주 사장님이 직접 고른 다섯 가지",
+      large: true, items: [
+        { name:"국산 삼겹살", by:"축산 · 600g", originalPrice:14900, salePrice:9900,  badge:"30%↓",     duration:"7일", bg:"#3a1818", emoji:"🥓", playing: true },
+        { name:"한우 등심 1++", by:"축산 · 300g", originalPrice:49900, salePrice:39900, badge:"한정 20",   duration:"7일", bg:"#4a1a1a", emoji:"🥩" },
+        { name:"제주 한라봉", by:"청과 · 5kg", originalPrice:24900, salePrice:19900, badge:"20%↓", duration:"7일", bg:"#3e2c10", emoji:"🍊" },
+        { name:"완도 활전복", by:"수산 · 10미", originalPrice:49900, salePrice:39900, badge:"한정 12", duration:"오늘", bg:"#0e2540", emoji:"🐚" },
+        { name:"청양고추", by:"청과 · 200g", originalPrice:2990, salePrice:1990, badge:"33%↓", duration:"3일", bg:"#162a1a", emoji:"🌶️" },
+      ]
+    },
+    {
+      name: "축산", count: 5,
+      sub: "주말 한 끼, 두툼하게",
+      items: [
+        { name:"국산 삼겹살", by:"600g · 국산", originalPrice:14900, salePrice:9900, badge:"30%↓", duration:"7일", bg:"#3a1818", emoji:"🥓" },
+        { name:"한우 등심 1++", by:"300g · 국산 1++", originalPrice:49900, salePrice:39900, badge:"한정", duration:"7일", bg:"#4a1a1a", emoji:"🥩" },
+        { name:"양념 LA 갈비", by:"1.2kg · 미국", originalPrice:38900, salePrice:29900, badge:"23%↓", duration:"7일", bg:"#3e1f0e", emoji:"🍖" },
+        { name:"흑돼지 목살", by:"500g · 제주", originalPrice:18900, salePrice:14900, badge:"21%↓", duration:"7일", bg:"#2e1d10", emoji:"🐖" },
+        { name:"닭볶음용 토막", by:"1kg · 국산", originalPrice:7900, salePrice:5900, badge:"25%↓", duration:"5일", bg:"#3f2f10", emoji:"🍗" },
+      ]
+    },
+    {
+      name: "청과", count: 6,
+      sub: "햇과일이 도착했어요",
+      items: [
+        { name:"청양고추", by:"200g · 국산", originalPrice:2990, salePrice:1990, badge:"33%↓", duration:"3일", bg:"#162a1a", emoji:"🌶️" },
+        { name:"제주 한라봉", by:"5kg · 제주", originalPrice:24900, salePrice:19900, badge:"20%↓", duration:"7일", bg:"#3e2c10", emoji:"🍊" },
+        { name:"강원 감자", by:"2kg · 강원", originalPrice:7900, salePrice:5900, badge:"25%↓", duration:"7일", bg:"#2a2316", emoji:"🥔" },
+        { name:"수박 한 통", by:"7kg · 고창", originalPrice:19900, salePrice:14900, badge:"25%↓", duration:"5일", bg:"#0f2410", emoji:"🍉" },
+        { name:"방울토마토", by:"500g · 전남", originalPrice:5990, salePrice:3990, badge:"33%↓", duration:"7일", bg:"#3a1414", emoji:"🍅" },
+        { name:"청송 사과", by:"3kg · 청송", originalPrice:21900, salePrice:17900, badge:"18%↓", duration:"7일", bg:"#3a1414", emoji:"🍎" },
+      ]
+    },
+    {
+      name: "수산", count: 4,
+      sub: "새벽 활어차 직접 입고",
+      items: [
+        { name:"완도 활전복", by:"10미 · 완도", originalPrice:49900, salePrice:39900, badge:"한정 12", duration:"오늘", bg:"#0e2540", emoji:"🐚" },
+        { name:"굴비 5미", by:"5미 · 영광", originalPrice:24900, salePrice:18900, badge:"24%↓", duration:"5일", bg:"#1a2540", emoji:"🐟" },
+        { name:"노르웨이 연어", by:"400g · 수입", originalPrice:18900, salePrice:13900, badge:"26%↓", duration:"7일", bg:"#3a1d10", emoji:"🍣" },
+        { name:"동해 오징어", by:"3미 · 동해", originalPrice:9900, salePrice:6900, badge:"30%↓", duration:"3일", bg:"#1a3040", emoji:"🦑" },
+      ]
+    },
+    {
+      name: "공산 / 음료", count: 4,
+      sub: "한 주를 든든하게",
+      items: [
+        { name:"가족 우유 1.8L", by:"국산 1+1", originalPrice:5290, salePrice:4290, badge:"1+1", duration:"7일", bg:"#222226", emoji:"🥛" },
+        { name:"제주 감귤주스 1L", by:"제주 100%", originalPrice:3990, salePrice:2490, badge:"38%↓", duration:"1일", bg:"#3e2c10", emoji:"🧃" },
+        { name:"오트밀 그래놀라", by:"500g · 수입", originalPrice:8900, salePrice:5900, badge:"33%↓", duration:"7일", bg:"#2c2316", emoji:"🥣" },
+        { name:"생수 2L x 6", by:"제주산", originalPrice:5980, salePrice:3980, badge:"33%↓", duration:"7일", bg:"#10262a", emoji:"💧" },
+      ]
+    },
+  ];
+
+  const fmt = n => n.toLocaleString('ko-KR');
+  const main = document.getElementById('main');
+
+  DATA.forEach((cat, ci) => {
+    const row = document.createElement('section');
+    row.className = 'row' + (cat.large ? ' large' : '');
+    row.innerHTML = `
+      <div class="head">
+        <div>
+          <div class="h"><span class="tt">${cat.name}</span><span class="nn">${cat.count}곡</span></div>
+          <div class="sub">${cat.sub}</div>
+        </div>
+        <button class="more">SHOW ALL</button>
+      </div>
+      <div class="swipe"></div>
+    `;
+    const swipe = row.querySelector('.swipe');
+    cat.items.forEach(it => {
+      const card = document.createElement('article');
+      card.className = 'pcard' + (it.playing ? ' playing' : '');
+      const off = Math.round((1 - it.salePrice/it.originalPrice) * 100);
+      const tagOnly = it.badge.includes('한정') || it.badge.includes('1+1');
+      card.innerHTML = `
+        <div class="album" style="--ph-bg:${it.bg}; --ph-emoji:'${it.emoji}';">
+          <div class="grain"></div>
+          <span class="badge ${tagOnly ? '' : 'hot'}">${it.badge}</span>
+          <span class="duration">${it.duration} 남음</span>
+          <div class="eq" aria-hidden="true"><i></i><i></i><i></i></div>
+          <button class="playOverlay" aria-label="담기">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        </div>
+        <div class="info">
+          <div class="nm">${it.name}</div>
+          <div class="by">${it.by}</div>
+          <div class="priceRow">
+            <span class="off">${off}%</span>
+            <span class="sale price-num">${fmt(it.salePrice)}<span class="won">원</span></span>
+          </div>
+          <div class="orig price-num">${fmt(it.originalPrice)}원</div>
+        </div>
+      `;
+      swipe.appendChild(card);
+    });
+    main.appendChild(row);
+  });
+
+  // top bar scroll
+  document.addEventListener('scroll', () => {
+    document.getElementById('topbar').classList.toggle('scrolled', scrollY > 20);
+  }, { passive: true });
+
+  // hero save toggle
+  document.getElementById('heroSave').addEventListener('click', (e) => {
+    e.currentTarget.classList.toggle('on');
+  });
+
+  // player like toggle
+  document.getElementById('likeBtn').addEventListener('click', (e) => {
+    e.currentTarget.classList.toggle('on');
+  });
+
+  // season
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>

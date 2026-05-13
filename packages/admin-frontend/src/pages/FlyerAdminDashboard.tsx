@@ -1,12 +1,16 @@
 /**
- * 한줄전단 AI 슈퍼관리자 — 단순 placeholder
+ * 한줄전단 AI 슈퍼관리자 — 메인 대시보드 (탭 라우팅)
  *
- * backend /api/admin/flyer/dashboard + /companies 응답 camelCase 매칭.
- * 정식 기능은 PHASE 1 점진 확장.
+ * 통계 카드 + 3 탭(회사 관리 / 회원 관리 / 감사 로그).
+ * backend: GET /api/admin/flyer/dashboard (통계)
+ * D155: 단순 placeholder → 3 화면 분리 (소프트 삭제 + 감사 로그 통합)
  */
 import { useState, useEffect, useCallback } from 'react';
 import { API_BASE, apiFetch } from '../App';
-import { StatCard, SectionCard, DataTable, Button } from '../components/ui';
+import { StatCard, TabBar } from '../components/ui';
+import CompanyListPage from './CompanyListPage';
+import UserListPage from './UserListPage';
+import AuditLogPage from './AuditLogPage';
 
 interface Props { token: string; user: any; }
 
@@ -19,22 +23,11 @@ interface DashboardStats {
   totalCustomers?: number;
 }
 
-interface Company {
-  id: string;
-  company_name?: string;
-  business_type?: string;
-  owner_name?: string;
-  owner_phone?: string;
-  plan_type?: string;
-  payment_status?: string;
-  created_at?: string;
-}
+type Tab = 'companies' | 'users' | 'audit';
 
 export default function FlyerAdminDashboard({ token: _token, user: _user }: Props) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [tab, setTab] = useState<Tab>('companies');
 
   const loadStats = useCallback(async () => {
     try {
@@ -43,35 +36,18 @@ export default function FlyerAdminDashboard({ token: _token, user: _user }: Prop
         const data = await res.json();
         setStats(data);
       }
-    } catch (err: any) {
-      setError(err.message || '통계 로드 실패');
+    } catch {
+      // 통계 실패는 무시 (탭 화면 별도 로드)
     }
   }, []);
 
-  const loadCompanies = useCallback(async () => {
-    try {
-      const res = await apiFetch(`${API_BASE}/api/admin/flyer/companies`);
-      if (res.ok) {
-        const data = await res.json();
-        setCompanies(data.items || data || []);
-      }
-    } catch (err: any) {
-      setError(err.message || '회사 목록 로드 실패');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadStats();
-    loadCompanies();
-  }, [loadStats, loadCompanies]);
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text">한줄전단 AI 슈퍼관리자</h1>
-        <p className="text-sm text-text-secondary mt-1">매장 회사 관리 · 통계 · 정산</p>
+        <p className="text-sm text-text-secondary mt-1">매장 회사 관리 · 회원 관리 · 감사 로그</p>
       </div>
 
       {/* 통계 카드 (backend camelCase 응답) */}
@@ -82,38 +58,19 @@ export default function FlyerAdminDashboard({ token: _token, user: _user }: Prop
         <StatCard label="총 매장 고객" value={stats?.totalCustomers ?? '-'} />
       </div>
 
-      {/* 회사 목록 */}
-      <SectionCard
-        title="매장 회사 목록"
-        action={<Button size="sm">+ 회사 추가</Button>}
-      >
-        {error && (
-          <div className="bg-error-50 border border-error-500/20 rounded-lg px-3 py-2 mb-4">
-            <p className="text-sm text-error-600">{error}</p>
-          </div>
-        )}
-        {loading ? (
-          <p className="text-sm text-text-muted text-center py-8">로딩 중...</p>
-        ) : (
-          <DataTable
-            columns={[
-              { key: 'company_name', label: '회사명' },
-              { key: 'business_type', label: '업종' },
-              { key: 'owner_name', label: '대표자' },
-              { key: 'owner_phone', label: '연락처' },
-              { key: 'plan_type', label: '요금제' },
-              { key: 'payment_status', label: '상태' },
-              { key: 'created_at', label: '등록일', render: (v) => v ? new Date(v).toLocaleDateString('ko-KR') : '-' },
-            ]}
-            rows={companies}
-            emptyMessage="등록된 매장이 없습니다"
-          />
-        )}
-      </SectionCard>
+      <TabBar<Tab>
+        tabs={[
+          { key: 'companies', label: '회사 관리' },
+          { key: 'users', label: '회원 관리' },
+          { key: 'audit', label: '감사 로그' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
-      <p className="text-xs text-text-muted text-center">
-        ※ 추가 기능(총판/매장 매트릭스, 발송 통계 상세, 정산, 환불 등)은 PHASE 1에서 점진 확장 예정
-      </p>
+      {tab === 'companies' && <CompanyListPage />}
+      {tab === 'users' && <UserListPage />}
+      {tab === 'audit' && <AuditLogPage />}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>한줄전단 템플릿 6종 — 리디자인 미리보기</title>
+<title>한줄전단 템플릿 11종 — 리디자인 미리보기</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <style>
   :root {
@@ -13,6 +13,7 @@
     --rule: #2A2A30;
     --text: #F3F3F2;
     --text-soft: #9E9EA6;
+    --text-dim: #6B6B72;
     --accent: #F97316;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,7 +23,8 @@
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
   }
-  button { font-family: inherit; cursor: pointer; }
+  button, a { font-family: inherit; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
 
   /* ===== top app bar ===== */
   .appbar {
@@ -32,25 +34,23 @@
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--rule);
     display: flex; align-items: center; gap: 14px;
+    overflow-x: auto; scrollbar-width: none;
   }
-  .brand {
-    display: flex; align-items: center; gap: 10px;
-  }
+  .appbar::-webkit-scrollbar { display: none; }
+  .brand { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
   .brand .mark {
     width: 28px; height: 28px; border-radius: 7px;
     background: linear-gradient(135deg, #F97316, #EF4444);
     display: grid; place-items: center; font-size: 14px; font-weight: 900; color: #fff;
   }
-  .brand .title {
-    display: flex; flex-direction: column;
-  }
+  .brand .title { display: flex; flex-direction: column; }
   .brand .title .h { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
-  .brand .title .s { font-size: 11px; color: var(--text-soft); letter-spacing: 0.02em; margin-top: -2px; }
-
-  .appbar .spacer { flex: 1; }
+  .brand .title .s { font-size: 11px; color: var(--text-soft); margin-top: -2px; }
+  .appbar .spacer { flex: 1; min-width: 4px; }
 
   .seasonGroup {
-    display: flex; align-items: center; gap: 6px;
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 4px;
     background: var(--panel); padding: 6px;
     border-radius: 10px;
     border: 1px solid var(--rule);
@@ -61,11 +61,12 @@
     padding: 0 8px 0 6px;
   }
   .swatch {
-    height: 30px; padding: 0 12px 0 8px;
+    height: 30px; padding: 0 10px 0 7px;
     border-radius: 7px; border: 1px solid transparent;
     background: transparent; color: var(--text);
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 12px; font-weight: 600; letter-spacing: -0.01em;
+    white-space: nowrap;
   }
   .swatch .dot {
     width: 12px; height: 12px; border-radius: 50%;
@@ -80,6 +81,7 @@
   .swatch:hover { background: var(--bg); }
 
   .control {
+    flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 4px;
     background: var(--panel); padding: 4px; border-radius: 10px;
     border: 1px solid var(--rule);
@@ -111,12 +113,40 @@
   }
   .canvas {
     position: relative;
-    padding: 56px 56px 80px;
-    display: flex; flex-wrap: wrap;
-    gap: 40px 28px;
-    justify-content: flex-start;
-    align-items: flex-start;
+    padding: 40px 40px 80px;
     transform-origin: 0 0;
+  }
+
+  /* family group */
+  .family { margin-bottom: 28px; }
+  .family .head {
+    display: flex; align-items: baseline; gap: 14px;
+    padding: 0 6px 16px;
+  }
+  .family .head .no {
+    font-size: 11px; letter-spacing: 0.2em; color: var(--text-dim);
+    font-weight: 700;
+  }
+  .family .head .title {
+    font-size: 26px; font-weight: 900; letter-spacing: -0.025em;
+  }
+  .family .head .desc {
+    color: var(--text-soft); font-size: 13px; margin-left: 4px;
+    max-width: 600px;
+  }
+  .family .head .sep {
+    flex: 1; height: 1px; background: var(--rule);
+  }
+  .family .head .tag {
+    font-size: 10px; letter-spacing: 0.18em; color: var(--text-soft);
+    padding: 3px 8px; border-radius: 4px;
+    background: var(--panel); border: 1px solid var(--rule);
+    font-weight: 700; text-transform: uppercase;
+  }
+  .family.misc .head .title { color: var(--text-dim); }
+
+  .row {
+    display: flex; gap: 28px; flex-wrap: wrap;
   }
 
   /* phone */
@@ -127,20 +157,26 @@
   }
   .phone .meta {
     display: flex; align-items: baseline; justify-content: space-between;
-    padding: 0 10px 14px;
+    padding: 0 10px 12px;
   }
   .phone .meta .ix {
     font-size: 10px; letter-spacing: 0.2em; color: var(--text-soft); font-weight: 700;
   }
   .phone .meta .nm {
-    font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+    font-size: 17px; font-weight: 800; letter-spacing: -0.02em;
     margin-top: -2px;
   }
-  .phone .meta .nm a { color: var(--text); text-decoration: none; }
   .phone .meta .nm a:hover { color: var(--accent); }
+  .phone .meta .nm .var {
+    font-size: 11px; padding: 2px 6px; border-radius: 4px;
+    background: var(--accent); color: #fff;
+    font-weight: 700; letter-spacing: 0.04em;
+    margin-left: 6px; vertical-align: middle;
+  }
+  .phone .meta .nm .var.a { background: var(--panel); color: var(--text-soft); border: 1px solid var(--rule); }
   .phone .meta .desc {
     font-size: 12px; color: var(--text-soft); margin-top: 4px;
-    max-width: 320px; line-height: 1.45;
+    max-width: 360px; line-height: 1.45;
   }
   .phone .body {
     width: 411px; height: 870px;
@@ -163,7 +199,6 @@
     width: 393px; height: 852px;
     border: 0; display: block;
   }
-  /* notch */
   .phone .notch {
     position: absolute; left: 50%; top: 18px; transform: translateX(-50%);
     width: 120px; height: 32px; border-radius: 999px;
@@ -180,6 +215,8 @@
   .phone .toolbar .ix2 {
     font-size: 11px; padding: 0 8px;
     color: var(--text-soft); font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 180px;
   }
   .phone .toolbar button {
     height: 26px; padding: 0 10px; border-radius: 6px; border: 0;
@@ -237,13 +274,12 @@
     display: flex; align-items: center; gap: 8px;
   }
   .focus .titleStrip a {
-    color: var(--accent); text-decoration: none; font-size: 12px;
+    color: var(--accent); font-size: 12px;
   }
 
-  /* responsive: smaller screens get narrower canvas padding */
   @media (max-width: 900px) {
-    .canvas { padding: 24px; gap: 32px; }
-    .appbar { padding: 0 12px; gap: 8px; overflow-x: auto; }
+    .canvas { padding: 24px; }
+    .appbar { padding: 0 12px; gap: 8px; }
     .appbar .brand .title .s { display: none; }
     .seasonGroup .label { display: none; }
     .swatch { padding: 0 8px 0 6px; font-size: 11px; }
@@ -256,8 +292,8 @@
   <div class="brand">
     <div class="mark">한</div>
     <div class="title">
-      <div class="h">한줄전단AI · 모바일 전단 6종</div>
-      <div class="s">06_template_redesign_master · Claude Design 출력</div>
+      <div class="h">한줄전단AI · 모바일 전단 11종</div>
+      <div class="s">5가족 × A/B 변형 + 스토리</div>
     </div>
   </div>
 
@@ -302,56 +338,112 @@
 </aside>
 
 <script>
-  const TEMPLATES = [
-    { id: 'story',         file: 'templates/01-story.html',         num: '01', name: 'STORY',         kor: '스토리형',     desc: '풀스크린 1상품 1슬라이드. 5초 자동 진행 + 탭/스와이프 + 위로 밀어 상세.' },
-    { id: 'magazine',      file: 'templates/02-magazine.html',      num: '02', name: 'MAGAZINE',      kor: '매거진 스크롤', desc: '챕터별 풀블리드 + 패럴랙스 이미지. 사장님 큐레이션 무드보드.' },
-    { id: 'deal_feed',     file: 'templates/03-deal-feed.html',     num: '03', name: 'DEAL FEED',     kor: '오늘의 핫딜',   desc: '실시간 카운트다운 + 잔여수량 progress + 좋아요·공유. 마감 임박 빨강 펄세이트.' },
-    { id: 'grid_hero',     file: 'templates/04-grid-hero.html',     num: '04', name: 'GRID HERO',     kor: '위클리 메인',   desc: 'Hero 캐러셀 + sticky 카테고리 + 2×2 그리드 + 단가 자동 계산.' },
-    { id: 'catalog_swipe', file: 'templates/05-catalog-swipe.html', num: '05', name: 'CATALOG SWIPE', kor: '가로 카탈로그', desc: '카테고리별 가로 스와이프 행. 카드 hold 500ms로 확대 미리보기.' },
-    { id: 'poster_promo',  file: 'templates/06-poster-promo.html',  num: '06', name: 'POSTER PROMO',  kor: '포스터 임팩트', desc: '인쇄 전단 풍 + 모션. 6매체 정합 본진. 빨강 80px 가격 + 회전 sticker.' },
+  const FAMILIES = [
+    {
+      key: 'magazine', no: '01', title: 'MAGAZINE · 매거진',
+      desc: '긴 스크롤 + 챕터 헤드. 사장님이 큐레이션한 위클리 무드보드.',
+      variants: [
+        { tag: 'A · 클래식', file: 'templates/02-magazine.html',      num: '02',  name: 'EDITORIAL',  kor: '매거진 스크롤',     desc: '본지 베이지 + Hahmlet 세리프. 챕터 풀블리드 + 패럴랙스.' },
+        { tag: 'B · 트렌디', file: 'templates/02b-magazine-zine.html', num: '02b', name: 'ZINE',       kor: '리소그래프 진',     desc: '2색 인쇄 + 하프톤 도트 + 미스레지스터 + 페이스트업.' },
+      ]
+    },
+    {
+      key: 'deal', no: '02', title: 'DEAL FEED · 핫딜',
+      desc: '실시간 카운트다운 + 마감 임박. 마트의 일일 운영 핵심.',
+      variants: [
+        { tag: 'A · 클래식', file: 'templates/03-deal-feed.html',  num: '03',  name: 'CARD FEED',  kor: '카드 피드',          desc: '카드 1줄 피드 + 카운트다운 + progress bar + 좋아요.' },
+        { tag: 'B · 트렌디', file: 'templates/03b-deal-bento.html', num: '03b', name: 'BENTO',      kor: '벤또 그리드',         desc: '비대칭 멀티컬러 타일. 2026 벤또 UI 트렌드.' },
+      ]
+    },
+    {
+      key: 'grid', no: '03', title: 'GRID HERO · 위클리 메인',
+      desc: '매장 첫 진입 페이지. Hero + 카테고리 + 그리드의 정석.',
+      variants: [
+        { tag: 'A · 클래식', file: 'templates/04-grid-hero.html', num: '04',  name: 'HERO + GRID', kor: '위클리 메인',         desc: 'Hero 캐러셀 + sticky 카테고리 + 2×2 그리드 + 단가 자동 계산.' },
+        { tag: 'B · 트렌디', file: 'templates/04b-grid-muji.html', num: '04b', name: 'MINIMAL',     kor: '일본 미니멀',         desc: '화이트 스페이스 + Hahmlet 세리프 + 사양 카탈로그. MUJI 톤.' },
+      ]
+    },
+    {
+      key: 'catalog', no: '04', title: 'CATALOG · 가로 카탈로그',
+      desc: '카테고리별 가로 스와이프. 다양한 상품 탐색.',
+      variants: [
+        { tag: 'A · 클래식', file: 'templates/05-catalog-swipe.html', num: '05',  name: 'WOOD SHELF', kor: '진열대',           desc: '우드 텍스처 + 매장 카드. 손맛 있는 진열대 무드.' },
+        { tag: 'B · 트렌디', file: 'templates/05b-catalog-dark.html', num: '05b', name: 'NIGHT MODE', kor: '다크 / 뮤직앱',     desc: '다크 모드 + 앨범커버 카드 + 미니플레이어. 야간 무드.' },
+      ]
+    },
+    {
+      key: 'poster', no: '05', title: 'POSTER PROMO · 포스터',
+      desc: '6매체 정합 본진. 인쇄 PDF · POP · MMS · 알림톡까지 변환.',
+      variants: [
+        { tag: 'A · 클래식', file: 'templates/06-poster-promo.html', num: '06',  name: 'PRINT INK',  kor: '인쇄 전단',          desc: '본지 베이지 + 인쇄 빨강 + 회전 sticker. 일본 슈퍼 전단 톤.' },
+        { tag: 'B · 트렌디', file: 'templates/06b-poster-pop.html',  num: '06b', name: 'POP MEMPHIS', kor: '멤피스 팝',         desc: '기하 도형 + 원색 + Black Han Sans + Bagel Fat One.' },
+      ]
+    },
+    {
+      key: 'misc', no: '✕', title: 'STORY · 스토리형 (보류)',
+      desc: '풀스크린 자동 진행. 검토 후 보류.',
+      misc: true,
+      variants: [
+        { tag: '보류', file: 'templates/01-story.html', num: '01', name: 'STORY', kor: '스토리형', desc: '인스타그램 스토리 패턴. 5초 자동 진행 + 위로 스와이프.' },
+      ]
+    },
   ];
 
   const canvas = document.getElementById('canvas');
   let currentSeason = 'default';
 
-  TEMPLATES.forEach(t => {
-    const phone = document.createElement('div');
-    phone.className = 'phone';
-    phone.dataset.id = t.id;
-    phone.innerHTML = `
-      <div class="meta">
-        <div>
-          <div class="ix">No. ${t.num}</div>
-          <div class="nm"><a href="${t.file}" target="_blank">${t.name} · ${t.kor}</a></div>
-          <div class="desc">${t.desc}</div>
-        </div>
+  FAMILIES.forEach(fam => {
+    const grp = document.createElement('section');
+    grp.className = 'family' + (fam.misc ? ' misc' : '');
+    grp.innerHTML = `
+      <div class="head">
+        <span class="no">FAMILY ${fam.no}</span>
+        <span class="title">${fam.title}</span>
+        <span class="desc">${fam.desc}</span>
+        <span class="sep"></span>
+        <span class="tag">${fam.variants.length} 안</span>
       </div>
-      <div class="body">
-        <div class="notch"></div>
-        <div class="screen">
-          <iframe src="${t.file}" loading="lazy" title="${t.name}" data-template="${t.id}"></iframe>
-        </div>
-      </div>
-      <div class="toolbar">
-        <span class="ix2">${t.file}</span>
-        <span class="spacer"></span>
-        <button data-action="reload">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-          새로고침
-        </button>
-        <button data-action="focus" class="open">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M14 10l7-7M9 21H3v-6M10 14l-7 7"/></svg>
-          확대
-        </button>
-      </div>
+      <div class="row"></div>
     `;
-    canvas.appendChild(phone);
-
-    phone.querySelector('[data-action="reload"]').addEventListener('click', () => {
-      const f = phone.querySelector('iframe');
-      const src = f.src; f.src = 'about:blank'; setTimeout(() => f.src = src, 50);
+    const row = grp.querySelector('.row');
+    fam.variants.forEach(t => {
+      const phone = document.createElement('div');
+      phone.className = 'phone';
+      phone.innerHTML = `
+        <div class="meta">
+          <div>
+            <div class="ix">No. ${t.num}</div>
+            <div class="nm"><a href="${t.file}" target="_blank">${t.name} · ${t.kor}</a><span class="var ${t.tag.startsWith('A') ? 'a' : ''}">${t.tag}</span></div>
+            <div class="desc">${t.desc}</div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="notch"></div>
+          <div class="screen">
+            <iframe src="${t.file}" loading="lazy" title="${t.name}"></iframe>
+          </div>
+        </div>
+        <div class="toolbar">
+          <span class="ix2">${t.file}</span>
+          <span class="spacer"></span>
+          <button data-action="reload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            새로고침
+          </button>
+          <button data-action="focus" class="open">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M14 10l7-7M9 21H3v-6M10 14l-7 7"/></svg>
+            확대
+          </button>
+        </div>
+      `;
+      phone.querySelector('[data-action="reload"]').addEventListener('click', () => {
+        const f = phone.querySelector('iframe');
+        const src = f.src; f.src = 'about:blank'; setTimeout(() => f.src = src, 50);
+      });
+      phone.querySelector('[data-action="focus"]').addEventListener('click', () => openFocus(t));
+      row.appendChild(phone);
     });
-    phone.querySelector('[data-action="focus"]').addEventListener('click', () => openFocus(t));
+    canvas.appendChild(grp);
   });
 
   // broadcast season
@@ -368,8 +460,6 @@
       broadcastSeason(b.dataset.season);
     });
   });
-
-  // re-broadcast on every iframe load (in case it loaded after season already changed)
   document.querySelectorAll('iframe').forEach(f => {
     f.addEventListener('load', () => {
       try { f.contentWindow.postMessage({ type: 'season', value: currentSeason }, '*'); } catch(e) {}
@@ -388,12 +478,8 @@
   document.getElementById('zoomOut').addEventListener('click', () => setZoom(zoom - 0.1));
   document.getElementById('zoomFit').addEventListener('click', () => setZoom(1));
 
-  // ctrl+wheel zoom
   document.getElementById('stage').addEventListener('wheel', (e) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      setZoom(zoom + (e.deltaY < 0 ? 0.05 : -0.05));
-    }
+    if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(zoom + (e.deltaY < 0 ? 0.05 : -0.05)); }
   }, { passive: false });
 
   // focus
@@ -416,10 +502,10 @@
   focus.addEventListener('click', (e) => { if (e.target === focus) closeFocus(); });
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFocus(); });
 
-  // initial fit: if window narrow, scale down a touch
-  if (window.innerWidth < 1500) setZoom(0.85);
-  if (window.innerWidth < 1200) setZoom(0.7);
-  if (window.innerWidth < 900)  setZoom(0.55);
+  // initial fit — wide enough for 2 phones side by side
+  if (window.innerWidth < 1100) setZoom(0.85);
+  if (window.innerWidth < 900)  setZoom(0.7);
+  if (window.innerWidth < 700)  setZoom(0.55);
 </script>
 </body>
 </html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 · POP! — 진짜 싸요</title>
+<meta property="og:title" content="동네마트 강남점 · POP">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Black+Han+Sans&family=Gaegu:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #FF3D2E;   /* pop red */
+    --color-accent: #FFD300;    /* pop yellow */
+    --pop-blue: #2056FF;
+    --pop-mint: #00D6A2;
+    --pop-pink: #FF7AB6;
+    --pop-purple: #7B4DFF;
+    --ink: #131110;
+    --paper: #FFF7E8;
+    --paper-2: #FFEBC4;
+    --rule: #131110;
+    --color-on-primary: #FFFFFF;
+  }
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; }
+  html[data-season="summer"]    { --color-primary:#06B6D4; --color-accent:#0891B2; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--paper); color: var(--ink); }
+  body {
+    font-family: 'Pretendard Variable', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    padding-bottom: 32px;
+  }
+  .price-num { font-variant-numeric: tabular-nums; }
+  .han { font-family: 'Black Han Sans', sans-serif; font-weight: 400; }
+  .fat { font-family: 'Bagel Fat One', cursive; font-weight: 400; }
+  .geu { font-family: 'Gaegu', cursive; }
+
+  /* paper noise */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200;
+    opacity: 0.42; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    position: relative;
+    padding: 28px 22px 60px;
+    border-bottom: 4px solid var(--ink);
+    overflow: hidden;
+  }
+  .hero .topline {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 10px; border-bottom: 2px solid var(--ink);
+    font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  .hero .topline .stamp {
+    background: var(--ink); color: var(--paper);
+    padding: 3px 8px; font-weight: 800;
+  }
+
+  /* memphis shape decorations */
+  .shape {
+    position: absolute; pointer-events: none; z-index: 0;
+  }
+  .shape.s-zigzag {
+    top: 56px; right: 12px; width: 70px; height: 14px;
+    background:
+      linear-gradient(135deg, transparent 33%, var(--pop-blue) 33% 66%, transparent 66%) 0 0/16px 16px;
+    transform: rotate(-8deg);
+  }
+  .shape.s-dots {
+    bottom: 8px; left: -16px; width: 130px; height: 130px;
+    background-image: radial-gradient(var(--ink) 22%, transparent 24%);
+    background-size: 12px 12px;
+    transform: rotate(8deg);
+  }
+  .shape.s-disc {
+    top: 230px; left: 12px; width: 56px; height: 56px; border-radius: 50%;
+    background: var(--pop-mint);
+    border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .shape.s-ring {
+    top: 320px; right: 14px; width: 72px; height: 72px; border-radius: 50%;
+    border: 6px solid var(--pop-blue);
+    transform: rotate(-10deg);
+  }
+  .shape.s-blob {
+    top: 30%; left: 35%; width: 50px; height: 50px;
+    background: var(--pop-pink);
+    border-radius: 60% 40% 35% 65% / 55% 60% 40% 45%;
+    transform: rotate(20deg);
+    border: 3px solid var(--ink);
+  }
+  .shape.s-cross {
+    top: 200px; right: 28%; width: 40px; height: 40px;
+    background: var(--pop-purple);
+    clip-path: polygon(40% 0, 60% 0, 60% 40%, 100% 40%, 100% 60%, 60% 60%, 60% 100%, 40% 100%, 40% 60%, 0 60%, 0 40%, 40% 40%);
+    transform: rotate(15deg);
+  }
+  /* slogan */
+  .hero .slogan {
+    position: relative; z-index: 2;
+    margin-top: 18px;
+    font-size: 78px;
+    line-height: 0.86; letter-spacing: -0.04em;
+  }
+  .hero .slogan .l1 {
+    display: block; color: var(--ink);
+  }
+  .hero .slogan .l2 {
+    display: inline-block;
+    background: var(--color-primary); color: var(--paper);
+    padding: 4px 14px 10px;
+    border: 3px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+    transform: rotate(-2deg);
+    margin-top: 8px;
+    line-height: 0.85;
+  }
+  .hero .slogan .l3 {
+    display: inline-block;
+    margin-top: 14px;
+    color: var(--ink);
+    transform: rotate(-1deg);
+  }
+  .hero .slogan .l3 .bang {
+    display: inline-block;
+    background: var(--color-accent);
+    border: 3px solid var(--ink);
+    width: 78px; height: 78px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 78px;
+    vertical-align: middle;
+    margin-left: 6px;
+    color: var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    transform: rotate(8deg);
+    font-size: 64px;
+  }
+
+  /* hero info row */
+  .hero .info {
+    position: relative; z-index: 2;
+    margin-top: 60px;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 8px; align-items: end;
+  }
+  .hero .info .store {
+    display: flex; flex-direction: column;
+  }
+  .hero .info .store .by { font-family: 'Gaegu', cursive; font-size: 18px; color: var(--ink); line-height: 1; }
+  .hero .info .store .nm {
+    margin-top: 6px;
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 26px; line-height: 1; color: var(--ink);
+  }
+  .hero .info .period {
+    background: var(--ink); color: var(--paper);
+    padding: 6px 10px;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
+    transform: rotate(2deg);
+  }
+
+  /* ===== section markers ===== */
+  .secmark {
+    margin: 36px 22px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .secmark .blob {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--pop-mint);
+    border: 3px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    display: grid; place-items: center;
+    font-family: 'Bagel Fat One', cursive;
+    font-size: 16px; color: var(--ink);
+  }
+  .secmark .tt {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 26px; letter-spacing: -0.025em; color: var(--ink);
+  }
+  .secmark .ll {
+    flex: 1; height: 3px; background: var(--ink);
+  }
+  .secmark.alt .blob { background: var(--color-accent); }
+  .secmark.b .blob { background: var(--pop-pink); }
+
+  /* ===== product slab — bold maximalist ===== */
+  .slab {
+    margin: 0 22px 18px;
+    background: var(--paper-2);
+    border: 3px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+    position: relative;
+    overflow: hidden;
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 540ms ease, transform 540ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .slab.in { opacity: 1; transform: none; }
+  .slab.tilt { transform: rotate(-1deg); }
+  .slab.tilt.in { transform: rotate(-0.8deg); }
+  .slab.tilt2 { transform: rotate(1.2deg); }
+  .slab.tilt2.in { transform: rotate(0.8deg); }
+
+  .slab .pic {
+    aspect-ratio: 16/10;
+    position: relative;
+    background: var(--bg, var(--paper));
+    border-bottom: 3px solid var(--ink);
+    overflow: hidden;
+  }
+  .ph { position: absolute; inset: 0; display: grid; place-items: center;
+        background: var(--ph-bg, var(--paper)); }
+  .ph::after { content: var(--ph-emoji, ""); font-size: 130px; line-height: 1;
+               filter: drop-shadow(2px 2px 0 var(--ink)) drop-shadow(0 6px 12px rgba(0,0,0,0.18)); }
+
+  /* shapes inside pic */
+  .pic .deco-1 {
+    position: absolute; left: 12px; top: 12px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--pop-blue);
+    border: 2px solid var(--ink);
+  }
+  .pic .deco-2 {
+    position: absolute; right: 12px; top: 12px;
+    width: 36px; height: 36px;
+    background: var(--color-accent);
+    border: 2px solid var(--ink);
+    transform: rotate(20deg);
+  }
+  .pic .stripe {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 16px;
+    background:
+      repeating-linear-gradient(45deg, var(--ink) 0 6px, var(--paper) 6px 12px);
+  }
+  .pic .stamp {
+    position: absolute; right: 12px; bottom: 24px;
+    transform: rotate(-10deg);
+    width: 90px; height: 90px;
+    background: var(--color-primary); color: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    border-radius: 50%;
+    display: grid; place-items: center; text-align: center;
+    font-family: 'Bagel Fat One', cursive;
+    line-height: 0.95;
+    z-index: 2;
+  }
+  .pic .stamp .a { font-size: 11px; font-weight: 400; letter-spacing: 0.02em; }
+  .pic .stamp .b { font-size: 32px; }
+
+  .slab .body {
+    padding: 14px 16px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .slab .id {
+    display: inline-flex; align-items: center; gap: 6px;
+    align-self: flex-start;
+    background: var(--ink); color: var(--paper);
+    padding: 3px 8px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+  }
+  .slab h3 {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 28px; letter-spacing: -0.025em; color: var(--ink);
+    line-height: 1.05;
+  }
+  .slab .specs {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    margin-top: 4px;
+  }
+  .slab .specs span {
+    font-size: 11px; font-weight: 700; padding: 3px 8px;
+    background: var(--paper); border: 1.5px solid var(--ink);
+  }
+  .slab .specs .col-y { background: var(--color-accent); }
+  .slab .specs .col-b { background: var(--pop-blue); color: var(--paper); }
+  .slab .specs .col-m { background: var(--pop-mint); }
+  .slab .specs .col-p { background: var(--pop-pink); }
+
+  .slab .priceRow {
+    margin-top: 8px;
+    display: flex; align-items: baseline; gap: 10px;
+    flex-wrap: wrap;
+  }
+  .slab .orig {
+    font-size: 14px; color: var(--ink); opacity: 0.55;
+    text-decoration: line-through; text-decoration-thickness: 2.5px;
+  }
+  .slab .sale {
+    font-family: 'Bagel Fat One', cursive;
+    font-size: 56px; line-height: 0.9;
+    color: var(--color-primary);
+    -webkit-text-stroke: 2.5px var(--ink); paint-order: stroke fill;
+    letter-spacing: -0.02em;
+  }
+  .slab.in .sale {
+    animation: pricePop 800ms cubic-bezier(0.34, 1.56, 0.64, 1) both 220ms;
+  }
+  @keyframes pricePop {
+    0% { transform: scale(0.5) rotate(-8deg); opacity: 0; }
+    60% { transform: scale(1.15) rotate(2deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .slab .sale .won { font-size: 24px; }
+  .slab .sale .bang { color: var(--color-accent); }
+  .slab .unitp {
+    font-family: 'Gaegu', cursive;
+    font-size: 18px; color: var(--ink); margin-top: 2px;
+  }
+
+  /* compact pair slabs */
+  .pair {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin: 0 22px 18px;
+  }
+  .pair .slab {
+    margin: 0; box-shadow: 4px 4px 0 var(--ink);
+  }
+  .pair .slab .pic { aspect-ratio: 1/1; }
+  .pair .slab h3 { font-size: 18px; }
+  .pair .slab .sale { font-size: 38px; }
+  .pair .slab .sale .won { font-size: 16px; }
+  .pair .slab .unitp { font-size: 14px; }
+  .pair .slab .specs span { font-size: 10px; padding: 2px 6px; }
+  .pair .slab .pic .stamp { width: 60px; height: 60px; right: 8px; bottom: 14px; }
+  .pair .slab .pic .stamp .a { font-size: 9px; }
+  .pair .slab .pic .stamp .b { font-size: 20px; }
+
+  /* MEGA badge */
+  .megaStrip {
+    margin: 24px 0;
+    background: var(--ink); color: var(--paper);
+    padding: 14px 0;
+    border-top: 4px solid var(--ink);
+    border-bottom: 4px solid var(--ink);
+    overflow: hidden; white-space: nowrap;
+    font-family: 'Bagel Fat One', cursive;
+    font-size: 22px; letter-spacing: 0.04em;
+  }
+  .megaStrip .track { display: inline-flex; gap: 24px; animation: marquee 18s linear infinite; }
+  .megaStrip .track .red { color: var(--color-primary); }
+  .megaStrip .track .yel { color: var(--color-accent); }
+  .megaStrip .track .star { color: var(--color-accent); }
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ===== footer ===== */
+  .foot {
+    margin: 24px 22px 0;
+    padding: 18px;
+    background: var(--ink); color: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--color-primary);
+    position: relative;
+  }
+  .foot .ribbon {
+    position: absolute; top: -14px; left: 14px;
+    background: var(--color-accent); color: var(--ink);
+    padding: 3px 10px;
+    border: 2px solid var(--ink);
+    font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+  }
+  .foot .nameRow {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-top: 4px;
+  }
+  .foot .nameRow .h {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 28px; letter-spacing: -0.02em;
+  }
+  .foot .nameRow .vol {
+    font-family: 'Bagel Fat One', cursive;
+    color: var(--color-accent); font-size: 18px;
+  }
+  .foot .lines {
+    margin-top: 12px;
+    display: grid; gap: 6px;
+    font-size: 13px;
+  }
+  .foot .lines .ln { display: grid; grid-template-columns: 60px 1fr; gap: 10px; align-items: baseline; }
+  .foot .lines .k {
+    font-family: 'Bagel Fat One', cursive;
+    color: var(--color-accent); font-size: 11px; letter-spacing: 0.06em;
+  }
+  .foot .lines .v { font-weight: 600; }
+  .foot .ctas {
+    margin-top: 14px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .foot .ctas button {
+    height: 50px; border: 3px solid var(--paper);
+    background: transparent; color: var(--paper);
+    font-family: 'Bagel Fat One', cursive;
+    font-size: 16px; cursor: pointer; letter-spacing: 0.02em;
+  }
+  .foot .ctas button.fill { background: var(--color-primary); border-color: var(--color-primary); color: var(--paper); }
+  .foot .ctas button:active { transform: translate(2px, 2px); }
+  .foot .small {
+    margin-top: 14px;
+    font-family: 'Gaegu', cursive; font-size: 13px; opacity: 0.7;
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slab.in .sale { animation: none; }
+    .megaStrip .track { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="topline">
+    <span>HANJUL · POP NO.24</span>
+    <span>5/13 — 5/19</span>
+  </div>
+
+  <div class="shape s-zigzag" aria-hidden="true"></div>
+  <div class="shape s-disc" aria-hidden="true"></div>
+  <div class="shape s-ring" aria-hidden="true"></div>
+  <div class="shape s-blob" aria-hidden="true"></div>
+  <div class="shape s-cross" aria-hidden="true"></div>
+  <div class="shape s-dots" aria-hidden="true"></div>
+
+  <h1 class="slogan han">
+    <span class="l1">이번 주!</span>
+    <span class="l2">진짜</span>
+    <span class="l3">싸요<span class="bang fat">!</span></span>
+  </h1>
+
+  <div class="info">
+    <div class="store">
+      <div class="by">우리 동네</div>
+      <div class="nm">동네마트 강남점</div>
+    </div>
+    <div class="period">7일간 행사</div>
+  </div>
+</section>
+
+<!-- ===== Section 1: 축산 ===== -->
+<div class="secmark">
+  <span class="blob fat">01</span>
+  <span class="tt">축산</span>
+  <span class="ll"></span>
+</div>
+
+<article class="slab tilt" data-num="01">
+  <div class="pic">
+    <div class="ph" style="--ph-bg:#FFD4B8; --ph-emoji:'🥓';"></div>
+    <span class="deco-1"></span>
+    <span class="deco-2"></span>
+    <div class="stamp fat">
+      <div class="a">SAVE</div>
+      <div class="b">5,000</div>
+    </div>
+    <div class="stripe"></div>
+  </div>
+  <div class="body">
+    <span class="id">NO. 01 · 축산</span>
+    <h3>국산 삼겹살 600g</h3>
+    <div class="specs">
+      <span class="col-y">600G</span>
+      <span class="col-b">국산</span>
+      <span>새벽 입고</span>
+      <span class="col-m">한정 50팩</span>
+    </div>
+    <div class="priceRow">
+      <span class="orig price-num">14,900원</span>
+      <span class="sale price-num">9,900<span class="won">원</span><span class="bang">!!</span></span>
+    </div>
+    <div class="unitp">100g당 1,650원 · 두툼한 컷이야!</div>
+  </div>
+</article>
+
+<article class="slab tilt2" data-num="02">
+  <div class="pic">
+    <div class="ph" style="--ph-bg:#FFCFCF; --ph-emoji:'🥩';"></div>
+    <span class="deco-1" style="background: var(--pop-mint);"></span>
+    <span class="deco-2" style="background: var(--pop-pink);"></span>
+    <div class="stamp fat" style="background: var(--pop-blue);">
+      <div class="a">PREMIUM</div>
+      <div class="b">1++</div>
+    </div>
+    <div class="stripe"></div>
+  </div>
+  <div class="body">
+    <span class="id">NO. 02 · 한정 20개</span>
+    <h3>한우 등심 1++ 300g</h3>
+    <div class="specs">
+      <span class="col-p">300G</span>
+      <span class="col-b">국산 1++</span>
+      <span>진공 포장</span>
+      <span class="col-y">한정 20</span>
+    </div>
+    <div class="priceRow">
+      <span class="orig price-num">49,900원</span>
+      <span class="sale price-num">39,900<span class="won">원</span></span>
+    </div>
+    <div class="unitp">100g당 13,300원 · 가족 모임용 최고!</div>
+  </div>
+</article>
+
+<!-- mega strip -->
+<div class="megaStrip" aria-hidden="true">
+  <div class="track fat">
+    <span><span class="star">★</span> 진짜 싸요 <span class="yel">·</span> 7일간 <span class="red">5/13–5/19</span> <span class="star">★</span> 한정 특가 <span class="yel">·</span> 카드 추가할인 <span class="star">★</span></span>
+    <span><span class="star">★</span> 진짜 싸요 <span class="yel">·</span> 7일간 <span class="red">5/13–5/19</span> <span class="star">★</span> 한정 특가 <span class="yel">·</span> 카드 추가할인 <span class="star">★</span></span>
+  </div>
+</div>
+
+<!-- ===== Section 2: 청과 — pair ===== -->
+<div class="secmark alt">
+  <span class="blob fat">02</span>
+  <span class="tt">청과</span>
+  <span class="ll"></span>
+</div>
+
+<div class="pair">
+  <article class="slab tilt" data-num="03">
+    <div class="pic">
+      <div class="ph" style="--ph-bg:#D7F0D2; --ph-emoji:'🌶️';"></div>
+      <span class="deco-1" style="background: var(--color-accent);"></span>
+      <div class="stamp fat" style="background: var(--pop-pink);">
+        <div class="a">HOT!</div>
+        <div class="b">33%</div>
+      </div>
+      <div class="stripe"></div>
+    </div>
+    <div class="body">
+      <span class="id">NO. 03</span>
+      <h3>청양고추 200g</h3>
+      <div class="specs">
+        <span class="col-y">200G</span>
+        <span class="col-b">국산</span>
+      </div>
+      <div class="priceRow">
+        <span class="orig price-num">2,990원</span>
+        <span class="sale price-num">1,990<span class="won">원</span></span>
+      </div>
+      <div class="unitp">100g당 995원</div>
+    </div>
+  </article>
+
+  <article class="slab tilt2" data-num="04">
+    <div class="pic">
+      <div class="ph" style="--ph-bg:#FFD9A8; --ph-emoji:'🍊';"></div>
+      <span class="deco-2" style="background: var(--pop-mint);"></span>
+      <div class="stamp fat" style="background: var(--color-accent); color: var(--ink);">
+        <div class="a">JEJU</div>
+        <div class="b">5kg</div>
+      </div>
+      <div class="stripe"></div>
+    </div>
+    <div class="body">
+      <span class="id">NO. 04</span>
+      <h3>제주 한라봉 5kg</h3>
+      <div class="specs">
+        <span class="col-m">5KG</span>
+        <span class="col-p">제주</span>
+      </div>
+      <div class="priceRow">
+        <span class="orig price-num">24,900원</span>
+        <span class="sale price-num">19,900<span class="won">원</span></span>
+      </div>
+      <div class="unitp">1kg당 3,980원</div>
+    </div>
+  </article>
+</div>
+
+<!-- ===== Section 3: 수산·공산 ===== -->
+<div class="secmark b">
+  <span class="blob fat">03</span>
+  <span class="tt">수산·공산</span>
+  <span class="ll"></span>
+</div>
+
+<article class="slab tilt" data-num="05">
+  <div class="pic">
+    <div class="ph" style="--ph-bg:#BFD9F3; --ph-emoji:'🐚';"></div>
+    <span class="deco-1" style="background: var(--color-primary);"></span>
+    <span class="deco-2"></span>
+    <div class="stamp fat">
+      <div class="a">TODAY!</div>
+      <div class="b">한정</div>
+    </div>
+    <div class="stripe"></div>
+  </div>
+  <div class="body">
+    <span class="id">NO. 05 · 새벽 4시 입고</span>
+    <h3>완도 활전복 10미</h3>
+    <div class="specs">
+      <span class="col-y">10미</span>
+      <span class="col-b">완도산</span>
+      <span class="col-m">활어</span>
+      <span class="col-p">한정 12박스</span>
+    </div>
+    <div class="priceRow">
+      <span class="orig price-num">49,900원</span>
+      <span class="sale price-num">39,900<span class="won">원</span></span>
+    </div>
+    <div class="unitp">미당 3,990원 · 회·죽·구이 다 좋아!</div>
+  </div>
+</article>
+
+<article class="slab tilt2" data-num="06">
+  <div class="pic">
+    <div class="ph" style="--ph-bg:#EDEDED; --ph-emoji:'🥛';"></div>
+    <span class="deco-1" style="background: var(--pop-purple);"></span>
+    <span class="deco-2" style="background: var(--color-primary);"></span>
+    <div class="stamp fat" style="background: var(--pop-mint); color: var(--ink);">
+      <div class="a">DEAL</div>
+      <div class="b">1+1</div>
+    </div>
+    <div class="stripe"></div>
+  </div>
+  <div class="body">
+    <span class="id">NO. 06 · 이번 주만</span>
+    <h3>가족 우유 1.8L × 2</h3>
+    <div class="specs">
+      <span class="col-y">1.8L</span>
+      <span class="col-b">국산</span>
+      <span class="col-m">1+1</span>
+    </div>
+    <div class="priceRow">
+      <span class="orig price-num">5,290원</span>
+      <span class="sale price-num">4,290<span class="won">원</span></span>
+    </div>
+    <div class="unitp">한 개 가격으로 두 개! 일주일 든든!</div>
+  </div>
+</article>
+
+<!-- ===== FOOTER ===== -->
+<footer class="foot">
+  <span class="ribbon">★ STORE INFO ★</span>
+  <div class="nameRow">
+    <span class="h">동네마트 강남점</span>
+    <span class="vol fat">NO. 24</span>
+  </div>
+  <div class="lines">
+    <div class="ln"><span class="k fat">OPEN</span><span class="v">09:00 — 22:00 · 연중무휴</span></div>
+    <div class="ln"><span class="k fat">CALL</span><span class="v">02-1234-5678</span></div>
+    <div class="ln"><span class="k fat">ADDR</span><span class="v">서울 강남구 역삼로 14길 8 · 1F</span></div>
+    <div class="ln"><span class="k fat">DATE</span><span class="v">5/13 — 5/19 (7일간)</span></div>
+  </div>
+  <div class="ctas">
+    <button>길찾기</button>
+    <button class="fill">전화 걸기</button>
+  </div>
+  <div class="small">매장에서 직접 보고 가세요 — 사장님이 골랐어요</div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.slab').forEach(s => io.observe(s));
+
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>

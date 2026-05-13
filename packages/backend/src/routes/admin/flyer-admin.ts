@@ -203,11 +203,89 @@ router.put('/companies/:id', async (req: Request, res: Response) => {
   }
 });
 
+// ★ D155: 회사 soft delete + 회원 cascade + 슈퍼관리자 감사로그
 router.delete('/companies/:id', async (req: Request, res: Response) => {
   try {
-    await query(`UPDATE flyer_companies SET deleted_at = NOW() WHERE id = $1`, [req.params.id]);
+    const companyId = req.params.id;
+    const superAdmin = req.flyerSuperUser!;
+
+    // 회사 + 회원수 정보 조회 (audit log details)
+    const companyRes = await query(
+      `SELECT company_name FROM flyer_companies WHERE id = $1 AND deleted_at IS NULL`,
+      [companyId]
+    );
+    if (companyRes.rows.length === 0) {
+      return res.status(404).json({ error: '회사를 찾을 수 없거나 이미 삭제됨' });
+    }
+    const companyName = companyRes.rows[0].company_name;
+
+    const usersRes = await query(
+      `SELECT COUNT(*)::int AS cnt FROM flyer_users WHERE company_id = $1 AND deleted_at IS NULL`,
+      [companyId]
+    );
+    const cascadeUserCount = usersRes.rows[0].cnt;
+
+    // 회원 cascade soft delete (회사 삭제 = 소속 회원도 함께)
+    await query(
+      `UPDATE flyer_users SET deleted_at = NOW() WHERE company_id = $1 AND deleted_at IS NULL`,
+      [companyId]
+    );
+
+    // 회사 soft delete
+    await query(`UPDATE flyer_companies SET deleted_at = NOW() WHERE id = $1`, [companyId]);
+
+    // 슈퍼관리자 감사로그
+    await logFlyerSuperAdminAudit({
+      superAdminId: superAdmin.adminId,
+      superAdminLoginId: superAdmin.loginId,
+      action: 'company_delete',
+      targetType: 'company',
+      targetId: companyId,
+      targetCompanyId: companyId,
+      details: { companyName, cascadeUserCount },
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
+    });
+
+    return res.json({ message: '삭제되었습니다', cascadeUserCount });
+  } catch (error: any) {
+    console.error('[flyer-admin] company DELETE error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ★ D155: 회원 soft delete + 슈퍼관리자 감사로그
+router.delete('/users/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+    const superAdmin = req.flyerSuperUser!;
+
+    const userRes = await query(
+      `SELECT login_id, name, company_id, store_name FROM flyer_users WHERE id = $1 AND deleted_at IS NULL`,
+      [userId]
+    );
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: '회원을 찾을 수 없거나 이미 삭제됨' });
+    }
+    const user = userRes.rows[0];
+
+    await query(`UPDATE flyer_users SET deleted_at = NOW() WHERE id = $1`, [userId]);
+
+    await logFlyerSuperAdminAudit({
+      superAdminId: superAdmin.adminId,
+      superAdminLoginId: superAdmin.loginId,
+      action: 'user_delete',
+      targetType: 'user',
+      targetId: userId,
+      targetCompanyId: user.company_id || null,
+      details: { loginId: user.login_id, name: user.name, storeName: user.store_name },
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
+    });
+
     return res.json({ message: '삭제되었습니다' });
   } catch (error: any) {
+    console.error('[flyer-admin] user DELETE error:', error);
     return res.status(500).json({ error: 'Server error' });
   }
 });
@@ -585,7 +663,7 @@ router.get('/billing', async (req: Request, res: Response) => {
 // ============================================================
 // ★ 감사로그 조회 (슈퍼관리자)
 // ============================================================
-import { queryFlyerAuditLogs, AUDIT_ACTION_LABELS } from '../../utils/flyer/audit/flyer-audit-log';
+import { queryFlyerAuditLogs, AUDIT_ACTION_LABELS, logFlyerSuperAdminAudit } from '../../utils/flyer/audit/flyer-audit-log';
 
 router.get('/audit-logs', async (req: Request, res: Response) => {
   try {

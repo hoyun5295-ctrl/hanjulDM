@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 · 위클리 카탈로그</title>
+<meta property="og:title" content="동네마트 강남점 · 위클리 카탈로그">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #C8261A;   /* MUJI-ish brand red, used very sparingly */
+    --color-accent:  #1E1E1E;
+    --color-on-primary: #FFFFFF;
+    --ink: #1A1A1A;
+    --ink-2: #2E2E2E;
+    --ink-3: #6E6E6E;
+    --ink-4: #9E9E9E;
+    --paper: #FAFAFA;
+    --paper-2: #F1EFEB;
+    --rule: #E2E0DB;
+    --rule-strong: #1A1A1A;
+  }
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; }
+  html[data-season="summer"]    { --color-primary:#0E7490; --color-accent:#06B6D4; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--paper); color: var(--ink); }
+  body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 96px; }
+  button { font-family: inherit; cursor: pointer; }
+  .price-num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-weight: 400; }
+  .ser  { font-family: 'Hahmlet', serif; }
+
+  /* ===== top bar — very thin ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(250, 250, 250, 0.95);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--rule);
+    height: 44px;
+    display: flex; align-items: center; padding: 0 8px;
+  }
+  .topbar .btn {
+    width: 36px; height: 36px; border: 0; background: transparent;
+    color: var(--ink); display: grid; place-items: center;
+  }
+  .topbar svg { width: 18px; height: 18px; }
+  .topbar .crumbs {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 0 6px;
+  }
+  .topbar .crumbs .a { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase; }
+  .topbar .crumbs .b { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; margin-top: -1px; }
+
+  /* ===== Hero: very quiet ===== */
+  .hero {
+    padding: 40px 22px 0;
+  }
+  .hero .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 0.18em; color: var(--ink-3); font-weight: 500;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hero .eyebrow::before {
+    content: ""; width: 24px; height: 1px; background: var(--ink-3);
+  }
+  .hero h1 {
+    margin-top: 14px;
+    font-family: 'Hahmlet', serif;
+    font-size: 44px; font-weight: 400; line-height: 1.12; letter-spacing: -0.025em;
+    color: var(--ink); max-width: 320px;
+  }
+  .hero h1 em { font-style: normal; font-weight: 700; }
+  .hero .stand {
+    margin-top: 22px;
+    font-size: 14px; line-height: 1.7; color: var(--ink-2);
+    max-width: 320px;
+  }
+  .hero .info {
+    margin-top: 40px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--ink); padding-top: 14px;
+  }
+  .hero .info .c { display: flex; flex-direction: column; gap: 2px; }
+  .hero .info .k { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase; }
+  .hero .info .v { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+
+  /* feature product — quiet hero card */
+  .featureCard {
+    margin: 22px 22px 0;
+    display: grid; grid-template-columns: 1fr; gap: 14px;
+    padding-top: 22px;
+    border-top: 1px solid var(--ink);
+  }
+  .featureCard .pic {
+    aspect-ratio: 4/3; background: var(--paper-2);
+    position: relative; overflow: hidden;
+  }
+  .ph { position: absolute; inset: 0; display: grid; place-items: center; background: var(--ph-bg, var(--paper-2)); }
+  .ph::after { content: var(--ph-emoji, ""); font-size: 130px; line-height: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.10)); }
+  .featureCard .pic .id {
+    position: absolute; left: 14px; top: 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.12em; color: var(--ink-3);
+  }
+  .featureCard .info {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .featureCard .id2 { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+  .featureCard h2 {
+    font-family: 'Hahmlet', serif;
+    font-size: 26px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15;
+  }
+  .featureCard .specs {
+    margin-top: 4px;
+    font-size: 12px; color: var(--ink-3); line-height: 1.6;
+  }
+  .featureCard .specs .sep { color: var(--ink-4); margin: 0 6px; }
+  .featureCard .priceRow {
+    margin-top: 12px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .featureCard .priceRow .orig {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    text-decoration: line-through; color: var(--ink-3);
+  }
+  .featureCard .priceRow .sale {
+    font-family: 'Hahmlet', serif;
+    font-size: 32px; font-weight: 700; letter-spacing: -0.025em;
+    color: var(--color-primary);
+  }
+  .featureCard .priceRow .sale .won { font-size: 14px; font-weight: 500; margin-left: 1px; }
+  .featureCard .unitp { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-3); }
+  .featureCard .add {
+    margin-top: 16px;
+    height: 48px; border: 1px solid var(--ink); background: var(--paper);
+    color: var(--ink); font-weight: 700; font-size: 14px; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background 200ms;
+  }
+  .featureCard .add:hover { background: var(--ink); color: var(--paper); }
+  .featureCard .add svg { width: 14px; height: 14px; }
+  .featureCard .add.added { background: var(--ink); color: var(--paper); }
+
+  /* ===== category nav — sticky, very thin ===== */
+  .catnav {
+    position: sticky; top: 44px; z-index: 25;
+    background: rgba(250,250,250,0.95);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    margin-top: 36px;
+  }
+  .catnav .scroll {
+    display: flex; overflow-x: auto; scrollbar-width: none;
+    padding: 0 12px;
+  }
+  .catnav .scroll::-webkit-scrollbar { display: none; }
+  .catnav .chip {
+    flex: 0 0 auto; padding: 14px 12px;
+    background: transparent; border: 0;
+    font-size: 13px; font-weight: 500; color: var(--ink-3);
+    position: relative;
+    letter-spacing: -0.01em;
+  }
+  .catnav .chip .num { font-family: 'JetBrains Mono', monospace; font-size: 10px; opacity: 0.6; margin-left: 4px; }
+  .catnav .chip.active { color: var(--ink); font-weight: 700; }
+  .catnav .chip.active::after {
+    content: ""; position: absolute;
+    left: 12px; right: 12px; bottom: -1px;
+    height: 2px; background: var(--ink);
+  }
+
+  /* ===== category section ===== */
+  .cat {
+    padding: 30px 22px 0;
+  }
+  .cat .head {
+    display: flex; align-items: baseline; gap: 10px;
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 6px;
+  }
+  .cat .head .no {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.16em; color: var(--ink-3);
+  }
+  .cat .head h3 {
+    font-family: 'Hahmlet', serif;
+    font-size: 22px; font-weight: 500; letter-spacing: -0.02em;
+  }
+  .cat .head .ct { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-3); }
+  .cat .lede {
+    margin-top: 12px;
+    font-size: 13px; color: var(--ink-2); line-height: 1.65;
+    max-width: 300px;
+  }
+
+  /* grid — 2 cols, thin rule between */
+  .pgrid {
+    margin-top: 22px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--rule);
+  }
+  .pgrid .pcard {
+    padding: 16px 0 20px;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .pgrid .pcard:nth-child(odd) { padding-right: 12px; border-right: 1px solid var(--rule); }
+  .pgrid .pcard:nth-child(even) { padding-left: 12px; }
+  .pgrid .pcard:not(:nth-last-child(-n+2)) { border-bottom: 1px solid var(--rule); }
+
+  .pcard .pic {
+    aspect-ratio: 1/1; background: var(--paper-2);
+    position: relative; overflow: hidden;
+  }
+  .pcard .pic .id {
+    position: absolute; left: 8px; top: 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    color: var(--ink-3); letter-spacing: 0.1em;
+  }
+  .pcard .pic .add {
+    position: absolute; right: 8px; bottom: 8px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--paper); border: 1px solid var(--ink);
+    color: var(--ink);
+    display: grid; place-items: center; cursor: pointer;
+    transition: background 200ms;
+  }
+  .pcard .pic .add svg { width: 12px; height: 12px; }
+  .pcard .pic .add.added { background: var(--ink); color: var(--paper); }
+  .pcard .pic.popping .add { animation: addPop 600ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes addPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+
+  .pcard .nameRow {
+    margin-top: 12px;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .pcard .badge {
+    flex: 0 0 auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.08em; color: var(--color-primary);
+    font-weight: 500; line-height: 1;
+    margin-top: 2px;
+  }
+  .pcard .badge.tag { color: var(--ink); }
+  .pcard .nm {
+    font-size: 14px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    min-height: 35px;
+  }
+  .pcard .specs {
+    margin-top: 4px;
+    font-size: 11px; color: var(--ink-3);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
+  }
+  .pcard .price {
+    margin-top: 10px;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .pcard .price .orig {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    text-decoration: line-through; color: var(--ink-3);
+  }
+  .pcard .price .sale {
+    font-family: 'Hahmlet', serif;
+    font-size: 18px; font-weight: 700; letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .pcard .price .sale .won { font-size: 10px; font-weight: 500; margin-left: 1px; }
+  .pcard .unitp {
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-3);
+  }
+
+  /* card discount mention as quiet caption */
+  .pcard .cardDisc {
+    margin-top: 6px;
+    font-size: 10px; color: var(--ink-3); font-style: italic;
+  }
+
+  /* SECTION DIVIDER — big quiet number */
+  .secDivider {
+    margin: 60px 22px 0;
+    padding: 28px 0;
+    border-top: 1px solid var(--ink);
+    display: grid; grid-template-columns: auto 1fr;
+    gap: 16px; align-items: end;
+  }
+  .secDivider .big {
+    font-family: 'Hahmlet', serif;
+    font-size: 96px; line-height: 0.8;
+    font-weight: 400; letter-spacing: -0.04em; color: var(--ink);
+  }
+  .secDivider .right {
+    padding-bottom: 6px;
+    display: flex; flex-direction: column; gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .secDivider .right .lbl { font-size: 10px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+  .secDivider .right .v { font-size: 14px; font-weight: 500; color: var(--ink); }
+
+  /* "About this week" quiet block */
+  .about {
+    margin: 50px 22px 0;
+    padding: 28px 0 0;
+    border-top: 1px solid var(--ink);
+  }
+  .about .lbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+  .about h4 {
+    margin-top: 10px;
+    font-family: 'Hahmlet', serif;
+    font-size: 24px; font-weight: 400; letter-spacing: -0.02em; line-height: 1.3;
+    max-width: 320px;
+  }
+  .about p {
+    margin-top: 16px;
+    font-size: 13px; line-height: 1.75; color: var(--ink-2);
+    max-width: 320px;
+  }
+
+  /* footer */
+  .ft {
+    margin: 50px 22px 0;
+    padding-top: 22px;
+    border-top: 1px solid var(--ink);
+  }
+  .ft .row {
+    display: grid; grid-template-columns: 88px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--rule);
+    align-items: baseline;
+  }
+  .ft .k { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; color: var(--ink-3); text-transform: uppercase; }
+  .ft .v { font-size: 13px; font-weight: 500; }
+  .ft .small {
+    margin-top: 18px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: var(--ink-3);
+    text-align: center; padding: 12px 0; border-top: 1px solid var(--ink);
+  }
+
+  /* sticky bottom cart bar — also minimal */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(250,250,250,0.97);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--ink);
+  }
+  .dock .bar {
+    height: 48px;
+    background: var(--ink); color: var(--paper);
+    display: flex; align-items: center; gap: 12px; padding: 0 12px 0 14px;
+  }
+  .dock .ct {
+    width: 24px; height: 24px; border-radius: 0;
+    background: var(--paper); color: var(--ink);
+    font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 12px;
+    display: grid; place-items: center;
+  }
+  .dock .tt { display: flex; flex-direction: column; line-height: 1.1; }
+  .dock .tt .a { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+  .dock .tt .b { font-size: 10px; opacity: 0.6; font-family: 'JetBrains Mono', monospace; }
+  .dock .arr { margin-left: auto; }
+  .dock .arr svg { width: 16px; height: 16px; }
+
+  /* toast */
+  .toast {
+    position: fixed; bottom: 84px; left: 50%; transform: translate(-50%, 30px);
+    padding: 8px 14px; background: var(--ink); color: var(--paper);
+    font-size: 12px; font-weight: 600; letter-spacing: -0.01em;
+    opacity: 0; pointer-events: none; z-index: 70;
+    transition: opacity 180ms, transform 180ms;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pcard .pic.popping .add { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="btn" aria-label="메뉴"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <div class="crumbs">
+    <div class="a">VOL. 24 · 5/13 — 5/19</div>
+    <div class="b">동네마트 강남점</div>
+  </div>
+  <button class="btn" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+  <button class="btn" aria-label="찜"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
+</header>
+
+<section class="hero">
+  <div class="eyebrow">No. 24 · 2026.05.13 — 05.19</div>
+  <h1 class="ser">이번 주<br><em>여섯 가지</em>를<br>골랐습니다.</h1>
+  <p class="stand">사장님이 새벽 시장에서 직접 본 것만 매대에 올립니다. 이번 주는 축산 2종 · 청과 2종 · 수산 1종 · 공산 1종.</p>
+  <div class="info">
+    <div class="c"><div class="k">기간</div><div class="v">5/13 — 5/19</div></div>
+    <div class="c"><div class="k">총 행사 수</div><div class="v">6 품목</div></div>
+  </div>
+</section>
+
+<article class="featureCard">
+  <div class="pic">
+    <span class="id">NO.01 · FEATURE</span>
+    <div class="ph" style="--ph-bg:#F1ECE3; --ph-emoji:'🥓';"></div>
+  </div>
+  <div class="info">
+    <div class="id2 mono">No. 01 · 축산 · 600g</div>
+    <h2 class="ser">국산 삼겹살, 두툼한 1.5cm 컷.</h2>
+    <div class="specs">국산 <span class="sep">/</span> 600g <span class="sep">/</span> 한 팩 <span class="sep">/</span> 5/13 새벽 입고</div>
+    <div class="priceRow">
+      <span class="orig price-num">14,900원</span>
+      <span class="sale price-num">9,900<span class="won">원</span></span>
+    </div>
+    <div class="unitp">100g당 1,650원 · 한 가구 최대 2팩</div>
+    <button class="add" aria-label="담기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      카트에 담기
+    </button>
+  </div>
+</article>
+
+<nav class="catnav" aria-label="카테고리">
+  <div class="scroll" id="catnav"></div>
+</nav>
+
+<main id="main"></main>
+
+<section class="secDivider">
+  <span class="big ser">06</span>
+  <div class="right">
+    <div class="lbl">total items</div>
+    <div class="v">2026 · 19주차</div>
+  </div>
+</section>
+
+<section class="about">
+  <div class="lbl">about this week</div>
+  <h4 class="ser">매주 다르지만,<br>고르는 기준은 같습니다.</h4>
+  <p>이번 주에 어떤 상품이 좋은지 결정할 때, 우리는 가격이 가장 싼 것보다 그 가격으로 살 가치가 있는 것을 먼저 봅니다. 산지 · 신선도 · 손질 상태 — 사장님이 새벽 도매 시장에서 직접 본 후 매대에 올립니다.</p>
+</section>
+
+<footer class="ft">
+  <div class="row"><div class="k">store</div><div class="v">동네마트 강남점</div></div>
+  <div class="row"><div class="k">hours</div><div class="v">09:00 — 22:00 · 연중무휴</div></div>
+  <div class="row"><div class="k">tel</div><div class="v">02-1234-5678</div></div>
+  <div class="row"><div class="k">addr</div><div class="v">서울 강남구 역삼로 14길 8 · 1F</div></div>
+  <div class="row"><div class="k">period</div><div class="v">2026.05.13 — 05.19</div></div>
+  <div class="small mono">PUBLISHED VIA HANJUL · NO.24 / 2026</div>
+</footer>
+
+<div class="dock">
+  <div class="bar">
+    <span class="ct">00</span>
+    <div class="tt">
+      <span class="a">장바구니</span>
+      <span class="b" id="dockSub">담은 상품 없음</span>
+    </div>
+    <div class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">담음</div>
+
+<script>
+  const CATS = [
+    {
+      name: "축산", count: 2,
+      lede: "주말 가족 한 끼를 위한 두 가지.",
+      items: [
+        { id:"01", name:"국산 삼겹살", originalPrice:14900, salePrice:9900, badge:"30%↓", unit:"600g", origin:"국산",     cardDiscount:"삼성카드 5%↓", bg:"#F1ECE3", emoji:"🥓", unitp:"100g당 1,650원" },
+        { id:"02", name:"한우 등심 1++", originalPrice:49900, salePrice:39900, badge:"한정 20", unit:"300g", origin:"국산 1++", cardDiscount:"현대카드 7%↓", bg:"#F1E7E7", emoji:"🥩", unitp:"100g당 13,300원" }
+      ]
+    },
+    {
+      name: "청과", count: 2,
+      lede: "이번 주 새벽에 도착한 두 가지.",
+      items: [
+        { id:"03", name:"청양고추",   originalPrice:2990,  salePrice:1990,  badge:"33%↓", unit:"200g", origin:"국산",   cardDiscount:"", bg:"#EBF1E5", emoji:"🌶️", unitp:"100g당 995원" },
+        { id:"04", name:"제주 한라봉",   originalPrice:24900, salePrice:19900, badge:"20%↓", unit:"5kg",  origin:"제주산", cardDiscount:"BC카드 3%↓", bg:"#F4E9D9", emoji:"🍊", unitp:"1kg당 3,980원" }
+      ]
+    },
+    {
+      name: "수산", count: 1,
+      lede: "새벽 활어차에서 직접 수령.",
+      items: [
+        { id:"05", name:"완도 활전복", originalPrice:49900, salePrice:39900, badge:"한정 12", unit:"10미", origin:"완도산", cardDiscount:"신한카드 5%↓", bg:"#E3EBF4", emoji:"🐚", unitp:"미당 3,990원" }
+      ]
+    },
+    {
+      name: "공산", count: 1,
+      lede: "한 주를 든든하게.",
+      items: [
+        { id:"06", name:"가족 우유 1.8L", originalPrice:5290, salePrice:4290, badge:"1+1", unit:"1.8L", origin:"국산", cardDiscount:"", bg:"#EFEEEA", emoji:"🥛", unitp:"100ml당 238원" }
+      ]
+    }
+  ];
+
+  const fmt = n => n.toLocaleString('ko-KR');
+  const catnav = document.getElementById('catnav');
+  const main = document.getElementById('main');
+
+  CATS.forEach((cat, ci) => {
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (ci === 0 ? ' active' : '');
+    chip.dataset.target = 'sec-' + ci;
+    chip.innerHTML = `${cat.name}<span class="num">${String(cat.count).padStart(2,'0')}</span>`;
+    chip.addEventListener('click', () => {
+      const t = document.getElementById(chip.dataset.target);
+      if (t) window.scrollTo({ top: t.offsetTop - 92, behavior: 'smooth' });
+    });
+    catnav.appendChild(chip);
+
+    const sec = document.createElement('section');
+    sec.className = 'cat'; sec.id = 'sec-' + ci;
+    sec.innerHTML = `
+      <div class="head">
+        <span class="no">No. ${String(ci+1).padStart(2,'0')}</span>
+        <h3 class="ser">${cat.name}</h3>
+        <span class="ct">${String(cat.count).padStart(2,'0')} ITEMS</span>
+      </div>
+      <p class="lede">${cat.lede}</p>
+      <div class="pgrid"></div>
+    `;
+    const grid = sec.querySelector('.pgrid');
+    cat.items.forEach((it) => {
+      const card = document.createElement('article');
+      card.className = 'pcard';
+      const off = Math.round((1 - it.salePrice/it.originalPrice) * 100);
+      const tagOnly = it.badge.includes('한정') || it.badge.includes('1+1');
+      card.innerHTML = `
+        <div class="pic">
+          <span class="id">No.${it.id}</span>
+          <div class="ph" style="--ph-bg:${it.bg}; --ph-emoji:'${it.emoji}';"></div>
+          <button class="add" aria-label="담기">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+        <div class="nameRow">
+          <span class="badge ${tagOnly ? 'tag' : ''}">${it.badge}</span>
+        </div>
+        <div class="nm">${it.name}</div>
+        <div class="specs">${it.unit} · ${it.origin}</div>
+        <div class="price">
+          <span class="orig price-num">${fmt(it.originalPrice)}</span>
+          <span class="sale price-num">${fmt(it.salePrice)}<span class="won">원</span></span>
+        </div>
+        <div class="unitp">${it.unitp}</div>
+        ${it.cardDiscount ? `<div class="cardDisc">${it.cardDiscount}</div>` : ''}
+      `;
+      card.querySelector('.add').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const btn = card.querySelector('.add');
+        const pic = card.querySelector('.pic');
+        pic.classList.add('popping');
+        btn.classList.add('added');
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></svg>`;
+        setTimeout(() => pic.classList.remove('popping'), 620);
+        addToCart(it);
+      });
+      grid.appendChild(card);
+    });
+    main.appendChild(sec);
+  });
+
+  // featured card add
+  document.querySelector('.featureCard .add').addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    btn.classList.add('added');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></svg> 담음`;
+    addToCart({ name: '국산 삼겹살' });
+  });
+
+  // cart
+  let cart = [];
+  function addToCart(it) {
+    cart.push(it);
+    const ct = document.querySelector('.dock .ct');
+    ct.textContent = String(cart.length).padStart(2, '0');
+    document.getElementById('dockSub').textContent =
+      cart.length === 0 ? '담은 상품 없음'
+        : `${cart[cart.length-1].name}${cart.length > 1 ? ' 외 ' + (cart.length-1) : ''}`;
+    showToast(`${it.name} 담음`);
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1500);
+  }
+
+  // scrollspy
+  const sections = [...document.querySelectorAll('.cat')];
+  function spy() {
+    const y = scrollY + 110;
+    let active = sections[0]?.id;
+    sections.forEach(s => { if (s.offsetTop <= y) active = s.id; });
+    document.querySelectorAll('.catnav .chip').forEach(c => c.classList.toggle('active', c.dataset.target === active));
+  }
+  document.addEventListener('scroll', spy, { passive: true });
+
+  // season
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>

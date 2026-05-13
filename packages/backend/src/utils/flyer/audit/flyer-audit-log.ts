@@ -30,7 +30,12 @@ export type FlyerAuditAction =
   | 'coupon_redeem'
   | 'settings_update'
   | 'customer_upload'
-  | 'balance_charge';
+  | 'balance_charge'
+  // ★ D155: 슈퍼관리자 액션 (logFlyerSuperAdminAudit 사용)
+  | 'user_delete'
+  | 'company_delete'
+  | 'user_restore'
+  | 'company_restore';
 
 export interface FlyerAuditLogParams {
   userId: string;
@@ -83,6 +88,53 @@ export async function logFlyerAudit(params: FlyerAuditLogParams): Promise<void> 
   } catch (err: any) {
     // ★ 감사로그 실패해도 서비스 영향 없음
     console.error('[CT-F23] 감사로그 기록 실패:', err.message);
+  }
+}
+
+// ============================================================
+// ★ D155: 슈퍼관리자 감사로그 기록
+// flyer_audit_logs 공용 테이블 재활용. user_id NULL 박힘 (슈퍼관리자는 flyer_users 아님).
+// company_id = 대상 회사 id (target_type='company') 또는 대상 회원의 company_id (target_type='user').
+// details.actorType='super_admin' + superAdminId/superAdminLoginId 박힘.
+// ============================================================
+export interface FlyerSuperAdminAuditParams {
+  superAdminId: string;
+  superAdminLoginId?: string;
+  action: 'user_delete' | 'company_delete' | 'user_restore' | 'company_restore' | string;
+  targetType: 'user' | 'company' | string;
+  targetId: string;
+  targetCompanyId?: string | null;
+  details?: Record<string, any>;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}
+
+export async function logFlyerSuperAdminAudit(params: FlyerSuperAdminAuditParams): Promise<void> {
+  try {
+    const mergedDetails = {
+      actorType: 'super_admin',
+      superAdminId: params.superAdminId,
+      superAdminLoginId: params.superAdminLoginId || null,
+      ...(params.details || {}),
+    };
+    await query(
+      `INSERT INTO flyer_audit_logs
+         (user_id, company_id, action, target_type, target_id, details, ip_address, user_agent)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        null, // 슈퍼관리자는 flyer_users.id 아님 — NULL 박힘
+        params.targetCompanyId || null,
+        params.action,
+        params.targetType,
+        params.targetId,
+        JSON.stringify(mergedDetails),
+        params.ipAddress || null,
+        params.userAgent || null,
+      ]
+    );
+  } catch (err: any) {
+    // ★ 감사로그 실패해도 서비스 영향 없음
+    console.error('[CT-F23] 슈퍼관리자 감사로그 기록 실패:', err.message);
   }
 }
 
@@ -192,6 +244,11 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   settings_update: '설정 변경',
   customer_upload: '고객 업로드',
   balance_charge: '잔액 충전',
+  // ★ D155: 슈퍼관리자 액션
+  user_delete: '회원 삭제',
+  company_delete: '회사 삭제',
+  user_restore: '회원 복원',
+  company_restore: '회사 복원',
 };
 
 // ============================================================
