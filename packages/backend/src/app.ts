@@ -30,10 +30,18 @@ import flyerOgImageRoutes from './routes/flyer/og-image';
 
 // ★ hanjulDM 슈퍼관리자 라우트
 import flyerAdminRoutes from './routes/admin/flyer-admin';
+import flyerAdminAlimtalkRoutes from './routes/admin/alimtalk';
 import flyerSuperRoutes from './routes/flyer/super';
+
+// ★ hanjulDM 알림톡 (매장 조회 + 공개 웹훅)
+import flyerAlimtalkRoutes from './routes/flyer/alimtalk';
+import flyerAlimtalkWebhookRoutes from './routes/flyer/alimtalk-webhook';
 
 // ★ POS 자동 전단 생성 워커
 import { startAutoFlyerWorker } from './utils/flyer/pos/flyer-pos-auto';
+
+// ★ 알림톡 검수 스케줄러 (카테고리 일일 + 검수 5분 polling + 발신프로필 1시간)
+import { startFlyerAlimtalkScheduler } from './utils/flyer/alimtalk/alimtalk-jobs';
 
 // DB 연결
 import './config/database';
@@ -51,6 +59,9 @@ app.use('/api/flyer/q', flyerCouponPublicRoutes);
 app.use('/api/flyer/cart', flyerCartPublicRoutes);
 // ★ D154 PHASE 0 트랙 A: og:image 동적 라우트 (카톡 인박스 미리보기, 인증 불필요)
 app.use('/api/flyer', flyerOgImageRoutes);
+
+// ★ 휴머스온 IMC 알림톡 웹훅 (공개, raw body parser — helmet 전 마운트 의무)
+app.use('/api/flyer/alimtalk-webhook', flyerAlimtalkWebhookRoutes);
 
 // 미들웨어
 app.use(helmet());
@@ -104,6 +115,8 @@ app.use('/api/flyer/super', flyerSuperRoutes);
 
 // ★ hanjulDM 슈퍼관리자 데이터 API (admin.hanjuldm.kr)
 app.use('/api/admin/flyer', flyerAdminRoutes);
+// ★ hanjulDM 슈퍼관리자 알림톡 대행 API
+app.use('/api/admin/alimtalk', flyerAdminAlimtalkRoutes);
 
 // ★ hanjulDM 전단AI 라우트
 app.use('/api/flyer/auth', flyerAuthRoutes);
@@ -120,6 +133,8 @@ app.use('/api/flyer/pos', flyerPosRoutes);
 app.use('/api/flyer/business-types', flyerBusinessTypesRoutes);
 app.use('/api/flyer/coupons', flyerCouponsRoutes);
 app.use('/api/flyer/orders', flyerOrdersRoutes);
+// ★ 알림톡 매장 조회 (발송 화면 dropdown용 + 신청 이력)
+app.use('/api/flyer/alimtalk', flyerAlimtalkRoutes);
 
 // ★ 카탈로그 이미지 공개 서빙
 app.use('/api/flyer/catalog-images', express.static(path.join(process.cwd(), 'uploads', 'catalog-images')));
@@ -163,6 +178,9 @@ app.listen(PORT, () => {
 
   // ★ POS 자동 전단 생성 워커 시작 (5분 간격)
   startAutoFlyerWorker();
+
+  // ★ 알림톡 검수 스케줄러 시작 (카테고리 03:00 KST 일일 + 검수 5분 polling + 발신프로필 1시간)
+  startFlyerAlimtalkScheduler();
 });
 
 export default app;

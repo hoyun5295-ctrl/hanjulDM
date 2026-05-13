@@ -11,6 +11,14 @@ echo "[atomic-build:flyer] $(date '+%Y-%m-%d %H:%M:%S')"
 
 if [ -d "$DIST_NEW" ]; then rm -rf "$DIST_NEW"; fi
 
+# devDependencies 누락 자동 차단 안전망 (D151-6 backend 패턴 미러)
+# 운영 서버 NODE_ENV=production 이면 npm install이 devDependencies skip → tsc/vite 빌드 차단
+if [ ! -d "node_modules/typescript" ] || [ ! -d "node_modules/vite" ]; then
+  echo "[atomic-build:flyer] devDependencies 누락 감지 (typescript 또는 vite 없음)"
+  echo "[atomic-build:flyer] 자동 복구: npm install --include=dev 실행"
+  npm install --include=dev
+fi
+
 npx tsc -b
 npx vite build --outDir dist-new
 

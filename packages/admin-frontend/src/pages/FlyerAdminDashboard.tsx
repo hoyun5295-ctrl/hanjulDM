@@ -15,6 +15,7 @@ import PosAgentListPage from './PosAgentListPage';
 import BillingPage from './BillingPage';
 import AuditLogPage from './AuditLogPage';
 import SenderRegistrationListPage from './SenderRegistrationListPage';
+import AlimtalkManagementPage from './AlimtalkManagementPage';
 
 interface Props { token: string; user: any; }
 
@@ -33,7 +34,7 @@ interface DashboardStats {
   senderRegPending?: number;
 }
 
-type Tab = 'companies' | 'users' | 'stores' | 'pos' | 'senders' | 'billing' | 'audit';
+type Tab = 'companies' | 'users' | 'stores' | 'pos' | 'senders' | 'alimtalk' | 'billing' | 'audit';
 
 export default function FlyerAdminDashboard({ token: _token, user: _user }: Props) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -97,6 +98,7 @@ export default function FlyerAdminDashboard({ token: _token, user: _user }: Prop
           { key: 'stores', label: '매장' },
           { key: 'pos', label: 'POS Agent' },
           { key: 'senders', label: `발신번호${stats?.senderRegPending ? ` (${stats.senderRegPending})` : ''}` },
+          { key: 'alimtalk', label: '알림톡 대행' },
           { key: 'billing', label: '결제' },
           { key: 'audit', label: '감사 로그' },
         ]}
@@ -109,6 +111,7 @@ export default function FlyerAdminDashboard({ token: _token, user: _user }: Prop
       {tab === 'stores' && <StoreListPage />}
       {tab === 'pos' && <PosAgentListPage />}
       {tab === 'senders' && <SenderRegistrationListPage />}
+      {tab === 'alimtalk' && <AlimtalkManagementPage />}
       {tab === 'billing' && <BillingPage />}
       {tab === 'audit' && <AuditLogPage />}
     </div>
