@@ -212,8 +212,11 @@ function mergeCompanyProfileToExtraData(extra: any, profile: any): any {
   if (profile.store_phone && !hasIcon('phone')) {
     externalLinks.push({ label: profile.store_phone, url: 'tel:' + String(profile.store_phone).replace(/-/g, ''), icon: 'phone' });
   }
-  if (profile.map_url && !hasIcon('map')) {
-    externalLinks.push({ label: profile.address || '길찾기', url: profile.map_url, icon: 'map' });
+  // ★ map_url 미입력해도 address 있으면 카카오맵 검색 URL 자동 fallback
+  if ((profile.map_url || profile.address) && !hasIcon('map')) {
+    const mapUrl = profile.map_url
+      || ('https://map.kakao.com/?q=' + encodeURIComponent(profile.address));
+    externalLinks.push({ label: profile.address || '길찾기', url: mapUrl, icon: 'map' });
   }
   if (profile.kakao_channel_url && !hasIcon('link')) {
     externalLinks.push({ label: '카카오 채널', url: profile.kakao_channel_url, icon: 'link' });
