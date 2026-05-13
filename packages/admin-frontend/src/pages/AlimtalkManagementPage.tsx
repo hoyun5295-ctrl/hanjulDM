@@ -48,6 +48,15 @@ interface Template {
   reject_reason: string | null;
   message_type: string;
   emphasize_type: string;
+  // ★ AlimtalkTemplateModal Template 호환 필드 (TS2719 fix — interface 구조 매칭)
+  buttons: any[];
+  variables: string[];
+  emphasize_title: string | null;
+  emphasize_subtitle: string | null;
+  extra_content: string | null;
+  template_header: string | null;
+  category: string | null;
+  preview_message: string | null;
   requested_at: string | null;
   approved_at: string | null;
   updated_at: string;
