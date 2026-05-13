@@ -104,7 +104,7 @@ export default function StoreProfileSection() {
           <Input label="쇼핑몰" value={form.shop_url || ''} onChange={e => update('shop_url', e.target.value)} placeholder="https://..." />
         </div>
       </SectionCard>
-      <AlertModal show={alert.show} title={alert.title} message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, show: false })} />
+      <AlertModal alert={alert} onClose={() => setAlert({ ...alert, show: false })} />
     </>
   );
 }
