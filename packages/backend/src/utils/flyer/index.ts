@@ -56,6 +56,7 @@ export {
   buildFlyerAdMessage,
   stripFlyerAdParts,
   prepareFlyerSendMessage,
+  replaceFlyerAlimtalkVariables,
 } from './send/flyer-message';
 
 // CT-F06: 회신번호

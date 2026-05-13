@@ -31,11 +31,22 @@ router.post('/send', async (req: Request, res: Response) => {
       message_type, message_content, is_ad,
       callback_number, mms_image_paths, subject,
       recipients, flyer_id, short_url_id,
+      // ★ D158 알림톡 발송 파라미터 (message_type='ALIMTALK' 시 필수)
+      template_id, template_code, profile_id, sender_key,
+      kakao_buttons, next_type, next_contents,
+      emphasize_title, custom_vars,
     } = req.body;
 
     if (!message_content) return res.status(400).json({ error: '메시지 내용이 필요합니다' });
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       return res.status(400).json({ error: '수신자가 없습니다' });
+    }
+
+    // ★ D158 알림톡 발송 시 필수 파라미터 검증
+    if (message_type === 'ALIMTALK') {
+      if (!template_code || !profile_id) {
+        return res.status(400).json({ error: '알림톡 발송은 template_code + profile_id 필수입니다' });
+      }
     }
 
     const params: FlyerSendParams = {
@@ -50,6 +61,16 @@ router.post('/send', async (req: Request, res: Response) => {
       recipients,
       flyerId: flyer_id,
       shortUrlId: short_url_id,
+      // ★ D158 알림톡 발송
+      templateId: template_id,
+      templateCode: template_code,
+      profileId: profile_id,
+      senderKey: sender_key,
+      kakaoButtons: kakao_buttons,
+      nextType: next_type,
+      nextContents: next_contents,
+      emphasizeTitle: emphasize_title,
+      customVars: custom_vars,
     };
 
     const result = await sendFlyerCampaign(params);

@@ -119,3 +119,33 @@ export function prepareFlyerSendMessage(
   const replaced = replaceFlyerVariables(template, customer);
   return buildFlyerAdMessage(replaced, isAd, opt080);
 }
+
+/**
+ * 알림톡 IMC 표준 변수 치환 — `#{변수명}` 패턴.
+ *
+ * SMS의 `%변수%` 패턴과 별도. IMC 알림톡 매뉴얼 정합.
+ * 우선순위:
+ *   1) customVars (사용자가 직접 입력한 변수 값 — #{주문번호} 등 DB에 없는 변수)
+ *   2) VAR_ALIAS_TO_KEY 매핑 + flyer_customers 표준 필드 (#{고객명} → name 등)
+ *   3) 매칭 실패 시 빈 문자열 (안전망)
+ *
+ * 광고/080 미부착 — 알림톡은 정보성/광고성 정책이 IMC 템플릿 등록 시 결정됨.
+ */
+export function replaceFlyerAlimtalkVariables(
+  template: string,
+  customer: FlyerCustomerVars,
+  customVars?: Record<string, string>
+): string {
+  if (!template) return '';
+  return template.replace(/#\{([^}]+)\}/g, (_match, varName) => {
+    const trimmed = varName.trim();
+    // 1차: customVars (사용자 직접 입력 우선)
+    if (customVars && trimmed in customVars) {
+      return customVars[trimmed] ?? '';
+    }
+    // 2차: VAR_ALIAS_TO_KEY (표준 customer 필드 매핑)
+    const key = VAR_ALIAS_TO_KEY[trimmed] || (trimmed in customer ? trimmed as keyof FlyerCustomerVars : null);
+    if (!key) return '';
+    return formatVarValue(key, customer[key]);
+  });
+}

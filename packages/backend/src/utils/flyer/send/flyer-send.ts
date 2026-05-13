@@ -20,14 +20,15 @@ import {
   bulkInsertSmsQueue,
   toQtmsgType,
 } from './flyer-sms-queue';
+import { insertAlimtalkQueue } from '../../sms-queue';
 import { canFlyerStoreSend, deductFlyerPrepaid } from '../billing/flyer-billing';
 import { resolveFlyerCallback } from './flyer-callback-filter';
 import { deduplicateWithStats, FlyerRecipient } from './flyer-deduplicate';
 import { filterOutFlyerUnsubscribed } from './flyer-unsubscribe-helper';
-import { prepareFlyerSendMessage, FlyerCustomerVars } from './flyer-message';
+import { prepareFlyerSendMessage, replaceFlyerAlimtalkVariables, FlyerCustomerVars } from './flyer-message';
 import { generateTrackingUrls } from './flyer-short-code';
 
-export type FlyerMessageType = 'SMS' | 'LMS' | 'MMS';
+export type FlyerMessageType = 'SMS' | 'LMS' | 'MMS' | 'ALIMTALK';
 
 export type FlyerSendRecipient = FlyerRecipient & Omit<FlyerCustomerVars, 'phone'> & {
   customer_id?: string | null;
@@ -48,6 +49,16 @@ export interface FlyerSendParams {
   scheduleAt?: Date | null;
   skipUnsubscribeFilter?: boolean;
   skipDeduplicate?: boolean;
+  // ★ D158 알림톡 발송 (messageType='ALIMTALK' 시 필수)
+  templateId?: string | null;    // flyer_kakao_templates.id (DB FK)
+  templateCode?: string | null;  // IMC templateCode (insertAlimtalkQueue 전달)
+  profileId?: string | null;     // flyer_kakao_sender_profiles.id (DB FK)
+  senderKey?: string | null;     // IMC senderKey (캐시, etcJson 빌드용)
+  kakaoButtons?: any[] | null;   // 버튼 배열 → k_button_json 빌드
+  nextType?: string | null;      // 실패 시 폴백 'N'/'S'/'L'/'A'/'B' (기본 'L')
+  nextContents?: string | null;  // A/B 폴백 시 대체 문구
+  emphasizeTitle?: string | null; // etcJson 강조표기 title
+  customVars?: Record<string, string>; // 사용자 직접 입력 변수 (#{주문번호} 등 DB 미존재 변수)
 }
 
 export interface FlyerSendResult {
@@ -68,7 +79,25 @@ export async function sendFlyerCampaign(params: FlyerSendParams): Promise<FlyerS
     flyerId, shortUrlId, scheduleAt,
     skipUnsubscribeFilter = false,
     skipDeduplicate = false,
+    // ★ D158 알림톡 발송 파라미터
+    templateId, templateCode, profileId, senderKey,
+    kakaoButtons, nextType, nextContents, emphasizeTitle, customVars,
   } = params;
+
+  // ★ D158 알림톡 필수 파라미터 검증
+  if (messageType === 'ALIMTALK') {
+    if (!templateCode || !profileId) {
+      return {
+        ok: false,
+        totalRequested: recipients.length,
+        deduplicated: 0,
+        unsubscribedRemoved: 0,
+        enqueued: 0,
+        callbackUsed: null,
+        error: 'ALIMTALK 발송은 templateCode + profileId 필수입니다',
+      };
+    }
+  }
 
   // 1. 발송 가능 여부 (매장 + 총판 레벨)
   const canSend = await canFlyerStoreSend(userId);
@@ -143,28 +172,37 @@ export async function sendFlyerCampaign(params: FlyerSendParams): Promise<FlyerS
 
   // ★ Phase 1: 수신자별 메시지 생성 (추적 URL 치환은 campaignId 확보 후 진행)
   // 먼저 공통 메시지 생성 → 추적 URL 삽입은 9.5단계에서 처리
-  const baseMessages = working.map(r =>
-    prepareFlyerSendMessage(messageTemplate, r as FlyerCustomerVars, isAd, opt080)
-  );
+  // ★ D158 알림톡: #{변수명} IMC 표준 치환 / SMS: %변수% + (광고) 부착
+  const baseMessages = working.map(r => {
+    if (messageType === 'ALIMTALK') {
+      return replaceFlyerAlimtalkVariables(messageTemplate, r as FlyerCustomerVars, customVars);
+    }
+    return prepareFlyerSendMessage(messageTemplate, r as FlyerCustomerVars, isAd, opt080);
+  });
 
-  // 7. flyer_campaigns 레코드 생성
+  // 7. flyer_campaigns 레코드 생성 (★ D158 kakao_* 컬럼 박기 — ALIMTALK일 때만)
   const campaignResult = await query(
     `INSERT INTO flyer_campaigns
        (id, company_id, created_by, flyer_id, short_url_id,
-        message_type, message_content, is_ad, callback_number, mms_image_path,
+        message_type, message_content, message_template, is_ad, callback_number, mms_image_path,
         total_recipients, sent_count, success_count, fail_count,
-        status, scheduled_at, sent_at, created_at)
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0, 0, 0,
-             $11, $12, $13, NOW())
+        status, scheduled_at, sent_at, created_at,
+        kakao_profile_id, kakao_template_id, kakao_sender_key)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, 0, 0,
+             $12, $13, $14, NOW(),
+             $15, $16, $17)
      RETURNING id`,
     [
       companyId, userId, flyerId || null, shortUrlId || null,
-      messageType, messageTemplate, isAd, cb.callback,
+      messageType, messageTemplate, messageTemplate, isAd, cb.callback,
       mmsImagePaths?.[0] || null,
       working.length,
       scheduleAt ? 'queued' : 'sending',
       scheduleAt || null,
       scheduleAt ? null : new Date(),
+      messageType === 'ALIMTALK' ? (profileId || null) : null,
+      messageType === 'ALIMTALK' ? (templateId || null) : null,
+      messageType === 'ALIMTALK' ? (senderKey || null) : null,
     ]
   );
   const campaignId = campaignResult.rows[0].id;
@@ -226,23 +264,47 @@ export async function sendFlyerCampaign(params: FlyerSendParams): Promise<FlyerS
     }
   }
 
-  // 10. MySQL 큐 bulk INSERT (수신자별 메시지로 생성)
-  const rowsForQueue: any[][] = working.map((r, idx) => [
-    r.phone,                     // dest_no
-    cb.callback!,                // call_back
-    finalMessages[idx],          // msg_contents (개인별 URL 포함 가능)
-    toQtmsgType(messageType),    // msg_type
-    subject || '',               // title_str
-    '',                          // sendTime
-    campaignId,                  // app_etc1
-    companyId,                   // app_etc2
-    mmsImages[0] || '',          // file_name1
-    mmsImages[1] || '',          // file_name2
-    mmsImages[2] || '',          // file_name3
-  ]);
-
+  // 10. MySQL 큐 INSERT — 채널별 분기
   const tables = await getFlyerCompanySmsTables(companyId);
-  await bulkInsertSmsQueue(tables, rowsForQueue, true); // useNow=true 즉시발송
+
+  if (messageType === 'ALIMTALK') {
+    // ★ D158 알림톡 발송: insertAlimtalkQueue (msg_type='K' + k_template_code + k_button_json + k_etc_json)
+    const buttonJson = (kakaoButtons && kakaoButtons.length > 0) ? JSON.stringify(kakaoButtons) : null;
+    const etcObj: any = {};
+    if (senderKey) etcObj.senderkey = senderKey;
+    if (emphasizeTitle) etcObj.title = emphasizeTitle;
+    const etcJson = Object.keys(etcObj).length > 0 ? JSON.stringify(etcObj) : undefined;
+
+    const alimtalkRows = working.map((r, idx) => ({
+      phone: r.phone,
+      callback: cb.callback!,
+      message: finalMessages[idx],
+      templateCode: templateCode!,
+      nextType: nextType || 'L',
+      nextContents: (nextType === 'A' || nextType === 'B') ? (nextContents || '') : undefined,
+      buttonJson: buttonJson || undefined,
+      etcJson,
+      titleStr: subject || undefined,
+      companyId,
+    }));
+    await insertAlimtalkQueue(tables, alimtalkRows);
+  } else {
+    // SMS/LMS/MMS 발송 (기존 흐름)
+    const rowsForQueue: any[][] = working.map((r, idx) => [
+      r.phone,                     // dest_no
+      cb.callback!,                // call_back
+      finalMessages[idx],          // msg_contents (개인별 URL 포함 가능)
+      toQtmsgType(messageType),    // msg_type
+      subject || '',               // title_str
+      '',                          // sendTime
+      campaignId,                  // app_etc1
+      companyId,                   // app_etc2
+      mmsImages[0] || '',          // file_name1
+      mmsImages[1] || '',          // file_name2
+      mmsImages[2] || '',          // file_name3
+    ]);
+    await bulkInsertSmsQueue(tables, rowsForQueue, true); // useNow=true 즉시발송
+  }
 
   // 11. 발송 상태 업데이트
   await query(

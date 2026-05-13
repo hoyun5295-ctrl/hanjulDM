@@ -10,6 +10,28 @@ interface Recipient { phone: string; name?: string; extra1?: string; extra2?: st
 interface AddressGroup { group_name: string; count: number; }
 type MsgType = 'SMS' | 'LMS' | 'MMS';
 type RecipientMode = 'direct' | 'file' | 'address';
+// ★ D158 알림톡 발송 — 1차 분류 채널 모드
+type ChannelMode = 'sms' | 'alimtalk';
+
+interface AlimtalkProfile {
+  id: string;
+  profile_key: string;
+  profile_name: string;
+  yellow_id: string | null;
+  admin_phone_number: string | null;
+}
+
+interface AlimtalkTemplate {
+  id: string;
+  template_code: string;
+  template_key: string;
+  template_name: string;
+  content: string;
+  message_type: string;
+  emphasize_title: string | null;
+  buttons: any[] | null;
+  variables: string[] | null;
+}
 
 function calcBytes(text: string): number {
   let b = 0;
@@ -18,6 +40,14 @@ function calcBytes(text: string): number {
 }
 
 export default function SendPage({ token }: { token: string }) {
+  // ★ D158 알림톡 발송 — 1차 분류 채널 모드 (문자/알림톡)
+  const [channelMode, setChannelMode] = useState<ChannelMode>('sms');
+  const [alimtalkProfiles, setAlimtalkProfiles] = useState<AlimtalkProfile[]>([]);
+  const [alimtalkTemplates, setAlimtalkTemplates] = useState<AlimtalkTemplate[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [alimtalkLoading, setAlimtalkLoading] = useState(false);
+
   const [msgType, setMsgType] = useState<MsgType>('SMS');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -103,6 +133,40 @@ export default function SendPage({ token }: { token: string }) {
       if (!message.includes(url)) setMessage(prev => prev ? `${prev}\n${url}` : url);
     }
   }, [selectedFlyer]);
+
+  // ★ D158 알림톡: channelMode='alimtalk' 진입 시 발신프로필 + 카테고리 로딩
+  useEffect(() => {
+    if (channelMode !== 'alimtalk') return;
+    if (alimtalkProfiles.length > 0) return;
+    setAlimtalkLoading(true);
+    apiFetch(`${API_BASE}/api/flyer/alimtalk/senders`)
+      .then(r => r.ok ? r.json() : { profiles: [] })
+      .then(d => setAlimtalkProfiles(d.profiles || []))
+      .catch(() => {})
+      .finally(() => setAlimtalkLoading(false));
+  }, [channelMode]);
+
+  // ★ D158 알림톡: 발신프로필 변경 시 템플릿 로딩 (APPROVED만)
+  useEffect(() => {
+    if (channelMode !== 'alimtalk' || !selectedProfileId) {
+      setAlimtalkTemplates([]);
+      setSelectedTemplateId('');
+      return;
+    }
+    setAlimtalkLoading(true);
+    apiFetch(`${API_BASE}/api/flyer/alimtalk/templates?profileId=${selectedProfileId}`)
+      .then(r => r.ok ? r.json() : { templates: [] })
+      .then(d => setAlimtalkTemplates(d.templates || []))
+      .catch(() => {})
+      .finally(() => setAlimtalkLoading(false));
+  }, [channelMode, selectedProfileId]);
+
+  // ★ D158 알림톡: 템플릿 선택 시 본문 자동 박힘
+  useEffect(() => {
+    if (channelMode !== 'alimtalk' || !selectedTemplateId) return;
+    const t = alimtalkTemplates.find(tt => tt.id === selectedTemplateId);
+    if (t) setMessage(t.content);
+  }, [selectedTemplateId, alimtalkTemplates, channelMode]);
 
   const byteCount = useMemo(() => {
     let full = message;
@@ -332,18 +396,51 @@ export default function SendPage({ token }: { token: string }) {
 
     setSending(true);
     try {
-      let sendMsg = message;
-      if (isAd) { sendMsg = `(광고) ${message}\n${msgType === 'SMS' ? `무료거부${optOutNumber.replace(/-/g, '')}` : `무료수신거부 ${optOutNumber}`}`; }
-      const body: any = {
-        recipients: finalRecipients,
-        message: sendMsg,
-        subject: (msgType === 'LMS' || msgType === 'MMS') ? subject : undefined,
-        callback,
-        messageType: msgType,
-        // ★ MMS 이미지 경로 (전단AI 전용 flyer-mms 경로)
-        mmsImagePaths: msgType === 'MMS' ? mmsImages.map(img => img.serverPath) : undefined,
-        // ★ 수신거부 필터링은 백엔드 direct-send가 자동 적용 (filterUnsubscribes는 UI 표시용)
-      };
+      let body: any;
+      if (channelMode === 'alimtalk') {
+        // ★ D158 알림톡 발송 — campaigns POST /send에 message_type='ALIMTALK' + template_code + profile_id 박기
+        const profile = alimtalkProfiles.find(p => p.id === selectedProfileId);
+        const tpl = alimtalkTemplates.find(t => t.id === selectedTemplateId);
+        if (!profile || !tpl) {
+          setAlert({ show: true, title: '알림톡 선택 필요', message: '발신프로필 + 템플릿을 선택해주세요.', type: 'error' });
+          setSending(false);
+          return;
+        }
+        body = {
+          recipients: finalRecipients.map(r => ({ phone: r.phone })),
+          message: message, // 변수 치환은 backend에서 (#{변수명})
+          callback: profile.admin_phone_number || callback || '',
+          // CT-F08 sendFlyerCampaign param 매핑
+          message_type: 'ALIMTALK',
+          message_content: message,
+          template_id: tpl.id,
+          template_code: tpl.template_code,
+          profile_id: profile.id,
+          sender_key: profile.profile_key,
+          kakao_buttons: tpl.buttons || undefined,
+          emphasize_title: tpl.emphasize_title || undefined,
+          flyer_id: selectedFlyer || undefined,
+          is_ad: false, // 알림톡 자체는 (광고) 미부착
+        };
+      } else {
+        // SMS/LMS/MMS 기존 흐름
+        let sendMsg = message;
+        if (isAd) { sendMsg = `(광고) ${message}\n${msgType === 'SMS' ? `무료거부${optOutNumber.replace(/-/g, '')}` : `무료수신거부 ${optOutNumber}`}`; }
+        body = {
+          recipients: finalRecipients,
+          message: sendMsg,
+          message_content: sendMsg, // backend FlyerSendParams 정합
+          message_type: msgType,
+          subject: (msgType === 'LMS' || msgType === 'MMS') ? subject : undefined,
+          callback,
+          callback_number: callback, // backend 정합
+          messageType: msgType,      // 옛 호환
+          mms_image_paths: msgType === 'MMS' ? mmsImages.map(img => img.serverPath) : undefined,
+          mmsImagePaths: msgType === 'MMS' ? mmsImages.map(img => img.serverPath) : undefined, // 옛 호환
+          flyer_id: selectedFlyer || undefined,
+          is_ad: isAd,
+        };
+      }
       if (scheduledAt) { body.scheduled = true; body.scheduledAt = scheduledAt; }
       const res = await apiFetch(`${API_BASE}/api/flyer/campaigns/send`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -382,6 +479,60 @@ export default function SendPage({ token }: { token: string }) {
       <div className="flex gap-6">
         {/* ═══ 좌측: 메시지 작성 ═══ */}
         <div className="w-[400px] flex-shrink-0 space-y-3">
+          {/* ★ D158 1차 분류: 문자 / 알림톡 */}
+          <TabBar
+            tabs={[{ key: 'sms', label: '문자' }, { key: 'alimtalk', label: '알림톡' }]}
+            value={channelMode}
+            onChange={(v) => setChannelMode(v as ChannelMode)}
+          />
+
+          {channelMode === 'alimtalk' ? (
+            <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-card">
+              <div className="px-4 pt-4 space-y-3">
+                <Select value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
+                  <option value="">발신프로필 선택</option>
+                  {alimtalkProfiles.map(p => (
+                    <option key={p.id} value={p.id}>{p.profile_name} ({p.yellow_id || '-'})</option>
+                  ))}
+                </Select>
+                <Select value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)} disabled={!selectedProfileId}>
+                  <option value="">템플릿 선택 (승인된 템플릿만)</option>
+                  {alimtalkTemplates.map(t => (
+                    <option key={t.id} value={t.id}>{t.template_name}</option>
+                  ))}
+                </Select>
+                {alimtalkLoading && <p className="text-xs text-text-muted">로딩 중...</p>}
+                {alimtalkProfiles.length === 0 && !alimtalkLoading && (
+                  <p className="text-xs text-warning-600">등록된 발신프로필이 없습니다. 운영팀에 신청해주세요. (알림톡 메뉴에서 안내 확인)</p>
+                )}
+              </div>
+              <div className="p-4">
+                <textarea
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  placeholder={selectedTemplateId ? "템플릿 본문 — #{변수명} 부분에 수신자 정보가 자동 치환됩니다" : "템플릿을 선택하면 본문이 자동 입력됩니다"}
+                  readOnly={!selectedTemplateId}
+                  className="w-full resize-none border-0 focus:outline-none text-sm leading-relaxed text-text h-[180px] disabled:bg-bg"
+                />
+              </div>
+              <div className="px-4 py-2 bg-bg border-t border-border flex items-center justify-end">
+                <span className="text-xs text-text-muted">IMC 카카오 알림톡</span>
+              </div>
+              <div className="px-4 py-3 border-t border-border flex gap-2">
+                <Button className="flex-1" size="lg"
+                  disabled={sending || totalRecipientCount === 0 || !selectedTemplateId || !message.trim()}
+                  onClick={() => handleSend()}>
+                  {sending ? '발송 중...' : `알림톡 발송${totalRecipientCount > 0 ? ` (${totalRecipientCount}건)` : ''}`}
+                </Button>
+                <Button variant="secondary" size="lg"
+                  disabled={sending || totalRecipientCount === 0 || !selectedTemplateId}
+                  onClick={() => setShowSchedule(true)} className="flex-shrink-0">
+                  예약
+                </Button>
+              </div>
+            </div>
+          ) : (
+          <>
           <TabBar tabs={[{ key: 'SMS', label: 'SMS' }, { key: 'LMS', label: 'LMS' }, { key: 'MMS', label: 'MMS' }]} value={msgType} onChange={(v) => setMsgType(v as MsgType)} />
 
           <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-card">
@@ -474,6 +625,8 @@ export default function SendPage({ token }: { token: string }) {
               </Button>
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* ═══ 우측 ═══ */}
