@@ -260,3 +260,87 @@ export async function batchAutoMatchImages(
 function stripHtml(str: string): string {
   return str.replace(/<[^>]*>/g, '');
 }
+
+// ============================================================
+// ★ D154 PHASE 0 트랙 B — categories 자동 이미지 enrich
+// ============================================================
+
+interface EnrichImageItem {
+  name: string;
+  imageUrl?: string;
+}
+interface EnrichImageCategory {
+  name: string;
+  items: EnrichImageItem[];
+}
+
+/**
+ * ★ FlyerRenderData.categories[] 일괄 이미지 자동 매칭 (트랙 B 본진).
+ *
+ * 동작:
+ *   1. imageUrl 미존재 상품만 추출 (이미 있으면 보존)
+ *   2. batchAutoMatchImages()로 네이버 쇼핑 검색 → 1순위 이미지 다운로드
+ *   3. 결과를 items[].imageUrl에 mutate 박음
+ *   4. (옵션) rembg 적용은 PHASE 1에서 추가 — 현재 디폴트 false
+ *
+ * 호출 비용: 미매칭 상품 수만큼 네이버 API (100ms 간격 순차 호출 — rate-limit 안전).
+ * 사장님 발행 시점 또는 엑셀 업로드 후 1회 호출 권장.
+ *
+ * @param categories FlyerRenderData.categories — items[].imageUrl mutate
+ * @param companyId 매장 회사 ID (이미지 저장 경로용)
+ * @param opts.skipExisting 이미 imageUrl 있는 상품 스킵 (디폴트 true)
+ * @param opts.maxItems 최대 처리 상품 수 (디폴트 50, API 비용 보호)
+ * @returns 처리 카운트 (매칭 성공 / 실패 / 스킵)
+ */
+export async function enrichCategoriesWithImages(
+  categories: EnrichImageCategory[],
+  companyId: string,
+  opts?: { skipExisting?: boolean; maxItems?: number }
+): Promise<{ matched: number; failed: number; skipped: number; total: number }> {
+  const skipExisting = opts?.skipExisting !== false;
+  const maxItems = opts?.maxItems ?? 50;
+
+  // 처리 대상 추출 (카테고리 → flat with reference)
+  type Target = { name: string; index: number; ref: EnrichImageItem };
+  const targets: Target[] = [];
+  let skipped = 0;
+  let globalIdx = 0;
+  for (const cat of categories) {
+    for (const it of cat.items) {
+      if (skipExisting && it.imageUrl && it.imageUrl.trim().length > 0) {
+        skipped++;
+        continue;
+      }
+      if (!it.name || it.name.trim().length === 0) continue;
+      if (targets.length >= maxItems) break;
+      targets.push({ name: it.name, index: globalIdx++, ref: it });
+    }
+    if (targets.length >= maxItems) break;
+  }
+
+  if (targets.length === 0) {
+    return { matched: 0, failed: 0, skipped, total: skipped };
+  }
+
+  // 배치 호출
+  const results = await batchAutoMatchImages(
+    targets.map(t => ({ name: t.name, index: t.index })),
+    companyId
+  );
+
+  // results를 targets와 매핑 (index 기준)
+  let matched = 0;
+  let failed = 0;
+  for (const r of results) {
+    const target = targets.find(t => t.index === r.index);
+    if (!target) continue;
+    if (r.imageUrl) {
+      target.ref.imageUrl = r.imageUrl;
+      matched++;
+    } else {
+      failed++;
+    }
+  }
+
+  return { matched, failed, skipped, total: matched + failed + skipped };
+}

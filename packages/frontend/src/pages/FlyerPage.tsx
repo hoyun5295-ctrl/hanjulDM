@@ -11,13 +11,14 @@ interface Flyer { id: string; title: string; store_name: string; period_start: s
 
 // D113: 하드코딩 폴백용 (API 실패 시)
 const DEFAULT_CATEGORY_PRESETS = ['청과/야채', '공산', '축산', '수산', '냉동', '유제품', '음료/주류', '생활용품'];
+// ★ D154 PHASE 0 트랙 A — 모바일 6 엔진 (Claude Design 통합). 백엔드 CT-F13 정합.
 const DEFAULT_TEMPLATES: TemplateOption[] = [
-  { value: 'grid', label: '가격 강조형', desc: '2열 카드 그리드, 가격 대형', color: 'linear-gradient(to right, #ef4444, #f97316)' },
-  { value: 'magazine', label: '매거진형', desc: '1열 매거진 레이아웃, 대형 이미지', color: 'linear-gradient(to right, #292524, #c2410c)' },
-  { value: 'editorial', label: '에디토리얼', desc: '풀블리드 이미지, 모던 타이포', color: 'linear-gradient(to right, #0f172a, #334155)' },
-  { value: 'showcase', label: '쇼케이스', desc: '대형 싱글 카드, 절약액 표시', color: 'linear-gradient(to right, #7c3aed, #ec4899)' },
-  { value: 'list', label: '리스트형', desc: '1열 매거진 (딥블루)', color: 'linear-gradient(to right, #1d4ed8, #3b82f6)' },
-  { value: 'highlight', label: '특가 하이라이트', desc: '다크 쇼케이스, 옐로 강조', color: 'linear-gradient(to right, #18181b, #facc15)' },
+  { value: 'story',         label: '스토리형',      desc: '풀스크린 1상품, 5초 자동 진행 (인스타 스타일)', color: 'linear-gradient(135deg, #F97316, #EF4444)' },
+  { value: 'magazine',      label: '매거진 스크롤', desc: '패럴랙스 + 챕터 헤드 무드보드',                   color: 'linear-gradient(135deg, #292524, #C2410C)' },
+  { value: 'deal_feed',     label: '오늘의 핫딜',   desc: '카운트다운 + 잔여수량 + 좋아요·공유',              color: 'linear-gradient(135deg, #171717, #EF4444)' },
+  { value: 'grid_hero',     label: '위클리 메인',   desc: 'Hero + 카테고리 sticky + 그리드 + 단가',           color: 'linear-gradient(135deg, #7C3AED, #EC4899)' },
+  { value: 'catalog_swipe', label: '카탈로그 가로', desc: '카테고리별 가로 스와이프 + hold 확대',             color: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' },
+  { value: 'poster_promo',  label: '포스터 임팩트', desc: '인쇄 전단풍 + 6매체 정합 본진',                    color: 'linear-gradient(135deg, #1C1917, #FBBF24)' },
 ];
 
 interface TemplateOption { value: string; label: string; desc: string; color: string; }
@@ -31,13 +32,13 @@ export default function FlyerPage({ token, businessType = 'mart' }: { token: str
   // D113: 업종별 동적 템플릿/카테고리
   const [categoryPresets, setCategoryPresets] = useState<string[]>(DEFAULT_CATEGORY_PRESETS);
   const [availableTemplates, setAvailableTemplates] = useState<TemplateOption[]>(DEFAULT_TEMPLATES);
-  const [defaultTemplate, setDefaultTemplate] = useState('grid');
+  const [defaultTemplate, setDefaultTemplate] = useState('grid_hero');
 
   const [title, setTitle] = useState('');
   const [storeName, setStoreName] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
-  const [template, setTemplate] = useState('grid');
+  const [template, setTemplate] = useState('grid_hero');
   const [categories, setCategories] = useState<FlyerCategory[]>([{ name: '청과/야채', items: [{ name: '', originalPrice: 0, salePrice: 0 }] }]);
 
   const [alert, setAlert] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'error' | 'info' }>({ show: false, title: '', message: '', type: 'info' });

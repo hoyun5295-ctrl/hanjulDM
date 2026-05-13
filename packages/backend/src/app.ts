@@ -26,6 +26,7 @@ import flyerCartPublicRoutes from './routes/flyer/carts';
 import flyerOrdersRoutes from './routes/flyer/orders';
 import flyerRoutes from './routes/flyer/flyers';
 import flyerPublicRoutes from './routes/flyer/short-urls';
+import flyerOgImageRoutes from './routes/flyer/og-image';
 
 // ★ hanjulDM 슈퍼관리자 라우트
 import flyerAdminRoutes from './routes/admin/flyer-admin';
@@ -48,6 +49,8 @@ app.use('/api/flyer/p', flyerPublicRoutes);
 app.use('/api/flyer/q', flyerCouponPublicRoutes);
 // ★ Phase 3: 장바구니 공개 API (인증 불필요 — phone 기반)
 app.use('/api/flyer/cart', flyerCartPublicRoutes);
+// ★ D154 PHASE 0 트랙 A: og:image 동적 라우트 (카톡 인박스 미리보기, 인증 불필요)
+app.use('/api/flyer', flyerOgImageRoutes);
 
 // 미들웨어
 app.use(helmet());

@@ -17,6 +17,9 @@ import { getPuppeteerBrowser } from '../../flyer-pdf';
 import { loadTemplate } from './template-registry';
 import { resolveSlotData, FILL_RUNTIME, type RawFlyerInput } from './slot-filler';
 import { getPaperDimensions, type PaperSizeKey, type Orientation } from '../PAPER-SIZES';
+// ★ D154 PHASE 0 §1-3: 6매체 통합 디자인 토큰 (인쇄 A3 시즌 컬러 자동 적용)
+import { generateMediaCssBlock, generateAllSeasonsCssBlock } from '../../design-tokens';
+import type { SeasonToken } from '../../season-resolver';
 
 const PAGED_POLYFILL_CDN = 'https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.js';
 
@@ -33,6 +36,8 @@ export interface RenderFlyerPdfOptions {
   format?: 'pdf' | 'png';
   /** PNG 모드 전용: deviceScaleFactor 기본 3 (≈288dpi). 인쇄 확인용이라 300dpi 근접 */
   pngScale?: number;
+  /** ★ D154 PHASE 0 §1-3: 시즌 토큰 (인쇄 A3 컬러 자동 — URL/POP/MMS와 동일 토큰 정합) */
+  seasonToken?: SeasonToken;
 }
 
 export interface RenderFlyerPdfResult {
@@ -64,10 +69,17 @@ function assembleHtml(
   templateHtml: string,
   templateCss: string,
   slotData: Record<string, any>,
-  opts: { skipPagedJs?: boolean },
+  opts: { skipPagedJs?: boolean; seasonToken?: SeasonToken },
 ): string {
-  // 1. {{INLINE_CSS}} 플레이스홀더 치환
-  let html = templateHtml.replace(/\{\{INLINE_CSS\}\}/g, templateCss);
+  // ★ D154 PHASE 0 §1-3: 6매체 통합 CSS variable 토큰 prepend (default + 8 시즌 분기)
+  const seasonToken: SeasonToken = opts.seasonToken || 'default';
+  const tokenCss =
+    generateMediaCssBlock('print_a3', seasonToken) +
+    generateAllSeasonsCssBlock('print_a3');
+  const enrichedCss = tokenCss + '\n' + templateCss;
+
+  // 1. {{INLINE_CSS}} 플레이스홀더 치환 (디자인 토큰 prepend된 CSS)
+  let html = templateHtml.replace(/\{\{INLINE_CSS\}\}/g, enrichedCss);
 
   // 2. {{flyer.title}} 플레이스홀더 제거 (slot-filler 가 처리하므로 title 태그만 비움)
   html = html.replace(/\{\{flyer\.title\}\}/g, '');
@@ -156,7 +168,7 @@ export async function renderFlyerPdf(options: RenderFlyerPdfOptions): Promise<Re
   log('slot data resolved', Object.keys(slotData));
 
   // 3) 최종 HTML 조립
-  const html = assembleHtml(tpl.html, tpl.css, slotData, { skipPagedJs: options.skipPagedJs });
+  const html = assembleHtml(tpl.html, tpl.css, slotData, { skipPagedJs: options.skipPagedJs, seasonToken: options.seasonToken });
 
   // 4) Puppeteer 렌더
   const browser = await getPuppeteerBrowser();

@@ -66,7 +66,8 @@ router.get('/:code', async (req: Request, res: Response) => {
     ).catch(err => console.error('[전단AI] 클릭 로그 실패:', err.message));
 
     // ★ Phase 3: tracking URL이면 phone을 뷰어 컨텍스트에 전달 (장바구니 식별용)
-    const html = await renderFlyerPage(flyer, trackingPhone);
+    // ★ D154 PHASE 0: shortCode 전달 (og:image 동적 라우트 URL 생성용)
+    const html = await renderFlyerPage(flyer, trackingPhone, code);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   } catch (err: any) {
@@ -139,7 +140,7 @@ function renderExpiredPage(storeName: string, title: string, endDate: string): s
 // ============================================================
 // 전단지 렌더링 — CT-F14 컨트롤타워 위임
 // ============================================================
-export async function renderFlyerPage(flyer: any, trackingPhone?: string | null): Promise<string> {
+export async function renderFlyerPage(flyer: any, trackingPhone?: string | null, shortCode?: string | null): Promise<string> {
   const categories = typeof flyer.categories === 'string' ? JSON.parse(flyer.categories) : (flyer.categories || []);
   const storeName = flyer.store_name || '';
   const title = flyer.title || '';
@@ -171,7 +172,7 @@ export async function renderFlyerPage(flyer: any, trackingPhone?: string | null)
     ? JSON.parse(flyer.extra_data || '{}')
     : (flyer.extra_data || {});
 
-  return renderTemplate(flyer.template || 'grid', {
+  return renderTemplate(flyer.template || 'grid_hero', {
     storeName, title, period, categories, qrCodeDataUrl, qrCouponText,
     externalLinks: extraData.externalLinks,
     announcements: extraData.announcements,
@@ -179,6 +180,11 @@ export async function renderFlyerPage(flyer: any, trackingPhone?: string | null)
     trackingPhone: trackingPhone || undefined,
     flyerId: flyer.id,
     companyId: flyer.company_id,
+    // ★ D154 PHASE 0: 시즌 토큰 자동 매핑 + DEAL FEED 카운트다운용 원본 날짜
+    periodStart: flyer.period_start || null,
+    periodEnd: flyer.period_end || null,
+    // ★ D154 PHASE 0: og:image 동적 라우트 URL 생성용 (/api/flyer/og/{shortCode}.png)
+    shortCode: shortCode || null,
   });
 }
 

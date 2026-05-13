@@ -100,4 +100,103 @@ export async function generateBatchProductCopy(
   return map;
 }
 
+// ============================================================
+// ★ D154 PHASE 0 트랙 B — 통합 헬퍼 (categories 자동 enrich)
+// ============================================================
+
+/**
+ * 카테고리 → 최적 CopyType 자동 매핑 (휴리스틱).
+ * 청과/축산/수산 → recipe (조리 팁)
+ * 공산/음료/생활용품/베이커리/간식 → selling_point (구매 포인트)
+ * 냉동 → storage (보관법)
+ * 유제품 → benefit (건강 효능)
+ */
+export function selectCopyTypeForCategory(category: string | null | undefined): CopyType {
+  const c = (category || '').trim();
+  const map: Record<string, CopyType> = {
+    '청과/야채': 'recipe', '청과': 'recipe', '야채': 'recipe', '과일': 'recipe',
+    '축산': 'recipe', '정육': 'recipe', '한우': 'recipe', '돈육': 'recipe',
+    '수산': 'recipe',
+    '냉동': 'storage',
+    '유제품': 'benefit',
+    '공산': 'selling_point', '공산품': 'selling_point',
+    '음료/주류': 'selling_point', '음료': 'selling_point', '주류': 'selling_point',
+    '생활용품': 'selling_point',
+    '베이커리': 'selling_point', '빵': 'selling_point',
+    '간식': 'selling_point',
+  };
+  return map[c] || 'selling_point';
+}
+
+interface EnrichItemInput {
+  name: string;
+  category?: string;
+  aiCopy?: string;
+}
+
+interface EnrichCategoryInput {
+  name: string;
+  items: EnrichItemInput[];
+}
+
+/**
+ * ★ FlyerRenderData.categories[] 일괄 AI 카피 자동 생성 (트랙 B 본진).
+ *
+ * 동작:
+ *   1. 카테고리별로 그룹화 (같은 카테고리 = 같은 CopyType)
+ *   2. aiCopy 미존재 상품만 추출 (이미 있으면 보존)
+ *   3. generateBatchProductCopy()로 카테고리별 일괄 호출
+ *   4. 결과를 items[].aiCopy에 mutate 박음
+ *
+ * 호출 비용: 카테고리 수만큼 callAIWithFallback (병렬 호출 X — rate-limit 안전).
+ * 사장님 발행 시점에 1회 호출 권장 (매번 페이지 로드 호출 X).
+ *
+ * @param categories FlyerRenderData.categories — items에 aiCopy mutate
+ * @param opts.skipExisting 이미 aiCopy 있는 상품 스킵 (디폴트 true)
+ * @param opts.maxItemsPerBatch 1회 batch 최대 상품 수 (디폴트 10, API rate-limit 보호)
+ * @returns enriched 카운트 + 실패 카운트
+ */
+export async function enrichCategoriesWithAiCopy(
+  categories: EnrichCategoryInput[],
+  opts?: { skipExisting?: boolean; maxItemsPerBatch?: number }
+): Promise<{ enriched: number; failed: number; categoryCount: number }> {
+  const skipExisting = opts?.skipExisting !== false;
+  const batchSize = opts?.maxItemsPerBatch ?? 10;
+  let enriched = 0;
+  let failed = 0;
+
+  for (const cat of categories) {
+    const copyType = selectCopyTypeForCategory(cat.name);
+    const targets = cat.items
+      .filter(it => skipExisting ? !it.aiCopy : true)
+      .filter(it => it.name && it.name.trim().length > 0);
+    if (targets.length === 0) continue;
+
+    // batch 분할 (API rate-limit 보호)
+    for (let i = 0; i < targets.length; i += batchSize) {
+      const slice = targets.slice(i, i + batchSize);
+      try {
+        const map = await generateBatchProductCopy(
+          slice.map(it => ({ name: it.name, category: cat.name })),
+          copyType
+        );
+        for (const it of slice) {
+          const copy = map[it.name];
+          if (copy && copy.length > 0) {
+            it.aiCopy = copy;
+            enriched++;
+          } else {
+            failed++;
+          }
+        }
+      } catch (err: any) {
+        console.error('[flyer-ai-copy] batch enrich 실패:', cat.name, err && err.message);
+        failed += slice.length;
+      }
+    }
+  }
+
+  return { enriched, failed, categoryCount: categories.length };
+}
+
 export { COPY_TYPE_LABELS };

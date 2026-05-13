@@ -37,37 +37,64 @@ export interface TemplateInfo {
 //   이유: API에서 동적으로 받아오는 Tailwind 클래스는 빌드 시 purge되어 색상 미표시
 // ============================================================
 
+// ============================================================
+// ★ D154 PHASE 0 트랙 A — 모바일 6 엔진 (Claude Design 통합)
+// ============================================================
+// 이전 22종(grid/magazine/editorial/showcase/highlight/season_*/event_*/mart_*/butcher_*)
+// 은 1차원 슬롯 채움 한계로 deprecated. 신규 6 엔진은 각자 명확히 다른 모바일 네이티브 UI DNA.
+// 시즌·행사는 별도 시즌 토큰 8종으로 분리 (CT-F season-resolver.ts + season-tokens.json).
+//
+// deprecated 22종 발행 전단 안전 렌더: DEPRECATED_FALLBACK_MAP + CT-F14 renderTemplate 분기.
+// ============================================================
 export const TEMPLATE_REGISTRY: Record<string, TemplateInfo> = {
-  // ━━ 기본 (8개 엔진 대표) ━━
-  grid:             { value: 'grid', label: '가격 강조형', desc: '2열 카드, 가격 대형 강조', color: 'linear-gradient(to right, #ef4444, #f97316)' },
-  magazine:         { value: 'magazine', label: '매거진형', desc: '1열 좌우교대, 대형 이미지', color: 'linear-gradient(to right, #292524, #c2410c)' },
-  editorial:        { value: 'editorial', label: '에디토리얼', desc: '첫상품 풀블리드 + 2열', color: 'linear-gradient(to right, #0f172a, #334155)' },
-  showcase:         { value: 'showcase', label: '쇼케이스', desc: '대형 싱글 카드, 절약액', color: 'linear-gradient(to right, #7c3aed, #ec4899)' },
-  highlight:        { value: 'highlight', label: '특가 하이라이트', desc: '다크+옐로, 임팩트 강조', color: 'linear-gradient(to right, #18181b, #facc15)' },
+  story:         { value: 'story',         label: '스토리형',      desc: '풀스크린 1상품, 5초 자동 진행 (인스타 스타일)', color: 'linear-gradient(135deg, #F97316, #EF4444)' },
+  magazine:      { value: 'magazine',      label: '매거진 스크롤', desc: '패럴랙스 + 챕터 헤드 무드보드',                   color: 'linear-gradient(135deg, #292524, #C2410C)' },
+  deal_feed:     { value: 'deal_feed',     label: '오늘의 핫딜',   desc: '카운트다운 + 잔여수량 + 좋아요·공유',              color: 'linear-gradient(135deg, #171717, #EF4444)' },
+  grid_hero:     { value: 'grid_hero',     label: '위클리 메인',   desc: 'Hero + 카테고리 sticky + 그리드 + 단가',           color: 'linear-gradient(135deg, #7C3AED, #EC4899)' },
+  catalog_swipe: { value: 'catalog_swipe', label: '카탈로그 가로', desc: '카테고리별 가로 스와이프 + hold 확대',             color: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' },
+  poster_promo:  { value: 'poster_promo',  label: '포스터 임팩트', desc: '인쇄 전단풍 + 6매체 정합 본진',                    color: 'linear-gradient(135deg, #1C1917, #FBBF24)' },
+};
 
-  // ━━ 시즌 (모든 업종 공통) ━━
-  season_newyear:   { value: 'season_newyear', label: '설날 특선', desc: '빨강+금색, 대형 쇼케이스', color: 'linear-gradient(to right, #dc2626, #ca8a04)' },
-  season_chuseok:   { value: 'season_chuseok', label: '추석 한가위', desc: '남색+주황, 풀블리드', color: 'linear-gradient(to right, #1e40af, #f59e0b)' },
-  season_summer:    { value: 'season_summer', label: '여름 시원특가', desc: '시안+블루, 3열 촘촘', color: 'linear-gradient(to right, #06b6d4, #0891b2)' },
-  season_winter:    { value: 'season_winter', label: '겨울 따뜻특가', desc: '딥로즈, 매거진형', color: 'linear-gradient(to right, #be123c, #fb7185)' },
-  season_christmas: { value: 'season_christmas', label: '크리스마스', desc: '그린+레드, 가로 스크롤', color: 'linear-gradient(to right, #15803d, #dc2626)' },
+// ============================================================
+// ★ D154 PHASE 0 — Deprecated templateCode 폴백 매핑
+// ============================================================
+// 기존 발행 전단(flyer_flyers.template = 'grid'|'magazine'|...)의 deprecated 22 templateCode를
+// 신규 6 엔진 중 가장 적합한 것으로 매핑. CT-F14 renderTemplate(templateCode, data) 진입점에서
+// RENDERER_MAP 미존재 시 DEPRECATED_FALLBACK_MAP 조회 → 매핑된 신규 엔진 + 시즌 토큰 자동 주입.
+//
+// DB 마이그레이션 0건 — 코드 분기로만 안전 렌더 보장. (옛 발행 전단 흔들림 0)
+// ============================================================
+export const DEPRECATED_FALLBACK_MAP: Record<string, string> = {
+  // 기본 5 → 신규
+  grid:             'grid_hero',
+  magazine:         'magazine',
+  editorial:        'poster_promo',
+  showcase:         'poster_promo',
+  highlight:        'poster_promo',
 
-  // ━━ 행사 유형 (모든 업종 공통) ━━
-  event_bogo:       { value: 'event_bogo', label: '1+1 / 2+1', desc: '오렌지, 2열 혜택 강조', color: 'linear-gradient(to right, #f97316, #ea580c)' },
-  event_timesale:   { value: 'event_timesale', label: '타임세일', desc: '블랙+레드, 가로 스크롤', color: 'linear-gradient(to right, #171717, #ef4444)' },
-  event_membership: { value: 'event_membership', label: '멤버십 데이', desc: '퍼플, 대+소 타일 교차', color: 'linear-gradient(to right, #7e22ce, #a855f7)' },
-  event_grand_open: { value: 'event_grand_open', label: '그랜드 오픈', desc: '블랙+골드, 풀블리드', color: 'linear-gradient(to right, #1c1917, #fbbf24)' },
+  // 시즌 5 → 신규 (시즌 토큰은 season-resolver가 별도 처리)
+  season_newyear:   'poster_promo',
+  season_chuseok:   'poster_promo',
+  season_christmas: 'deal_feed',
+  season_summer:    'grid_hero',
+  season_winter:    'magazine',
 
-  // ━━ 마트 확장 ━━
-  mart_fresh:       { value: 'mart_fresh', label: '신선식품 특화', desc: '녹색, 2열 그리드', color: 'linear-gradient(to right, #22c55e, #059669)' },
-  mart_clearance:   { value: 'mart_clearance', label: '창고대방출', desc: '노랑+빨강, 3열 촘촘', color: 'linear-gradient(to right, #eab308, #ef4444)' },
-  mart_general:     { value: 'mart_general', label: '공산품 특가', desc: '슬레이트, 3열 깔끔', color: 'linear-gradient(to right, #475569, #6366f1)' },
-  mart_seafood:     { value: 'mart_seafood', label: '수산 코너', desc: '딥블루, 대형배너+리스트', color: 'linear-gradient(to right, #1d4ed8, #3b82f6)' },
+  // 행사 4 → 신규
+  event_bogo:       'poster_promo',
+  event_timesale:   'deal_feed',
+  event_membership: 'magazine',
+  event_grand_open: 'poster_promo',
 
-  // ━━ 정육 확장 ━━
-  butcher_premium:  { value: 'butcher_premium', label: '프리미엄 정육', desc: '다크+골드, 매거진형', color: 'linear-gradient(to right, #111827, #d97706)' },
-  butcher_hanwoo:   { value: 'butcher_hanwoo', label: '한우 전문', desc: '블랙+앰버, 대형배너', color: 'linear-gradient(to right, #1c1917, #f59e0b)' },
-  butcher_giftset:  { value: 'butcher_giftset', label: '선물세트', desc: '앰버+골드, 타일 교차', color: 'linear-gradient(to right, #92400e, #d97706)' },
+  // 마트 4 → 신규
+  mart_fresh:       'catalog_swipe',
+  mart_clearance:   'deal_feed',
+  mart_general:     'grid_hero',
+  mart_seafood:     'catalog_swipe',
+
+  // 정육 3 → 신규 (PHASE 1에서 정육 prefix 분리 별도 작업 예정)
+  butcher_premium:  'magazine',
+  butcher_hanwoo:   'poster_promo',
+  butcher_giftset:  'magazine',
 };
 
 // ============================================================
@@ -107,7 +134,7 @@ export async function getBusinessTypes(): Promise<BusinessType[]> {
     category_presets: typeof r.category_presets === 'string'
       ? JSON.parse(r.category_presets)
       : (r.category_presets || []),
-    default_template: r.default_template || 'grid',
+    default_template: r.default_template || 'grid_hero',
     is_active: r.is_active,
     sort_order: r.sort_order || 0,
   }));
@@ -135,28 +162,16 @@ export async function getCategoryPresets(typeCode: string): Promise<string[]> {
 
 /**
  * 업종별 사용 가능 템플릿 (메타데이터 포함).
- * DB의 available_templates가 없으면 공통 3종 + 업종 prefix 자동 매칭.
+ *
+ * D154 PHASE 0: 모바일 6 엔진을 모든 업종(마트·정육·식자재·과일·수산) 공통 노출.
+ * 업종 prefix 분리(mart_ / butcher_ / 등)는 PHASE 1에서 점진 확장 예정.
+ * typeCode 인자는 시그니처 호환 유지용 (라우트 호출처 변경 0).
  */
 export async function getAvailableTemplates(typeCode: string): Promise<TemplateInfo[]> {
-  // 공통 템플릿 (모든 업종 사용 가능)
-  const commonCodes = [
-    'grid', 'magazine', 'editorial', 'showcase', 'highlight',
-    'season_newyear', 'season_chuseok', 'season_summer', 'season_winter', 'season_christmas',
-    'event_bogo', 'event_timesale', 'event_membership', 'event_grand_open',
-  ];
+  void typeCode; // PHASE 1 업종별 확장 시 사용
+  const commonCodes = ['story', 'magazine', 'deal_feed', 'grid_hero', 'catalog_swipe', 'poster_promo'];
 
-  // 업종별 prefix로 매칭 (mart_ → 마트, butcher_ → 정육)
-  const prefixMap: Record<string, string> = {
-    mart: 'mart_',
-    butcher: 'butcher_',
-  };
-
-  const prefix = prefixMap[typeCode] || `${typeCode}_`;
-  const typeCodes = Object.keys(TEMPLATE_REGISTRY).filter(
-    code => commonCodes.includes(code) || code.startsWith(prefix)
-  );
-
-  return typeCodes
+  return commonCodes
     .map(code => TEMPLATE_REGISTRY[code])
     .filter((t): t is TemplateInfo => !!t);
 }
@@ -177,7 +192,7 @@ export async function getAllBusinessTypes(): Promise<BusinessType[]> {
     category_presets: typeof r.category_presets === 'string'
       ? JSON.parse(r.category_presets)
       : (r.category_presets || []),
-    default_template: r.default_template || 'grid',
+    default_template: r.default_template || 'grid_hero',
     is_active: r.is_active,
     sort_order: r.sort_order || 0,
   }));

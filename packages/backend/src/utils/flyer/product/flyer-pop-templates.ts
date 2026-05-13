@@ -7,7 +7,14 @@
  *   3. simple  — 심플 화이트 (깔끔한 흰 배경 + 이미지 + 가격)
  *   4. dark    — 다크 프리미엄 (검정 배경 + 골드 가격)
  *   5. jumbo   — 대형 가격 (가격이 메인, 이미지 보조)
+ *
+ * ★ D154 PHASE 0 §1-3: 6매체 통합 디자인 토큰 (URL/A3/MMS와 동일 시즌 컬러).
+ *   pageCss()가 design-tokens.generateMediaCssBlock('pop', 'default') prepend.
+ *   8 시즌 분기는 generateAllSeasonsCssBlock('pop')로 박혀 <html data-season> 속성 변경만으로 동적 전환.
  */
+
+// ★ D154 PHASE 0: 6매체 통합 디자인 토큰
+import { generateMediaCssBlock, generateAllSeasonsCssBlock } from './design-tokens';
 
 // ============================================================
 // 타입
@@ -32,6 +39,8 @@ export interface PopOptions {
   popTemplate?: PopTemplate;
   paperSize?: string;
   landscape?: boolean;
+  /** ★ D154 PHASE 0 §1-3: 시즌 토큰 (POP에 시즌 컬러 자동 — URL/A3/MMS와 동일 토큰 정합) */
+  seasonToken?: import('./season-resolver').SeasonToken;
 }
 
 export type PopTemplate = 'hot' | 'classic' | 'simple' | 'dark' | 'jumbo';
@@ -80,7 +89,11 @@ function getPaperSize(opts: PopOptions): { w: number; h: number } {
 }
 
 function pageCss(paper: { w: number; h: number }): string {
-  return `@page{size:${paper.w}mm ${paper.h}mm;margin:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}*{margin:0;padding:0;box-sizing:border-box}`;
+  // ★ D154 PHASE 0 §1-3: 6매체 통합 디자인 토큰 prepend (URL/A3/MMS와 동일 시즌 컬러 정합)
+  const tokenCss =
+    generateMediaCssBlock('pop', 'default') +
+    generateAllSeasonsCssBlock('pop');
+  return tokenCss + `@page{size:${paper.w}mm ${paper.h}mm;margin:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}*{margin:0;padding:0;box-sizing:border-box}`;
 }
 
 function bodyBase(paper: { w: number; h: number }): string {

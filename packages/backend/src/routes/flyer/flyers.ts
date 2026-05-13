@@ -365,7 +365,7 @@ router.post('/', async (req: Request, res: Response) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [companyId, userId, store_code || null, title, store_name || null, period_start || null, period_end || null,
-       JSON.stringify(categories || []), template || 'grid', logo_url || null, JSON.stringify(extra_data || {})]
+       JSON.stringify(categories || []), template || 'grid_hero', logo_url || null, JSON.stringify(extra_data || {})]
     );
 
     res.status(201).json(result.rows[0]);
@@ -1009,7 +1009,7 @@ router.post('/:id/copy', async (req: Request, res: Response) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [companyId, userId, `${o.title} (복사)`, o.store_name, JSON.stringify(o.categories || []),
-       o.template || 'grid', o.logo_url, JSON.stringify(o.extra_data || {})]
+       o.template || 'grid_hero', o.logo_url, JSON.stringify(o.extra_data || {})]
     );
 
     res.status(201).json(result.rows[0]);

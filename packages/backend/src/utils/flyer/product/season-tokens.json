@@ -1,0 +1,85 @@
+{
+  "$schema": "./season-tokens.schema.json",
+  "version": "1.0.0",
+  "description": "한줄전단AI 모바일 6 엔진 시즌 컬러 토큰 SSOT. season-resolver.ts가 period_start/title 기반 자동 매핑. 각 템플릿은 <html data-season=\"...\"> 속성으로 토큰 적용 → CSS variable --color-primary / --color-accent 8종 동적 분기.",
+  "basis": "Claude Design 6 HTML 출력 토큰 + 04_master_plan §1-3 6매체 통합 디자인 토큰 정합",
+  "updatedAt": "2026-05-13",
+
+  "tokens": {
+    "default": {
+      "label": "기본",
+      "primary": "#F97316",
+      "accent": "#EF4444",
+      "onPrimary": "#FFFFFF",
+      "note": "주간 정기 행사 (디폴트). 오렌지+레드 그라데이션"
+    },
+    "newyear": {
+      "label": "설날",
+      "primary": "#DC2626",
+      "accent": "#CA8A04",
+      "onPrimary": "#FFFFFF",
+      "note": "음력 1월 설날 특선 — 빨강+금색"
+    },
+    "chuseok": {
+      "label": "추석",
+      "primary": "#1E40AF",
+      "accent": "#F59E0B",
+      "onPrimary": "#FFFFFF",
+      "note": "음력 8월 추석 한가위 — 남색+주황"
+    },
+    "christmas": {
+      "label": "크리스마스",
+      "primary": "#15803D",
+      "accent": "#DC2626",
+      "onPrimary": "#FFFFFF",
+      "note": "12월 크리스마스 — 그린+레드"
+    },
+    "summer": {
+      "label": "여름",
+      "primary": "#06B6D4",
+      "accent": "#0891B2",
+      "onPrimary": "#FFFFFF",
+      "note": "6~8월 여름 시원특가 — 시안+블루"
+    },
+    "winter": {
+      "label": "겨울",
+      "primary": "#BE123C",
+      "accent": "#FB7185",
+      "onPrimary": "#FFFFFF",
+      "note": "11~2월 겨울 따뜻특가 — 딥로즈"
+    },
+    "grand_open": {
+      "label": "그랜드오픈",
+      "primary": "#1C1917",
+      "accent": "#FBBF24",
+      "onPrimary": "#FFFFFF",
+      "note": "개점·재오픈·특별 — 블랙+골드"
+    },
+    "urgent": {
+      "label": "긴급세일",
+      "primary": "#171717",
+      "accent": "#EF4444",
+      "onPrimary": "#FFFFFF",
+      "note": "타임세일·창고대방출·마감 임박 — 블랙+레드"
+    }
+  },
+
+  "matchingPriority": {
+    "note": "season-resolver.ts 매칭 순서. 위에서 아래로 첫 매치 적용. 모두 미매치 시 default. 키워드 매치가 날짜 매치보다 우선.",
+    "order": [
+      "키워드: grand_open (개점/오픈/재오픈/1주년/리뉴얼)",
+      "키워드: urgent (타임세일/창고대방출/마감 임박/한정/오늘만)",
+      "키워드: newyear (설날/설 특선/설 명절)",
+      "키워드: chuseok (추석/한가위/추석 명절)",
+      "키워드: christmas (크리스마스/성탄/X-mas/산타)",
+      "키워드: summer (여름/시원/쿨/더위/삼복)",
+      "키워드: winter (겨울/따뜻/동지/한파)",
+      "날짜: christmas (12월 1~31일)",
+      "날짜: newyear (양력 1월 25일 ~ 2월 20일 — 음력 1월 1일 ±14일 안전 범위)",
+      "날짜: chuseok (양력 9월 1일 ~ 10월 15일 — 음력 8월 15일 ±14일 안전 범위)",
+      "날짜: summer (6월 1일 ~ 8월 31일)",
+      "날짜: winter (11월 1일 ~ 2월 28일, newyear/christmas 제외)",
+      "default (위 매치 모두 X)"
+    ]
+  }
+}
