@@ -60,7 +60,7 @@ export default function PosAgentListPage() {
 
   useEffect(() => { loadAgents(); loadCompanies(); }, [loadAgents, loadCompanies]);
 
-  const heartbeatBadge = (lastHeartbeat: string | undefined, syncStatus: string | undefined) => {
+  const heartbeatBadge = (lastHeartbeat: string | undefined, _syncStatus: string | undefined) => {
     if (!lastHeartbeat) return <Badge variant="neutral">미연결</Badge>;
     const diff = (Date.now() - new Date(lastHeartbeat).getTime()) / 1000;
     if (diff < 300) return <Badge variant="success">실시간 ({Math.floor(diff)}s)</Badge>;
