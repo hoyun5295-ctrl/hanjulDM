@@ -362,24 +362,30 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '행사명(title)은 필수입니다.' });
     }
 
-    // ★ D155: 발행 시 AI 카피 자동 enrich (사장님 수동 일괄문구 보존 = skipExisting:true)
-    // 카테고리당 1회 batch 호출. 실패 시 빈 채 INSERT (예외 throw X).
-    const enrichedCategoriesPost = Array.isArray(categories) ? categories : [];
-    if (enrichedCategoriesPost.length > 0) {
-      try {
-        await enrichCategoriesWithAiCopy(enrichedCategoriesPost, { skipExisting: true });
-      } catch (err: any) {
-        console.warn('[flyer/flyers] POST AI 카피 enrich 실패 (계속 진행):', err && err.message);
-      }
-    }
-
     const result = await query(
       `INSERT INTO flyers (company_id, user_id, store_code, title, store_name, period_start, period_end, categories, template, logo_url, extra_data)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [companyId, userId, store_code || null, title, store_name || null, period_start || null, period_end || null,
-       JSON.stringify(enrichedCategoriesPost), template || 'grid_hero', logo_url || null, JSON.stringify(extra_data || {})]
+       JSON.stringify(categories || []), template || 'grid_hero', logo_url || null, JSON.stringify(extra_data || {})]
     );
+
+    // ★ D155 fix: AI 카피 자동 enrich를 비동기 백그라운드로 (사장님 저장 응답 즉시 + 발행 후 ~5초 자동 채워짐)
+    // 사장님 수동 일괄문구 보존(skipExisting:true). 실패 시 빈 채 유지(예외 throw X). 사장님 응답에 영향 0.
+    if (Array.isArray(categories) && categories.length > 0) {
+      const flyerId = result.rows[0].id;
+      setImmediate(async () => {
+        try {
+          await enrichCategoriesWithAiCopy(categories, { skipExisting: true });
+          await query(
+            `UPDATE flyers SET categories = $1, updated_at = NOW() WHERE id = $2`,
+            [JSON.stringify(categories), flyerId]
+          );
+        } catch (err: any) {
+          console.warn('[flyer/flyers] POST 비동기 AI 카피 enrich 실패:', err && err.message);
+        }
+      });
+    }
 
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
@@ -613,15 +619,6 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: '전단지를 찾을 수 없습니다.' });
     }
 
-    // ★ D155: 수정 시 AI 카피 자동 enrich (POST와 동일. 신규 추가된 상품만 채움, 기존 보존)
-    if (Array.isArray(categories) && categories.length > 0) {
-      try {
-        await enrichCategoriesWithAiCopy(categories, { skipExisting: true });
-      } catch (err: any) {
-        console.warn('[flyer/flyers] PUT AI 카피 enrich 실패 (계속 진행):', err && err.message);
-      }
-    }
-
     const result = await query(
       `UPDATE flyers SET
         title = COALESCE($3, title),
@@ -639,6 +636,21 @@ router.put('/:id', async (req: Request, res: Response) => {
        categories ? JSON.stringify(categories) : null, template || null, logo_url || null,
        extra_data ? JSON.stringify(extra_data) : null]
     );
+
+    // ★ D155 fix: AI 카피 자동 enrich를 비동기 백그라운드로 (사장님 응답 즉시 + 수동 일괄문구 보존)
+    if (Array.isArray(categories) && categories.length > 0) {
+      setImmediate(async () => {
+        try {
+          await enrichCategoriesWithAiCopy(categories, { skipExisting: true });
+          await query(
+            `UPDATE flyers SET categories = $1, updated_at = NOW() WHERE id = $2 AND company_id = $3`,
+            [JSON.stringify(categories), id, companyId]
+          );
+        } catch (err: any) {
+          console.warn('[flyer/flyers] PUT 비동기 AI 카피 enrich 실패:', err && err.message);
+        }
+      });
+    }
 
     res.json(result.rows[0]);
   } catch (err: any) {
