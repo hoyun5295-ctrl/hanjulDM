@@ -2611,7 +2611,7 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .hero .topline { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--rule); font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
 .hero .topline .right { display: inline-flex; align-items: center; gap: 8px; }
 .hero .topline .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--rule); }
-.hero h1 { position: relative; z-index: 1; margin-top: 14px; font-size: 76px; font-weight: 900; line-height: 0.92; letter-spacing: -0.05em; color: var(--ink); word-break: keep-all; }
+.hero h1 { position: relative; z-index: 1; margin-top: 14px; padding-right: 140px; font-size: 76px; font-weight: 900; line-height: 0.92; letter-spacing: -0.05em; color: var(--ink); word-break: keep-all; }
 .hero h1 .red { color: var(--discount); }
 .hero h1 .char { display: inline-block; animation: charIn 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes charIn { from { opacity: 0; transform: translateY(40px) skewY(6deg); } to { opacity: 1; transform: translateY(0) skewY(0); } }

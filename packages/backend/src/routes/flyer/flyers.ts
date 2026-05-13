@@ -26,6 +26,8 @@ import { processProductImages } from '../../utils/flyer/product/print/pipeline/i
 import { mapFlyerExcelHeaders, applyFlyerMapping, getFlyerMappingFields } from '../../utils/flyer/product/flyer-excel-mapper';
 import { renderFlyerPage } from './short-urls';
 import { renderPricePop, renderMultiPop, renderPromoPop } from '../../utils/flyer/product/flyer-pop-templates';
+// ★ D155: 발행/수정 시 AI 카피 자동 enrich (사장님 수동 일괄문구 보존)
+import { enrichCategoriesWithAiCopy } from '../../utils/flyer/product/flyer-ai-copy';
 import { classifyProducts } from '../../utils/flyer/product/flyer-category-classifier';
 import { resolveProductImageUrl } from '../../utils/product-images';
 
@@ -360,12 +362,23 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '행사명(title)은 필수입니다.' });
     }
 
+    // ★ D155: 발행 시 AI 카피 자동 enrich (사장님 수동 일괄문구 보존 = skipExisting:true)
+    // 카테고리당 1회 batch 호출. 실패 시 빈 채 INSERT (예외 throw X).
+    const enrichedCategoriesPost = Array.isArray(categories) ? categories : [];
+    if (enrichedCategoriesPost.length > 0) {
+      try {
+        await enrichCategoriesWithAiCopy(enrichedCategoriesPost, { skipExisting: true });
+      } catch (err: any) {
+        console.warn('[flyer/flyers] POST AI 카피 enrich 실패 (계속 진행):', err && err.message);
+      }
+    }
+
     const result = await query(
       `INSERT INTO flyers (company_id, user_id, store_code, title, store_name, period_start, period_end, categories, template, logo_url, extra_data)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [companyId, userId, store_code || null, title, store_name || null, period_start || null, period_end || null,
-       JSON.stringify(categories || []), template || 'grid_hero', logo_url || null, JSON.stringify(extra_data || {})]
+       JSON.stringify(enrichedCategoriesPost), template || 'grid_hero', logo_url || null, JSON.stringify(extra_data || {})]
     );
 
     res.status(201).json(result.rows[0]);
@@ -598,6 +611,15 @@ router.put('/:id', async (req: Request, res: Response) => {
     const existing = await query('SELECT id, status FROM flyers WHERE id = $1 AND company_id = $2', [id, companyId]);
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: '전단지를 찾을 수 없습니다.' });
+    }
+
+    // ★ D155: 수정 시 AI 카피 자동 enrich (POST와 동일. 신규 추가된 상품만 채움, 기존 보존)
+    if (Array.isArray(categories) && categories.length > 0) {
+      try {
+        await enrichCategoriesWithAiCopy(categories, { skipExisting: true });
+      } catch (err: any) {
+        console.warn('[flyer/flyers] PUT AI 카피 enrich 실패 (계속 진행):', err && err.message);
+      }
     }
 
     const result = await query(

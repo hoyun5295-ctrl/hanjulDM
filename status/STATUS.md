@@ -1,11 +1,34 @@
 # hanjulDM 프로젝트 현황
 
-> **업데이트:** 2026-05-13 (D153)
-> **상태:** ★ 배포 인프라 100% 종결. PHASE 0 진입 준비.
+> **업데이트:** 2026-05-13 (D154)
+> **상태:** ★ PHASE 0 트랙 A + B + 6매체 디자인 토큰 + 매장 프로필 자동 merge 100% 종결. D155+ 블라인드 검증 + PHASE 1 진입 준비.
 
 ## 현재 단계 (CURRENT_TASK)
 
-**D153 종결 (2026-05-13)** — hanjulDM 분리 코드 + 배포 인프라 + 슈퍼관리자 구축 100% 완료. 외부 도메인 `https://sys.hanjul-flyer.co.kr` 슈퍼관리자 LoginPage 정상 + ceo/qwer1234 → TOTP enrollment 흐름 정상 검증.
+**D154 종결 (2026-05-13)** — PHASE 0 본격 진입. master plan §1-1 (트랙 A URL 페이지) + §1-2 (트랙 B AI 자동 생성) + §1-3 (6매체 통합 디자인 토큰) + §7 (매장 프로필 자동 merge) 모두 코드 완성 + 배포 검증. 6 엔진(STORY/MAGAZINE/DEAL FEED/GRID HERO/CATALOG SWIPE/POSTER PROMO) 본체 동적 변환 + 시즌 토큰 8종 + og:image 동적 라우트(puppeteer LRU) + 6매체 통합 design-tokens.ts + V4 미리보기 iframe(POST /preview-html) + 회사 프로필 자동 join(externalLinks/announcements 자동 박음, address fallback 카카오맵). 옛 V3 22 templateCode는 DEPRECATED_FALLBACK_MAP으로 안전 폴백 — 옛 발행 전단 흔들림 0건. DB 마이그레이션 = `flyer_companies` 7 컬럼 추가만(store_phone/map_url/kakao_channel_url/instagram_url/band_url/blog_url/shop_url). 자세한 작업 매트릭스는 비토 메모리 `project_d154_phase0_trackA_trackB_media_tokens.md` 참조.
+
+**D154 종합 매트릭스**:
+
+| Phase | 작업 | 결과 |
+|-------|------|------|
+| **1A~1D** 인프라 | season-tokens.json 8종 / season-resolver.ts CT-F / TEMPLATE_REGISTRY 22→6 + DEPRECATED_FALLBACK_MAP 22 / FlyerPage DEFAULT_TEMPLATES 6 | tsc 0 |
+| **2A~2G** 6 엔진 본체 | flyer-templates.ts V3 1643줄 → V4 약 4500줄(6 엔진 본체 동적 변환) / flyer-page-injections.ts 분리(cart-script + qr) | tsc 0 |
+| **3A** 라우트 정합 | short-urls.ts periodEnd 주입 + 디폴트 'grid_hero' | tsc 0 |
+| **4A** og:image | renderOgImageHtml + buildOgImageUrl + FlyerRenderData.shortCode + og-image.ts 신규 라우트(puppeteer 싱글톤 + LRU 1h) + app.ts mount | curl 200 OK 검증 |
+| **4B~4E** 트랙 B | claude-design-renderer.ts(시드 휴리스틱 6 변형) / template-recommender.ts(점수 매트릭스 6 엔진 자동 선정) / flyer-ai-copy.ts enrichCategoriesWithAiCopy / flyer-naver-search.ts enrichCategoriesWithImages | tsc 0 |
+| **4F~4K** 6매체 토큰 | design-tokens.ts(MEDIA_SPECS 6 + generateMediaCssBlock + generateAllSeasonsCssBlock) / paged-pdf.ts seasonToken 옵션 / flyer-pop-templates pageCss 토큰 prepend / media-images.ts(MMS 1080x1920 + 알림톡 1000x1000) / 브랜드메시지=URL 활용 | tsc 0 |
+| **5B** 1차 배포 | hdm-push + 4 패키지 atomic safe-build + DB SQL(default_template 정합) + 외부 검증 | https://hanjul-flyer.kr 정상, og:image 364KB/320KB PNG 정상 |
+| **6** 미리보기 V4 | POST /api/flyer/p/preview-html 라우트 신규 + FlyerPreview.tsx iframe(ResizeObserver scale 자동) + 옛 V3 React 미러 export 처리(unused 회피) | hdm-push 재배포 검증 |
+| **7A~7E** 매장 프로필 자동 merge | flyer_companies 7 컬럼 ALTER TABLE / GET-PUT /api/flyer/companies/ 7 컬럼 SELECT-UPDATE / StoreProfileSection.tsx 신규(SettingsPage 최상단) / short-urls.ts mergeCompanyProfileToExtraData 헬퍼(전단 발행 자동 join, address fallback 카카오맵) / preview-html flyerAuthenticate 추가(인증 토큰 → companyId 자동 식별) | hdm-push 재배포 검증 |
+
+## D155+ 인계 — PHASE 0 검증 + PHASE 1 진입 준비
+
+1. **PHASE 0 현장 검증 (master plan §1-4)**:
+   - Harold 4.0/5.0 + 비토 4.0/5.0 + 인비토 직원 3인 평균 4.0/5.0 + 마트 사장 1인 블라인드 "외주보다 낫다" + 고객 5인 중 4인 "보고 싶다"
+   - 6 엔진 × 시즌 토큰 8종 = 48 조합 + 사장님 입력 다양성 검증
+   - 6매체 정합 (URL/PDF/POP/MMS/알림톡/랜딩) 통합 검증
+2. **사고 fix 발생 시 hotfix** (D154 코드 기반)
+3. **PHASE 1 진입 준비 (D158~)**: 7대 무기 — POS Agent 직접연결 + CT-F10 RFM 실구현 + Campaign Autopilot + ROI Closed Loop + Outside DB + 정부 결제 모듈
 
 **D152 + D153 누적 매트릭스**:
 
