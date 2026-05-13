@@ -138,6 +138,22 @@ export {
 } from './pos/flyer-pos-ai';
 export type { PosRawSchema, SchemaMapping, PosTableInfo, PosColumnInfo } from './pos/flyer-pos-ai';
 
+// CT-F23: POS Agent 양방향 통신
+export {
+  issueRemoteCommand,
+  pollPendingCommand,
+  recordCommandResult,
+  listCommandHistory,
+  getCommandById,
+  expireOldCommands,
+  recordAdapterCandidate,
+  listAdapterCandidates,
+  recordCredentialDiscoveryLog,
+  getLatestAgentInfo,
+  recordAgentInstalled,
+} from './pos/flyer-pos-remote';
+export type { RemoteCommandType, RemoteCommandStatus, RemoteCommandRecord, AgentUpdateInfo, AdapterCandidate } from './pos/flyer-pos-remote';
+
 // ═══════════════════════════════════════════
 // coupon/ — 쿠폰 도메인
 // ═══════════════════════════════════════════

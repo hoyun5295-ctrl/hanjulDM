@@ -58,6 +58,7 @@ export async function registerAgent(info: {
   const res = await apiCall<{
     agentId: string;
     companyId: string;
+    companyName?: string;
     schemaMapping: any;
     message: string;
   }>('POST', '/register', info);
@@ -114,7 +115,10 @@ export async function fetchConfig() {
 }
 
 /** 데이터 푸시 */
-export async function pushData(type: 'sales' | 'members' | 'inventory', items: any[]) {
+export async function pushData(
+  type: 'sales' | 'members' | 'inventory',
+  items: any[]
+): Promise<{ ok: boolean; data: { accepted: number; rejected: number; errors: any[] }; error?: string }> {
   if (items.length === 0) return { ok: true, data: { accepted: 0, rejected: 0, errors: [] } };
 
   const config = getConfig();
@@ -140,7 +144,14 @@ export async function pushData(type: 'sales' | 'members' | 'inventory', items: a
   }
 
   logger.info(`[${type}] push 완료: accepted=${totalAccepted}, rejected=${totalRejected}`);
-  return { ok: true, data: { accepted: totalAccepted, rejected: totalRejected, errors: allErrors } };
+
+  // 전체 실패 시 ok=false (scheduler.ts cache-pusher가 markFailed 분기 박음)
+  const allFailed = totalAccepted === 0 && totalRejected > 0;
+  return {
+    ok: !allFailed,
+    data: { accepted: totalAccepted, rejected: totalRejected, errors: allErrors },
+    error: allFailed ? (allErrors[0]?.reason || 'all batches failed') : undefined,
+  };
 }
 
 /** 하트비트 전송 */

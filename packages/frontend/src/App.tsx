@@ -15,13 +15,14 @@ import OrdersPage from './pages/OrdersPage';
 import PrintFlyerPage from './pages/PrintFlyerPage';
 import SenderRegistrationPage from './pages/SenderRegistrationPage';
 import AlimtalkPage from './pages/AlimtalkPage';
+import PosAgentPage from './pages/PosAgentPage';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import SessionTimer from './components/SessionTimer';
 import SessionTimeoutModal from './components/SessionTimeoutModal';
 
 export const API_BASE = import.meta.env.VITE_API_URL || '';
 export function getToken(): string { return localStorage.getItem('flyer_token') || ''; }
-export type Page = 'flyer' | 'send' | 'pop' | 'customers' | 'catalog' | 'coupons' | 'orders' | 'print-flyer' | 'results' | 'balance' | 'unsubscribes' | 'settings' | 'senders' | 'alimtalk';
+export type Page = 'flyer' | 'send' | 'pop' | 'customers' | 'catalog' | 'coupons' | 'orders' | 'print-flyer' | 'results' | 'balance' | 'unsubscribes' | 'settings' | 'senders' | 'alimtalk' | 'pos-agent';
 
 /** 공통 fetch — 401 시 자동 로그아웃 */
 export async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
@@ -54,6 +55,7 @@ const MORE_MENUS: { key: Page; label: string; icon: string }[] = [
   { key: 'balance', label: '충전관리', icon: '💳' },
   { key: 'senders', label: '발신번호', icon: '📞' },
   { key: 'alimtalk', label: '알림톡', icon: '💬' },
+  { key: 'pos-agent', label: 'POS Agent', icon: '🖥️' },
   { key: 'unsubscribes', label: '수신거부', icon: '🚫' },
   { key: 'settings', label: '설정', icon: '⚙️' },
 ];
@@ -174,6 +176,7 @@ function App() {
         {currentPage === 'balance' && <BalancePage token={token} />}
         {currentPage === 'senders' && <SenderRegistrationPage token={token} />}
         {currentPage === 'alimtalk' && <AlimtalkPage token={token} />}
+        {currentPage === 'pos-agent' && <PosAgentPage token={token} />}
         {currentPage === 'unsubscribes' && <UnsubscribesPage token={token} />}
         {currentPage === 'settings' && <SettingsPage token={token} />}
       </main>

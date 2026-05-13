@@ -20,8 +20,16 @@ import {
   getSchemaMapping,
   getTopSellingProducts,
   getPosAgentStatusList,
+  issueRemoteCommand,
+  pollPendingCommand,
+  recordCommandResult,
+  listCommandHistory,
+  recordAdapterCandidate,
+  recordCredentialDiscoveryLog,
+  getLatestAgentInfo,
+  recordAgentInstalled,
 } from '../../utils/flyer';
-import type { PosRawSchema } from '../../utils/flyer';
+import type { PosRawSchema, RemoteCommandType } from '../../utils/flyer';
 import { query } from '../../config/database';
 
 const router = Router();
@@ -217,6 +225,53 @@ router.get('/top-selling', flyerAuthenticate, async (req: Request, res: Response
 });
 
 // ============================================================
+// GET /my-agent — 매장 사장님 본인 회사의 POS Agent 상태 (V2)
+// ============================================================
+router.get('/my-agent', flyerAuthenticate, async (req: Request, res: Response) => {
+  try {
+    const companyId = req.flyerUser?.companyId;
+    if (!companyId) return res.status(403).json({ error: '회사 정보 없음' });
+
+    const result = await query(
+      `SELECT id, agent_key, pos_type, pos_version, sync_status, last_heartbeat,
+              agent_version, last_update_at, hostname, ip_address, created_at, updated_at
+       FROM flyer_pos_agents
+       WHERE company_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [companyId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ exists: false });
+    }
+
+    // 대기 큐 통계도 같이 반환 (cache 상태 noisy 회피 — pending_count는 heartbeat에서 받음)
+    const agent = result.rows[0];
+    return res.json({
+      exists: true,
+      agent: {
+        id: agent.id,
+        agentKey: agent.agent_key,
+        posType: agent.pos_type,
+        posVersion: agent.pos_version,
+        syncStatus: agent.sync_status,
+        lastHeartbeat: agent.last_heartbeat,
+        agentVersion: agent.agent_version,
+        lastUpdateAt: agent.last_update_at,
+        hostname: agent.hostname,
+        ipAddress: agent.ip_address,
+        createdAt: agent.created_at,
+        updatedAt: agent.updated_at,
+      },
+    });
+  } catch (error: any) {
+    console.error('[pos] my-agent error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ============================================================
 // GET /agents — POS Agent 상태 목록 (슈퍼관리자 전용)
 // ============================================================
 router.get('/agents', async (req: Request, res: Response) => {
@@ -229,6 +284,177 @@ router.get('/agents', async (req: Request, res: Response) => {
     return res.json(agents);
   } catch (error: any) {
     console.error('[pos] agents list error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ============================================================
+// ★ 양방향 통신 라우트 6종 (CT-F23)
+// ============================================================
+
+/**
+ * POST /remote-command/issue — 슈퍼관리자가 Agent에 명령 발행
+ * Body: { agentId, type: RemoteCommandType, payload? }
+ * Header: Authorization: Bearer <super_token>
+ */
+router.post('/remote-command/issue', async (req: Request, res: Response) => {
+  try {
+    const token = (req.headers.authorization || '').replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { agentId, type, payload, issuedBy } = req.body;
+    if (!agentId || !type) return res.status(400).json({ error: 'agentId, type required' });
+
+    const validTypes: RemoteCommandType[] = ['FORCE_SYNC', 'RESEND_SCHEMA', 'FETCH_LOGS', 'REVOKE', 'UPDATE', 'DIAGNOSE_MASK_BYPASS'];
+    if (!validTypes.includes(type)) return res.status(400).json({ error: `Invalid type: ${type}` });
+
+    const commandId = await issueRemoteCommand(agentId, type, payload, issuedBy || 'super_admin');
+    return res.json({ ok: true, commandId });
+  } catch (error: any) {
+    console.error('[pos] remote-command/issue error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * POST /remote-command/poll — Agent long polling
+ * Body: { waitMs?: number }
+ * Header: x-agent-key
+ */
+router.post('/remote-command/poll', agentAuth, async (req: Request, res: Response) => {
+  try {
+    const { agentId } = (req as any).agent;
+    const waitMs = Math.min(Number(req.body?.waitMs) || 25000, 30000);
+
+    const cmd = await pollPendingCommand(agentId, waitMs);
+    if (!cmd) {
+      return res.status(204).end(); // 명령 없음
+    }
+
+    return res.json({
+      command: {
+        id: cmd.id,
+        type: cmd.type,
+        payload: cmd.payload,
+        issuedAt: cmd.issued_at,
+      },
+    });
+  } catch (error: any) {
+    console.error('[pos] remote-command/poll error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * POST /remote-command/respond — Agent 결과 보고
+ * Body: { commandId, ok, output?, error?, durationMs? }
+ * Header: x-agent-key
+ */
+router.post('/remote-command/respond', agentAuth, async (req: Request, res: Response) => {
+  try {
+    const { commandId, ok, output, error, durationMs } = req.body;
+    if (!commandId || typeof ok !== 'boolean') {
+      return res.status(400).json({ error: 'commandId, ok required' });
+    }
+    await recordCommandResult(commandId, ok, output, error, durationMs);
+    return res.json({ ok: true });
+  } catch (error: any) {
+    console.error('[pos] remote-command/respond error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * GET /remote-command/history — 명령 이력 조회 (슈퍼관리자)
+ */
+router.get('/remote-command/history', async (req: Request, res: Response) => {
+  try {
+    const token = (req.headers.authorization || '').replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+    const agentId = req.query.agentId as string;
+    if (!agentId) return res.status(400).json({ error: 'agentId required' });
+
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const history = await listCommandHistory(agentId, limit);
+    return res.json(history);
+  } catch (error: any) {
+    console.error('[pos] remote-command/history error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * GET /agent-update/check — Agent 자동 업데이트 체크
+ * Query: ?currentVersion=1.0.0
+ * Header: x-agent-key
+ */
+router.get('/agent-update/check', agentAuth, async (req: Request, res: Response) => {
+  try {
+    const currentVersion = (req.query.currentVersion as string) || '0.0.0';
+    const info = await getLatestAgentInfo(currentVersion);
+    return res.json(info);
+  } catch (error: any) {
+    console.error('[pos] agent-update/check error:', error);
+    return res.status(500).json({ available: false, error: 'Server error' });
+  }
+});
+
+/**
+ * POST /agent-update/report-installed — Agent 설치 완료 보고
+ * Body: { version, installedAt }
+ * Header: x-agent-key
+ */
+router.post('/agent-update/report-installed', agentAuth, async (req: Request, res: Response) => {
+  try {
+    const { agentId } = (req as any).agent;
+    const { version, installedAt } = req.body;
+    if (!version) return res.status(400).json({ error: 'version required' });
+    await recordAgentInstalled(agentId, version, installedAt || new Date().toISOString());
+    return res.json({ ok: true });
+  } catch (error: any) {
+    console.error('[pos] agent-update/report-installed error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * POST /adapter-candidate-report — 어댑터 학습 후보 (AI fallback confidence 95%+ 시 자동)
+ * Body: { posType, mapping, detection }
+ * Header: x-agent-key
+ */
+router.post('/adapter-candidate-report', agentAuth, async (req: Request, res: Response) => {
+  try {
+    const { agentId } = (req as any).agent;
+    const { posType, mapping, detection } = req.body;
+    if (!posType || !mapping) return res.status(400).json({ error: 'posType, mapping required' });
+    const candidateId = await recordAdapterCandidate(agentId, posType, mapping, detection || {});
+    return res.json({ ok: true, candidateId });
+  } catch (error: any) {
+    console.error('[pos] adapter-candidate-report error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * POST /credential-discovery/report — Credential Discovery 결과 학습 로그
+ * Body: { posType, attemptedAdapters, succeededAdapter, highestConfidence }
+ * Header: x-agent-key
+ */
+router.post('/credential-discovery/report', agentAuth, async (req: Request, res: Response) => {
+  try {
+    const { agentId } = (req as any).agent;
+    const { posType, attemptedAdapters, succeededAdapter, highestConfidence } = req.body;
+    await recordCredentialDiscoveryLog(
+      agentId,
+      posType || 'unknown',
+      Array.isArray(attemptedAdapters) ? attemptedAdapters : [],
+      succeededAdapter || null,
+      Number(highestConfidence) || 0
+    );
+    return res.json({ ok: true });
+  } catch (error: any) {
+    console.error('[pos] credential-discovery/report error:', error);
     return res.status(500).json({ error: 'Server error' });
   }
 });
