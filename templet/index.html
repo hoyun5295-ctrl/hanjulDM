@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한줄전단 템플릿 6종 — 리디자인 미리보기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --bg: #0E0E10;
+    --bg-2: #17171A;
+    --panel: #1E1E22;
+    --rule: #2A2A30;
+    --text: #F3F3F2;
+    --text-soft: #9E9EA6;
+    --accent: #F97316;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); height: 100%; }
+  body {
+    font-family: 'Pretendard Variable', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ===== top app bar ===== */
+  .appbar {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 50;
+    height: 64px; padding: 0 20px;
+    background: rgba(14,14,16,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--rule);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .brand .mark {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: linear-gradient(135deg, #F97316, #EF4444);
+    display: grid; place-items: center; font-size: 14px; font-weight: 900; color: #fff;
+  }
+  .brand .title {
+    display: flex; flex-direction: column;
+  }
+  .brand .title .h { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
+  .brand .title .s { font-size: 11px; color: var(--text-soft); letter-spacing: 0.02em; margin-top: -2px; }
+
+  .appbar .spacer { flex: 1; }
+
+  .seasonGroup {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--panel); padding: 6px;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+  }
+  .seasonGroup .label {
+    font-size: 11px; color: var(--text-soft); font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0 8px 0 6px;
+  }
+  .swatch {
+    height: 30px; padding: 0 12px 0 8px;
+    border-radius: 7px; border: 1px solid transparent;
+    background: transparent; color: var(--text);
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; letter-spacing: -0.01em;
+  }
+  .swatch .dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--p), var(--a));
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .swatch.active {
+    background: var(--bg);
+    border-color: rgba(255,255,255,0.16);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+  .swatch:hover { background: var(--bg); }
+
+  .control {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--panel); padding: 4px; border-radius: 10px;
+    border: 1px solid var(--rule);
+  }
+  .control button {
+    height: 30px; padding: 0 10px; border: 0; border-radius: 7px;
+    background: transparent; color: var(--text-soft);
+    font-size: 12px; font-weight: 600;
+  }
+  .control button.active { background: var(--bg); color: var(--text); }
+  .control button.iconOnly { padding: 0; width: 30px; display: grid; place-items: center; }
+  .control button svg { width: 14px; height: 14px; }
+
+  /* ===== stage area ===== */
+  .stage {
+    position: absolute; inset: 64px 0 0 0;
+    overflow: auto;
+    background:
+      radial-gradient(50% 40% at 50% 0%, rgba(249,115,22,0.06), transparent 60%),
+      var(--bg);
+  }
+  .stage::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+  .canvas {
+    position: relative;
+    padding: 56px 56px 80px;
+    display: flex; flex-wrap: wrap;
+    gap: 40px 28px;
+    justify-content: flex-start;
+    align-items: flex-start;
+    transform-origin: 0 0;
+  }
+
+  /* phone */
+  .phone {
+    flex: 0 0 auto;
+    width: 411px;
+    display: flex; flex-direction: column;
+  }
+  .phone .meta {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 0 10px 14px;
+  }
+  .phone .meta .ix {
+    font-size: 10px; letter-spacing: 0.2em; color: var(--text-soft); font-weight: 700;
+  }
+  .phone .meta .nm {
+    font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+    margin-top: -2px;
+  }
+  .phone .meta .nm a { color: var(--text); text-decoration: none; }
+  .phone .meta .nm a:hover { color: var(--accent); }
+  .phone .meta .desc {
+    font-size: 12px; color: var(--text-soft); margin-top: 4px;
+    max-width: 320px; line-height: 1.45;
+  }
+  .phone .body {
+    width: 411px; height: 870px;
+    background: #1a1a1f;
+    border-radius: 50px;
+    padding: 9px;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.06) inset,
+      0 0 0 1.5px #0b0b0d,
+      0 30px 60px -20px rgba(0,0,0,0.7);
+    position: relative;
+  }
+  .phone .screen {
+    width: 393px; height: 852px;
+    border-radius: 42px; overflow: hidden;
+    position: relative;
+    background: #000;
+  }
+  .phone .screen iframe {
+    width: 393px; height: 852px;
+    border: 0; display: block;
+  }
+  /* notch */
+  .phone .notch {
+    position: absolute; left: 50%; top: 18px; transform: translateX(-50%);
+    width: 120px; height: 32px; border-radius: 999px;
+    background: #050505;
+    z-index: 5; pointer-events: none;
+  }
+  .phone .toolbar {
+    margin-top: 14px;
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px;
+    background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 12px;
+  }
+  .phone .toolbar .ix2 {
+    font-size: 11px; padding: 0 8px;
+    color: var(--text-soft); font-weight: 600;
+  }
+  .phone .toolbar button {
+    height: 26px; padding: 0 10px; border-radius: 6px; border: 0;
+    background: transparent; color: var(--text-soft);
+    font-size: 11px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .phone .toolbar button:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .phone .toolbar button svg { width: 12px; height: 12px; }
+  .phone .toolbar .spacer { flex: 1; }
+  .phone .toolbar .open {
+    background: rgba(249,115,22,0.16); color: #FCA66B; font-weight: 700;
+  }
+
+  /* fullscreen viewer */
+  .focus {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.78); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 220ms;
+  }
+  .focus.open { opacity: 1; pointer-events: auto; }
+  .focus .frame {
+    width: 411px; height: 870px;
+    background: #1a1a1f; border-radius: 50px; padding: 9px;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7);
+    position: relative;
+    transform: scale(0.92);
+    transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .focus.open .frame { transform: scale(1); }
+  .focus .notch {
+    position: absolute; left: 50%; top: 18px; transform: translateX(-50%);
+    width: 120px; height: 32px; border-radius: 999px; background: #050505;
+    z-index: 5;
+  }
+  .focus iframe {
+    width: 393px; height: 852px;
+    border: 0; border-radius: 42px; background: #000;
+  }
+  .focus .close {
+    position: fixed; top: 80px; right: 24px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--panel); border: 1px solid var(--rule);
+    color: var(--text);
+    display: grid; place-items: center;
+  }
+  .focus .close svg { width: 20px; height: 20px; }
+  .focus .titleStrip {
+    position: fixed; left: 50%; bottom: 56px; transform: translateX(-50%);
+    padding: 8px 16px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--rule);
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .focus .titleStrip a {
+    color: var(--accent); text-decoration: none; font-size: 12px;
+  }
+
+  /* responsive: smaller screens get narrower canvas padding */
+  @media (max-width: 900px) {
+    .canvas { padding: 24px; gap: 32px; }
+    .appbar { padding: 0 12px; gap: 8px; overflow-x: auto; }
+    .appbar .brand .title .s { display: none; }
+    .seasonGroup .label { display: none; }
+    .swatch { padding: 0 8px 0 6px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="brand">
+    <div class="mark">한</div>
+    <div class="title">
+      <div class="h">한줄전단AI · 모바일 전단 6종</div>
+      <div class="s">06_template_redesign_master · Claude Design 출력</div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="seasonGroup" role="radiogroup" aria-label="시즌 토큰">
+    <span class="label">시즌</span>
+    <button class="swatch active" data-season="default"    style="--p:#F97316; --a:#EF4444;"><span class="dot"></span>기본</button>
+    <button class="swatch"        data-season="newyear"    style="--p:#DC2626; --a:#CA8A04;"><span class="dot"></span>설날</button>
+    <button class="swatch"        data-season="chuseok"    style="--p:#1E40AF; --a:#F59E0B;"><span class="dot"></span>추석</button>
+    <button class="swatch"        data-season="christmas"  style="--p:#15803D; --a:#DC2626;"><span class="dot"></span>크리스마스</button>
+    <button class="swatch"        data-season="summer"     style="--p:#06B6D4; --a:#0891B2;"><span class="dot"></span>여름</button>
+    <button class="swatch"        data-season="winter"     style="--p:#BE123C; --a:#FB7185;"><span class="dot"></span>겨울</button>
+    <button class="swatch"        data-season="grand_open" style="--p:#1C1917; --a:#FBBF24;"><span class="dot"></span>그랜드오픈</button>
+    <button class="swatch"        data-season="urgent"     style="--p:#171717; --a:#EF4444;"><span class="dot"></span>긴급세일</button>
+  </div>
+
+  <div class="control" role="group" aria-label="줌">
+    <button class="iconOnly" id="zoomOut" aria-label="축소"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+    <button id="zoomLabel">100%</button>
+    <button class="iconOnly" id="zoomIn" aria-label="확대"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="iconOnly" id="zoomFit" aria-label="맞춤"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9V5a2 2 0 0 1 2-2h4M21 9V5a2 2 0 0 0-2-2h-4M3 15v4a2 2 0 0 0 2 2h4M21 15v4a2 2 0 0 1-2 2h-4"/></svg></button>
+  </div>
+</header>
+
+<main class="stage" id="stage">
+  <div class="canvas" id="canvas"></div>
+</main>
+
+<aside class="focus" id="focus" role="dialog" aria-modal="true" aria-label="확대 보기">
+  <button class="close" id="focusClose" aria-label="닫기">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <div class="frame">
+    <div class="notch"></div>
+    <iframe id="focusFrame" title="확대 미리보기"></iframe>
+  </div>
+  <div class="titleStrip">
+    <span id="focusTitle">—</span>
+    <a id="focusLink" href="#" target="_blank">새 탭으로 열기 →</a>
+  </div>
+</aside>
+
+<script>
+  const TEMPLATES = [
+    { id: 'story',         file: 'templates/01-story.html',         num: '01', name: 'STORY',         kor: '스토리형',     desc: '풀스크린 1상품 1슬라이드. 5초 자동 진행 + 탭/스와이프 + 위로 밀어 상세.' },
+    { id: 'magazine',      file: 'templates/02-magazine.html',      num: '02', name: 'MAGAZINE',      kor: '매거진 스크롤', desc: '챕터별 풀블리드 + 패럴랙스 이미지. 사장님 큐레이션 무드보드.' },
+    { id: 'deal_feed',     file: 'templates/03-deal-feed.html',     num: '03', name: 'DEAL FEED',     kor: '오늘의 핫딜',   desc: '실시간 카운트다운 + 잔여수량 progress + 좋아요·공유. 마감 임박 빨강 펄세이트.' },
+    { id: 'grid_hero',     file: 'templates/04-grid-hero.html',     num: '04', name: 'GRID HERO',     kor: '위클리 메인',   desc: 'Hero 캐러셀 + sticky 카테고리 + 2×2 그리드 + 단가 자동 계산.' },
+    { id: 'catalog_swipe', file: 'templates/05-catalog-swipe.html', num: '05', name: 'CATALOG SWIPE', kor: '가로 카탈로그', desc: '카테고리별 가로 스와이프 행. 카드 hold 500ms로 확대 미리보기.' },
+    { id: 'poster_promo',  file: 'templates/06-poster-promo.html',  num: '06', name: 'POSTER PROMO',  kor: '포스터 임팩트', desc: '인쇄 전단 풍 + 모션. 6매체 정합 본진. 빨강 80px 가격 + 회전 sticker.' },
+  ];
+
+  const canvas = document.getElementById('canvas');
+  let currentSeason = 'default';
+
+  TEMPLATES.forEach(t => {
+    const phone = document.createElement('div');
+    phone.className = 'phone';
+    phone.dataset.id = t.id;
+    phone.innerHTML = `
+      <div class="meta">
+        <div>
+          <div class="ix">No. ${t.num}</div>
+          <div class="nm"><a href="${t.file}" target="_blank">${t.name} · ${t.kor}</a></div>
+          <div class="desc">${t.desc}</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="notch"></div>
+        <div class="screen">
+          <iframe src="${t.file}" loading="lazy" title="${t.name}" data-template="${t.id}"></iframe>
+        </div>
+      </div>
+      <div class="toolbar">
+        <span class="ix2">${t.file}</span>
+        <span class="spacer"></span>
+        <button data-action="reload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          새로고침
+        </button>
+        <button data-action="focus" class="open">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M14 10l7-7M9 21H3v-6M10 14l-7 7"/></svg>
+          확대
+        </button>
+      </div>
+    `;
+    canvas.appendChild(phone);
+
+    phone.querySelector('[data-action="reload"]').addEventListener('click', () => {
+      const f = phone.querySelector('iframe');
+      const src = f.src; f.src = 'about:blank'; setTimeout(() => f.src = src, 50);
+    });
+    phone.querySelector('[data-action="focus"]').addEventListener('click', () => openFocus(t));
+  });
+
+  // broadcast season
+  function broadcastSeason(s) {
+    currentSeason = s;
+    document.querySelectorAll('iframe').forEach(f => {
+      try { f.contentWindow.postMessage({ type: 'season', value: s }, '*'); } catch(e) {}
+    });
+  }
+  document.querySelectorAll('.swatch').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+      b.classList.add('active');
+      broadcastSeason(b.dataset.season);
+    });
+  });
+
+  // re-broadcast on every iframe load (in case it loaded after season already changed)
+  document.querySelectorAll('iframe').forEach(f => {
+    f.addEventListener('load', () => {
+      try { f.contentWindow.postMessage({ type: 'season', value: currentSeason }, '*'); } catch(e) {}
+    });
+  });
+
+  // zoom
+  let zoom = 1;
+  function setZoom(z) {
+    zoom = Math.max(0.4, Math.min(1.4, z));
+    canvas.style.transform = `scale(${zoom})`;
+    canvas.style.width = (100 / zoom) + '%';
+    document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+  }
+  document.getElementById('zoomIn').addEventListener('click', () => setZoom(zoom + 0.1));
+  document.getElementById('zoomOut').addEventListener('click', () => setZoom(zoom - 0.1));
+  document.getElementById('zoomFit').addEventListener('click', () => setZoom(1));
+
+  // ctrl+wheel zoom
+  document.getElementById('stage').addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      setZoom(zoom + (e.deltaY < 0 ? 0.05 : -0.05));
+    }
+  }, { passive: false });
+
+  // focus
+  const focus = document.getElementById('focus');
+  const focusFrame = document.getElementById('focusFrame');
+  function openFocus(t) {
+    focusFrame.src = t.file;
+    focusFrame.addEventListener('load', () => {
+      try { focusFrame.contentWindow.postMessage({ type: 'season', value: currentSeason }, '*'); } catch(e) {}
+    }, { once: true });
+    document.getElementById('focusTitle').textContent = `${t.num} · ${t.name} · ${t.kor}`;
+    document.getElementById('focusLink').href = t.file;
+    focus.classList.add('open');
+  }
+  function closeFocus() {
+    focus.classList.remove('open');
+    focusFrame.src = 'about:blank';
+  }
+  document.getElementById('focusClose').addEventListener('click', closeFocus);
+  focus.addEventListener('click', (e) => { if (e.target === focus) closeFocus(); });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFocus(); });
+
+  // initial fit: if window narrow, scale down a touch
+  if (window.innerWidth < 1500) setZoom(0.85);
+  if (window.innerWidth < 1200) setZoom(0.7);
+  if (window.innerWidth < 900)  setZoom(0.55);
+</script>
+</body>
+</html>

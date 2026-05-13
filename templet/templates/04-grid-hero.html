@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 — 위클리 메인</title>
+<meta property="og:title" content="동네마트 강남점 · 5월 둘째 주">
+<meta property="og:description" content="이번 주 진짜 싸요 — 위클리 행사 메인">
+<meta property="og:image" content="https://placehold.co/1200x630/F97316/FFFFFF?text=동네마트+위클리">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #F97316;
+    --color-accent: #EF4444;
+    --color-on-primary: #FFFFFF;
+    --color-text-strong: #171717;
+    --color-text-weak: #6B7280;
+    --color-bg: #FFFFFF;
+    --color-soft: #F7F7F5;
+    --color-rule: #ECECEA;
+    --color-discount: #DC2626;
+    --shadow-card: 0 1px 0 rgba(0,0,0,0.04), 0 6px 20px -10px rgba(0,0,0,0.10);
+    --shadow-lift: 0 12px 32px -8px rgba(0,0,0,0.16);
+    --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; }
+  html[data-season="summer"]    { --color-primary:#06B6D4; --color-accent:#0891B2; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--color-bg); color: var(--color-text-strong); }
+  body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 88px; }
+  button { font-family: inherit; }
+  .price-num { font-variant-numeric: tabular-nums; }
+
+  /* ===== top header ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 40;
+    height: 56px; background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--color-rule);
+    display: flex; align-items: center; padding: 0 8px;
+  }
+  .topbar .menu, .topbar .iconbtn {
+    width: 40px; height: 40px; border: 0; background: transparent;
+    color: var(--color-text-strong); display: grid; place-items: center;
+    cursor: pointer;
+  }
+  .topbar svg { width: 22px; height: 22px; }
+  .topbar .title {
+    flex: 1; text-align: left; padding: 0 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .topbar .title .crest {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    display: grid; place-items: center; color: #fff;
+    font-size: 12px; font-weight: 800;
+  }
+  .topbar .title strong { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
+  .topbar .title span { font-size: 11px; color: var(--color-text-weak); margin-left: 6px; }
+  .topbar .right { display: flex; }
+
+  /* ===== hero ===== */
+  .hero {
+    position: relative; overflow: hidden;
+    height: 56vh; min-height: 420px;
+    background:
+      radial-gradient(120% 100% at 0% 0%, color-mix(in oklab, var(--color-primary), white 18%) 0%, transparent 60%),
+      linear-gradient(135deg, var(--color-primary) 0%, color-mix(in oklab, var(--color-primary), var(--color-accent) 75%) 100%);
+    color: var(--color-on-primary);
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 100%, rgba(255,255,255,0.16), transparent 40%),
+      radial-gradient(circle at 100% 20%, rgba(0,0,0,0.18), transparent 40%);
+  }
+  .hero .grain {
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.4 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    opacity: 0.08; mix-blend-mode: overlay; pointer-events: none;
+  }
+  .hero .frame { position: absolute; inset: 0; padding: 24px 20px; display: flex; flex-direction: column; }
+  .hero .ribbon {
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(0,0,0,0.18); backdrop-filter: blur(6px);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  }
+  .hero .ribbon .dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+  .hero .productimg {
+    position: absolute; right: -20px; top: 12%;
+    width: 220px; height: 220px; border-radius: 24px;
+    transform: rotate(-6deg);
+    box-shadow: 0 24px 60px -8px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);
+    overflow: hidden;
+  }
+  .ph { position: absolute; inset: 0; display: grid; place-items: center; background: var(--ph-bg, #ddd); }
+  .ph::after { content: var(--ph-emoji, ""); font-size: 140px; line-height: 1; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.25)); }
+
+  .hero .copy {
+    position: absolute; left: 22px; right: 22px; bottom: 92px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .hero .copy .slogan {
+    font-size: 44px; font-weight: 900; letter-spacing: -0.045em; line-height: 0.95;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    max-width: 280px;
+  }
+  .hero .copy .pname { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; opacity: 0.95; }
+  .hero .copy .priceline { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+  .hero .copy .priceline .orig { font-size: 14px; opacity: 0.7; text-decoration: line-through; }
+  .hero .copy .priceline .sale {
+    font-size: 36px; font-weight: 900; letter-spacing: -0.03em;
+  }
+  .hero .copy .priceline .sale .won { font-size: 18px; font-weight: 800; margin-left: 1px; }
+
+  .hero .heroCTA {
+    position: absolute; left: 20px; right: 20px; bottom: 36px;
+    height: 50px; border: 0; border-radius: 14px;
+    background: rgba(0,0,0,0.92); color: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px 0 18px;
+    font-size: 15px; font-weight: 800; letter-spacing: -0.01em;
+    cursor: pointer;
+  }
+  .hero .heroCTA .right { display: flex; align-items: center; gap: 4px; }
+  .hero .heroCTA svg { width: 16px; height: 16px; }
+
+  /* carousel dots */
+  .hero .dots {
+    position: absolute; left: 20px; bottom: 14px;
+    display: flex; gap: 4px;
+  }
+  .hero .dots .d {
+    width: 18px; height: 3px; border-radius: 2px;
+    background: rgba(255,255,255,0.4);
+  }
+  .hero .dots .d.active { background: #fff; }
+
+  /* ===== sticky category chips ===== */
+  .catnav {
+    position: sticky; top: 56px; z-index: 30;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .catnav-scroll {
+    display: flex; gap: 0; padding: 4px 8px; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .catnav-scroll::-webkit-scrollbar { display: none; }
+  .catnav .chip {
+    flex: 0 0 auto;
+    padding: 12px 14px;
+    background: transparent; border: 0;
+    font-size: 14px; font-weight: 600; color: var(--color-text-weak);
+    letter-spacing: -0.01em;
+    position: relative;
+    cursor: pointer;
+  }
+  .catnav .chip.active { color: var(--color-text-strong); font-weight: 800; }
+  .catnav .chip.active::after {
+    content: ""; position: absolute; left: 14px; right: 14px; bottom: 4px;
+    height: 2px; border-radius: 2px;
+    background: var(--color-text-strong);
+  }
+
+  /* ===== category section ===== */
+  .cat-section { padding: 24px 16px 8px; }
+  .cat-section h2 {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 20px; font-weight: 800; letter-spacing: -0.025em;
+  }
+  .cat-section h2 small {
+    font-size: 12px; font-weight: 600; color: var(--color-text-weak);
+    letter-spacing: 0;
+  }
+  .cat-section .seemore {
+    margin-left: auto;
+    font-size: 12px; color: var(--color-text-weak); font-weight: 600;
+    background: transparent; border: 0; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 2px;
+  }
+  .cat-section .seemore svg { width: 12px; height: 12px; }
+  .cat-section .lede { font-size: 13px; color: var(--color-text-weak); margin-top: 4px; }
+
+  .grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    margin-top: 14px;
+  }
+  .pcard {
+    display: flex; flex-direction: column;
+    border-radius: 14px;
+    background: #fff;
+    position: relative;
+    transition: transform 200ms ease;
+  }
+  .pcard:active { transform: scale(0.98); }
+  .pic {
+    position: relative; aspect-ratio: 1/1;
+    border-radius: 14px; overflow: hidden;
+    background: var(--color-soft);
+  }
+  .pic .b1 {
+    position: absolute; top: 8px; left: 8px;
+    padding: 4px 8px; border-radius: 6px;
+    background: var(--color-discount); color: #fff;
+    font-size: 11px; font-weight: 800; letter-spacing: -0.01em;
+  }
+  .pic .b1.tag {
+    background: var(--color-text-strong);
+  }
+  .pic .b2 {
+    position: absolute; top: 8px; right: 8px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(255,255,255,0.9); border: 0;
+    display: grid; place-items: center;
+    color: var(--color-text-strong);
+    cursor: pointer;
+  }
+  .pic .b2 svg { width: 14px; height: 14px; }
+
+  .pinfo {
+    padding: 10px 4px 0;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .pinfo .nm {
+    font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+    line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    min-height: 35px;
+  }
+  .pinfo .unitPrice { font-size: 11px; color: var(--color-text-weak); font-weight: 500; }
+  .pinfo .pricerow {
+    display: flex; align-items: baseline; gap: 6px; margin-top: 2px;
+  }
+  .pinfo .off {
+    font-size: 13px; font-weight: 800; color: var(--color-discount);
+  }
+  .pinfo .sale {
+    font-size: 17px; font-weight: 900; letter-spacing: -0.02em;
+  }
+  .pinfo .sale .won { font-size: 12px; font-weight: 800; }
+  .pinfo .orig {
+    font-size: 11px; color: var(--color-text-weak); text-decoration: line-through;
+  }
+  .pinfo .meta {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .pinfo .meta .pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    background: var(--color-soft); color: var(--color-text-weak);
+    font-weight: 600;
+  }
+  .pcard .addbtn {
+    position: absolute; right: 6px; bottom: 90px;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 0; background: var(--color-text-strong); color: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+    cursor: pointer; z-index: 2;
+  }
+  .pcard .addbtn svg { width: 16px; height: 16px; }
+  .pcard .addbtn.added { background: var(--color-primary); }
+  .pcard.popping .addbtn { animation: addPop 600ms var(--motion-spring); }
+  @keyframes addPop {
+    0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); }
+  }
+
+  /* horizontal promo strip */
+  .promo {
+    display: grid; grid-template-columns: auto 1fr auto;
+    gap: 10px; align-items: center;
+    margin: 22px 16px 0;
+    padding: 14px 16px;
+    background: color-mix(in oklab, var(--color-primary), white 88%);
+    border-radius: 16px;
+    border: 1px solid color-mix(in oklab, var(--color-primary), white 70%);
+  }
+  .promo .ic {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--color-primary); color: var(--color-on-primary);
+    display: grid; place-items: center; font-weight: 800; font-size: 16px;
+  }
+  .promo .t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .promo .t .h { font-size: 13px; font-weight: 800; letter-spacing: -0.01em; }
+  .promo .t .s { font-size: 11px; color: var(--color-text-weak); font-weight: 600; }
+  .promo .go {
+    font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px;
+    background: var(--color-text-strong); color: #fff; border: 0;
+    cursor: pointer;
+  }
+
+  /* preview modal (long-press) */
+  .modal-scrim {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none;
+    transition: opacity 200ms;
+  }
+  .modal-scrim.show { opacity: 1; pointer-events: auto; }
+  .modal {
+    position: fixed; left: 16px; right: 16px;
+    top: 50%; transform: translateY(-50%) scale(0.96);
+    z-index: 61;
+    background: #fff; border-radius: 22px;
+    padding: 16px; box-shadow: var(--shadow-lift);
+    opacity: 0; pointer-events: none;
+    transition: opacity 220ms ease, transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .modal.show { opacity: 1; transform: translateY(-50%) scale(1); pointer-events: auto; }
+  .modal .pic { aspect-ratio: 4/3; }
+  .modal .pname { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-top: 14px; }
+  .modal .aiCopy { font-size: 13px; color: var(--color-text-weak); margin-top: 6px; line-height: 1.5; }
+  .modal .ms { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .modal .ms .c { padding: 10px 12px; background: var(--color-soft); border-radius: 10px; }
+  .modal .ms .c .k { font-size: 11px; color: var(--color-text-weak); }
+  .modal .ms .c .v { font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .modal .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .modal .btns button {
+    height: 46px; border-radius: 12px; border: 0;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .modal .btns .b1 { background: var(--color-soft); color: var(--color-text-strong); }
+  .modal .btns .b2 { background: var(--color-primary); color: var(--color-on-primary); }
+
+  /* sticky bottom cart bar */
+  .bottombar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(14px);
+    border-top: 1px solid var(--color-rule);
+  }
+  .bottombar .bar {
+    height: 56px; border-radius: 14px;
+    background: var(--color-text-strong); color: #fff;
+    display: flex; align-items: center; padding: 0 14px 0 16px;
+    gap: 12px;
+  }
+  .bottombar .badge {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--color-primary); color: var(--color-on-primary);
+    display: grid; place-items: center; font-weight: 800; font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .bottombar .lbl { display: flex; flex-direction: column; }
+  .bottombar .lbl .a { font-size: 15px; font-weight: 800; }
+  .bottombar .lbl .b { font-size: 11px; opacity: 0.7; font-weight: 500; }
+  .bottombar .arrow { margin-left: auto; opacity: 0.9; }
+  .bottombar .arrow svg { width: 18px; height: 18px; }
+
+  /* toast */
+  .toast {
+    position: fixed; bottom: 86px; left: 50%; transform: translate(-50%, 30px);
+    padding: 10px 14px; border-radius: 999px;
+    background: rgba(23,23,23,0.92); color: #fff;
+    font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+    opacity: 0; pointer-events: none; z-index: 70;
+    transition: opacity 180ms, transform 180ms;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pcard.popping .addbtn { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="menu" aria-label="메뉴"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <div class="title">
+    <div class="crest">동</div>
+    <strong>동네마트 강남점</strong>
+    <span>도보 3분</span>
+  </div>
+  <div class="right">
+    <button class="iconbtn" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+    <button class="iconbtn" aria-label="찜"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
+  </div>
+</header>
+
+<section class="hero" id="hero">
+  <div class="grain"></div>
+  <div class="frame">
+    <span class="ribbon"><span class="dot"></span>이번 주 키 상품 · 5/13 — 5/19</span>
+  </div>
+  <div class="productimg" id="heroPic">
+    <div class="ph" style="--ph-bg:#fbe4d6; --ph-emoji:'🥓';"></div>
+  </div>
+  <div class="copy" id="heroCopy">
+    <div class="slogan" id="heroSlogan">이번 주<br>진짜 싸요</div>
+    <div class="pname" id="heroName">국산 삼겹살 600g</div>
+    <div class="priceline">
+      <span class="orig price-num" id="heroOrig">14,900원</span>
+      <span class="sale price-num" id="heroSale">9,900<span class="won">원</span></span>
+    </div>
+  </div>
+  <div class="dots" id="heroDots"></div>
+  <button class="heroCTA">
+    <span>지금 보러가기</span>
+    <span class="right">
+      <span style="font-weight:700;font-size:13px;opacity:0.7;" id="heroIdx">1/4</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </span>
+  </button>
+</section>
+
+<nav class="catnav" aria-label="카테고리">
+  <div class="catnav-scroll" id="catnav"></div>
+</nav>
+
+<main id="main"></main>
+
+<aside class="promo">
+  <div class="ic">★</div>
+  <div class="t">
+    <div class="h">매장 방문 인증하면 5,000원 쿠폰</div>
+    <div class="s">5월 한 달간 · 1인 1회 한정</div>
+  </div>
+  <button class="go">받기</button>
+</aside>
+
+<div class="modal-scrim" id="scrim"></div>
+<aside class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="pic"><div class="ph" id="mPh" style="--ph-bg:#eee;"></div></div>
+  <h3 class="pname" id="mName">—</h3>
+  <p class="aiCopy" id="mCopy">—</p>
+  <div class="ms">
+    <div class="c"><div class="k">단위</div><div class="v" id="mUnit">—</div></div>
+    <div class="c"><div class="k">원산지</div><div class="v" id="mOrigin">—</div></div>
+    <div class="c"><div class="k">단가</div><div class="v" id="mUnitP">—</div></div>
+    <div class="c"><div class="k">카드 할인</div><div class="v" id="mCard">—</div></div>
+  </div>
+  <div class="btns">
+    <button class="b1" id="mClose">닫기</button>
+    <button class="b2" id="mAdd">담기</button>
+  </div>
+</aside>
+
+<div class="bottombar">
+  <div class="bar">
+    <div class="badge" id="cartCount">0</div>
+    <div class="lbl">
+      <div class="a">장바구니 보기</div>
+      <div class="b" id="cartSub">담은 상품 없음</div>
+    </div>
+    <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">담음</div>
+
+<script>
+  const CATEGORIES = [
+    {
+      name: "축산",
+      lede: "주말 한 끼, 두툼하게.",
+      items: [
+        { name:"국산 삼겹살", originalPrice:14900, salePrice:9900,  badge:"30% 할인",   unit:"600g",  origin:"국산",     cardDiscount:"삼성카드 5% 추가", aiCopy:"주말 바베큐엔 역시 두툼한 삼겹살. 600g 한 팩으로 4인 가족도 든든하게.", bg:"#fbe4d6", emoji:"🥓" },
+        { name:"한우 등심 1++", originalPrice:49900, salePrice:39900, badge:"한정 20개", unit:"300g", origin:"국산 1++", cardDiscount:"현대카드 7% 추가", aiCopy:"가족 모임용 프리미엄 한우 1++. 등심 본연의 마블링.", bg:"#f5d2d2", emoji:"🥩" }
+      ]
+    },
+    {
+      name: "청과",
+      lede: "햇과일이 도착했어요.",
+      items: [
+        { name:"청양고추",   originalPrice:2990,  salePrice:1990,  badge:"33% 할인",   unit:"200g",  origin:"국산",     cardDiscount:"",                aiCopy:"매운맛 진한 청양고추. 찌개·볶음 어디든 든든한 한 봉지.",        bg:"#dceedb", emoji:"🌶️" },
+        { name:"제주 한라봉",   originalPrice:24900, salePrice:19900, badge:"20% 할인",   unit:"5kg",   origin:"제주산",   cardDiscount:"BC카드 3% 추가",   aiCopy:"달콤 새콤한 제철 제주 한라봉 한 박스.",                       bg:"#fde2c2", emoji:"🍊" }
+      ]
+    },
+    {
+      name: "수산",
+      lede: "오늘 입고된 활어.",
+      items: [
+        { name:"완도 활전복", originalPrice:49900, salePrice:39900, badge:"한정 12박스", unit:"10미",  origin:"완도산",   cardDiscount:"신한카드 5% 추가", aiCopy:"오늘 입고된 완도 활전복 10미. 회·죽·구이 어디든.", bg:"#d8e6f7", emoji:"🐚" }
+      ]
+    },
+    {
+      name: "공산",
+      lede: "이번 주 1+1.",
+      items: [
+        { name:"가족 우유 1.8L", originalPrice:5290, salePrice:4290, badge:"1+1", unit:"1.8L", origin:"국산", cardDiscount:"", aiCopy:"아침 식탁의 든든한 한 잔. 1.8L 1+1 행사.", bg:"#eef0f3", emoji:"🥛" }
+      ]
+    }
+  ];
+
+  // Hero carousel uses top featured items
+  const FEATURED = [
+    { ...CATEGORIES[0].items[0], slogan:"이번 주<br>진짜 싸요" },
+    { ...CATEGORIES[2].items[0], slogan:"완도에서<br>오늘 왔어요" },
+    { ...CATEGORIES[1].items[1], slogan:"한라봉<br>5kg 한 박스" },
+    { ...CATEGORIES[0].items[1], slogan:"한우 1++<br>한정 20개" },
+  ];
+
+  const fmt = n => n.toLocaleString('ko-KR');
+  const pct = (o,s) => Math.round((1 - s/o) * 100);
+
+  // Normalize unit to base count (g, ml, count) and return display unit-price
+  function unitPrice(item) {
+    const u = (item.unit || '').toLowerCase().trim();
+    let mult = 1, denom = 0, base = '';
+    const m = u.match(/^([\d.]+)\s*(kg|g|l|ml|미|개|박스)/);
+    if (!m) return null;
+    const num = parseFloat(m[1]);
+    const u2 = m[2];
+    if (u2 === 'kg') { denom = num * 1000; base = '100g당'; }
+    else if (u2 === 'g')  { denom = num; base = '100g당'; }
+    else if (u2 === 'l')  { denom = num * 1000; base = '100ml당'; }
+    else if (u2 === 'ml') { denom = num; base = '100ml당'; }
+    else if (u2 === '미' || u2 === '개') { denom = num; base = (u2 === '미' ? '미당' : '개당'); mult = 1; }
+    else if (u2 === '박스') return null;
+    if (!denom) return null;
+    if (base === '100g당' || base === '100ml당') {
+      return `${base} ${fmt(Math.round(item.salePrice / denom * 100))}원`;
+    }
+    return `${base} ${fmt(Math.round(item.salePrice / denom))}원`;
+  }
+
+  // Build category chips & sections
+  const catnav = document.getElementById('catnav');
+  const main = document.getElementById('main');
+
+  CATEGORIES.forEach((cat, ci) => {
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (ci === 0 ? ' active' : '');
+    chip.textContent = cat.name;
+    chip.dataset.target = 'cat-' + ci;
+    chip.addEventListener('click', (e) => {
+      const t = document.getElementById(chip.dataset.target);
+      if (t) {
+        const top = t.getBoundingClientRect().top + scrollY - 110;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    });
+    catnav.appendChild(chip);
+
+    const sec = document.createElement('section');
+    sec.className = 'cat-section';
+    sec.id = 'cat-' + ci;
+    sec.innerHTML = `
+      <h2>${cat.name} <small>${cat.items.length}</small><button class="seemore">전체 보기 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></h2>
+      <div class="lede">${cat.lede}</div>
+      <div class="grid"></div>
+    `;
+    const grid = sec.querySelector('.grid');
+    cat.items.forEach((it, idx) => {
+      const card = document.createElement('article');
+      card.className = 'pcard';
+      const up = unitPrice(it);
+      card.innerHTML = `
+        <div class="pic">
+          <div class="ph" style="--ph-bg:${it.bg}; --ph-emoji:'${it.emoji}';"></div>
+          <span class="b1 ${it.badge.includes('한정') || it.badge.includes('1+1') ? 'tag' : ''}">${it.badge}</span>
+          <button class="b2" aria-label="찜">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+          </button>
+        </div>
+        <button class="addbtn" aria-label="담기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <div class="pinfo">
+          <div class="nm">${it.name}</div>
+          ${up ? `<div class="unitPrice">${up}</div>` : ''}
+          <div class="pricerow">
+            <span class="off">${pct(it.originalPrice, it.salePrice)}%</span>
+            <span class="sale price-num">${fmt(it.salePrice)}<span class="won">원</span></span>
+          </div>
+          <div class="orig price-num">${fmt(it.originalPrice)}원</div>
+          <div class="meta">
+            <span class="pill">${it.unit}</span>
+            <span class="pill">${it.origin}</span>
+            ${it.cardDiscount ? `<span class="pill" style="background: color-mix(in oklab, var(--color-primary), white 88%); color: var(--color-primary);">+카드</span>` : ''}
+          </div>
+        </div>
+      `;
+      // long press
+      let lpTimer;
+      card.addEventListener('pointerdown', () => { lpTimer = setTimeout(() => openModal(it), 500); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => card.addEventListener(ev, () => clearTimeout(lpTimer)));
+      // add
+      card.querySelector('.addbtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        card.classList.add('popping');
+        const btn = card.querySelector('.addbtn');
+        btn.classList.add('added');
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></svg>`;
+        setTimeout(() => card.classList.remove('popping'), 600);
+        addToCart(it);
+      });
+      grid.appendChild(card);
+    });
+    main.appendChild(sec);
+  });
+
+  // Hero carousel
+  const dotsEl = document.getElementById('heroDots');
+  FEATURED.forEach((f, i) => {
+    const d = document.createElement('span');
+    d.className = 'd' + (i === 0 ? ' active' : '');
+    dotsEl.appendChild(d);
+  });
+  let heroIdx = 0;
+  function showHero(i) {
+    heroIdx = (i + FEATURED.length) % FEATURED.length;
+    const f = FEATURED[heroIdx];
+    document.getElementById('heroPic').innerHTML = `<div class="ph" style="--ph-bg:${f.bg}; --ph-emoji:'${f.emoji}';"></div>`;
+    document.getElementById('heroSlogan').innerHTML = f.slogan;
+    document.getElementById('heroName').textContent = f.name + ' · ' + f.unit;
+    document.getElementById('heroOrig').textContent = fmt(f.originalPrice) + '원';
+    document.getElementById('heroSale').innerHTML = `${fmt(f.salePrice)}<span class="won">원</span>`;
+    document.getElementById('heroIdx').textContent = `${heroIdx+1}/${FEATURED.length}`;
+    dotsEl.querySelectorAll('.d').forEach((d, j) => d.classList.toggle('active', j === heroIdx));
+    document.getElementById('heroCopy').style.opacity = 0;
+    document.getElementById('heroPic').style.transform = 'rotate(-6deg) translateX(20px)';
+    requestAnimationFrame(() => {
+      document.getElementById('heroCopy').style.transition = 'opacity 360ms ease';
+      document.getElementById('heroPic').style.transition = 'transform 540ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+      document.getElementById('heroCopy').style.opacity = 1;
+      document.getElementById('heroPic').style.transform = 'rotate(-6deg) translateX(0)';
+    });
+  }
+  let heroTimer = setInterval(() => showHero(heroIdx + 1), 3800);
+  document.getElementById('hero').addEventListener('click', () => { showHero(heroIdx + 1); resetHeroTimer(); });
+  function resetHeroTimer() { clearInterval(heroTimer); heroTimer = setInterval(() => showHero(heroIdx + 1), 3800); }
+
+  // Cat chip scrollspy
+  const sections = [...document.querySelectorAll('.cat-section')];
+  function spyChip() {
+    const y = window.scrollY + 110 + 1;
+    let active = sections[0].id;
+    sections.forEach(s => { if (s.offsetTop <= y) active = s.id; });
+    document.querySelectorAll('.catnav .chip').forEach(c => c.classList.toggle('active', c.dataset.target === active));
+  }
+  document.addEventListener('scroll', spyChip, { passive: true });
+
+  // Modal
+  const scrim = document.getElementById('scrim');
+  const modal = document.getElementById('modal');
+  function openModal(it) {
+    document.getElementById('mPh').style.setProperty('--ph-bg', it.bg);
+    document.getElementById('mPh').style.setProperty('--ph-emoji', `'${it.emoji}'`);
+    document.getElementById('mName').textContent = it.name;
+    document.getElementById('mCopy').textContent = it.aiCopy || '';
+    document.getElementById('mUnit').textContent = it.unit;
+    document.getElementById('mOrigin').textContent = it.origin;
+    document.getElementById('mUnitP').textContent = unitPrice(it) || '—';
+    document.getElementById('mCard').textContent = it.cardDiscount || '—';
+    scrim.classList.add('show'); modal.classList.add('show');
+    document.getElementById('mAdd').onclick = () => { addToCart(it); closeModal(); };
+  }
+  function closeModal() { scrim.classList.remove('show'); modal.classList.remove('show'); }
+  scrim.addEventListener('click', closeModal);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+
+  // Cart
+  const cart = [];
+  function addToCart(it) {
+    cart.push(it);
+    document.getElementById('cartCount').textContent = cart.length;
+    document.getElementById('cartSub').textContent =
+      cart.length === 0 ? '담은 상품 없음'
+      : `${cart[cart.length-1].name}${cart.length > 1 ? ' 외 ' + (cart.length-1) + '개' : ''}`;
+    showToast(`${it.name} 담음`);
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1700);
+  }
+
+  // season
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>

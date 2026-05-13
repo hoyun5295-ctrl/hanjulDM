@@ -120,7 +120,7 @@
 ## 프로젝트 기본 정보
 
 - **서비스명:** 한줄전단AI (hanjulDM)
-- **도메인:** hanjul-flyer.kr (매장 사장님), admin.hanjuldm.kr (슈퍼관리자)
+- **도메인:** hanjul-flyer.kr/.com/.co.kr × www (매장 사장님 6 도메인), sys.hanjul-flyer.co.kr (슈퍼관리자 subdomain, D153 신규)
 - **스택:** Node.js/Express + React 19 + TypeScript + Vite, PostgreSQL + MySQL(QTmsg)
 - **상태:** 분리 시작 (2026-05-12, D152)
 - **분리 전 위치:** targetup/packages/backend/{routes,utils}/flyer + packages/flyer-frontend + packages/pos-agent

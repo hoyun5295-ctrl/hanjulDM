@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>동네마트 강남점 — 5월 둘째 주 진짜 싸요</title>
+<meta property="og:title" content="동네마트 강남점 · 5월 둘째 주 진짜 싸요">
+<meta property="og:description" content="삼겹살 9,900원 · 한우 등심 39,900원 · 활전복 39,900원">
+<meta property="og:image" content="https://placehold.co/1200x630/F97316/FFFFFF?text=동네마트+강남점">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #F97316;
+    --color-accent: #EF4444;
+    --color-on-primary: #FFFFFF;
+    --color-text-strong: #171717;
+    --color-text-weak: #6B7280;
+    --color-paper: #F5F1EB;
+    --color-discount: #DC2626;
+    --space-1: 4px; --space-2: 8px; --space-3: 16px; --space-4: 24px; --space-5: 40px; --space-6: 64px;
+    --radius-sm: 8px; --radius-md: 16px; --radius-lg: 24px;
+    --shadow-card: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-lift: 0 8px 24px rgba(0,0,0,0.12);
+    --motion-fast: 200ms; --motion-medium: 400ms; --motion-slow: 800ms;
+    --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  /* season tokens */
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; }
+  html[data-season="summer"]    { --color-primary:#06B6D4; --color-accent:#0891B2; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', sans-serif;
+    background: #000;
+    color: #fff;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+  .price-num { font-variant-numeric: tabular-nums; }
+
+  /* ====== Stage (the full viewport) ====== */
+  .stage { position: fixed; inset: 0; overflow: hidden; }
+
+  /* progress bars */
+  .progress-row {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; gap: 4px; padding: 10px 12px 0;
+    z-index: 30;
+  }
+  .progress-row .seg {
+    flex: 1; height: 3px; background: rgba(255,255,255,0.32);
+    border-radius: 2px; overflow: hidden;
+  }
+  .progress-row .seg .bar {
+    height: 100%; width: 0%; background: #fff;
+    border-radius: 2px;
+  }
+  .progress-row .seg.done .bar { width: 100%; }
+  .progress-row .seg.active .bar { animation: storyFill 5000ms linear forwards; }
+  .paused .progress-row .seg.active .bar { animation-play-state: paused; }
+  @keyframes storyFill { from { width: 0%; } to { width: 100%; } }
+
+  /* header */
+  .header {
+    position: absolute; top: 22px; left: 0; right: 0;
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; z-index: 25;
+  }
+  .logo {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    display: grid; place-items: center; font-weight: 800; font-size: 14px;
+    color: var(--color-on-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .store-meta { display: flex; flex-direction: column; gap: 1px; flex: 1; }
+  .store-meta .name { font-size: 14px; font-weight: 700; line-height: 1.1; }
+  .store-meta .when { font-size: 11px; font-weight: 500; opacity: 0.8; line-height: 1.1; letter-spacing: -0.01em; }
+  .header .icon-btn {
+    width: 32px; height: 32px; display: grid; place-items: center;
+    color: #fff; background: transparent; border: 0; cursor: pointer;
+  }
+  .header .icon-btn svg { width: 22px; height: 22px; }
+
+  /* slides */
+  .slides { position: absolute; inset: 0; }
+  .slide {
+    position: absolute; inset: 0;
+    opacity: 0; pointer-events: none;
+    transition: opacity 280ms ease;
+    display: flex; flex-direction: column;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  .hero {
+    position: absolute; inset: 0;
+    overflow: hidden;
+  }
+  .hero .img {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+  }
+  /* Color-shape placeholders */
+  .ph {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(60% 50% at 50% 38%, rgba(255,255,255,0.15), transparent 70%),
+      var(--ph-bg, #2a2a2a);
+  }
+  .ph::after {
+    content: var(--ph-emoji, ""); position: absolute; inset: 0;
+    display: grid; place-items: center;
+    font-size: 200px; line-height: 1;
+    filter: drop-shadow(0 12px 24px rgba(0,0,0,0.35));
+  }
+
+  .hero .mask {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 100%);
+  }
+
+  /* tap zones */
+  .tap-zones { position: absolute; inset: 0; z-index: 20; display: flex; }
+  .tap-zones .zone { flex: 1; }
+  .tap-zones .zone.mid { flex: 0.6; }
+
+  /* product info */
+  .info {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 22px 24px 110px;
+    display: flex; flex-direction: column; gap: 10px;
+    z-index: 22;
+  }
+  .chip {
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 999px;
+    background: rgba(255,255,255,0.18); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.32);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .chip .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 8px var(--color-accent);
+  }
+  .pname { font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; }
+  .pmeta { font-size: 13px; font-weight: 500; opacity: 0.78; letter-spacing: -0.01em; }
+  .price-row { display: flex; align-items: baseline; gap: 12px; margin-top: 4px; }
+  .price-orig {
+    font-size: 15px; font-weight: 500; opacity: 0.6;
+    text-decoration: line-through; text-decoration-thickness: 1.5px;
+  }
+  .price-sale {
+    font-size: 44px; font-weight: 900; letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .price-sale .won { font-size: 22px; font-weight: 700; margin-left: 2px; }
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border-radius: 8px;
+    background: var(--color-primary); color: var(--color-on-primary);
+    font-size: 13px; font-weight: 800; letter-spacing: -0.01em;
+    transform-origin: left center;
+    animation: pop 600ms var(--motion-spring) both 200ms;
+  }
+  .badge.outline {
+    background: transparent; color: #fff;
+    border: 1px solid rgba(255,255,255,0.5);
+    font-weight: 600;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* sticky CTA */
+  .cta-bar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 10px; z-index: 23;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.5) 60%);
+  }
+  .cta-bar .ghost {
+    width: 52px; height: 52px; border-radius: 16px;
+    background: rgba(255,255,255,0.16); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.28);
+    display: grid; place-items: center; color: #fff;
+    cursor: pointer;
+  }
+  .cta-bar .ghost svg { width: 22px; height: 22px; }
+  .cta-bar .primary {
+    flex: 1; height: 52px; border-radius: 16px;
+    background: var(--color-primary); color: var(--color-on-primary);
+    border: 0; font-size: 16px; font-weight: 800; letter-spacing: -0.01em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+    cursor: pointer;
+  }
+  .cta-bar .primary svg { width: 18px; height: 18px; }
+
+  /* swipe-up hint */
+  .swipe-hint {
+    position: absolute; left: 50%; bottom: 88px;
+    transform: translateX(-50%);
+    font-size: 11px; font-weight: 500; opacity: 0.7;
+    z-index: 22;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    animation: bounceUp 1800ms ease-in-out infinite;
+    pointer-events: none;
+  }
+  .swipe-hint svg { width: 16px; height: 16px; }
+  @keyframes bounceUp {
+    0%, 100% { transform: translate(-50%, 0); opacity: 0.55; }
+    50% { transform: translate(-50%, -6px); opacity: 1; }
+  }
+
+  /* entry stagger */
+  .slide.active .info > * {
+    animation: slideUp 540ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .slide.active .info > *:nth-child(1) { animation-delay: 80ms; }
+  .slide.active .info > *:nth-child(2) { animation-delay: 140ms; }
+  .slide.active .info > *:nth-child(3) { animation-delay: 200ms; }
+  .slide.active .info > *:nth-child(4) { animation-delay: 260ms; }
+  .slide.active .info > *:nth-child(5) { animation-delay: 320ms; }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+
+  /* sheet */
+  .sheet-scrim {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none; z-index: 40;
+    transition: opacity 240ms ease;
+  }
+  .sheet-scrim.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 62vh; background: #fff; color: #171717;
+    border-radius: 24px 24px 0 0; z-index: 41;
+    transform: translateY(100%); transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    padding: 8px 22px 22px;
+    overflow-y: auto;
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet .grabber { width: 40px; height: 4px; background: #E5E7EB; border-radius: 2px; margin: 8px auto 14px; }
+  .sheet h3 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .sheet .ai-copy { margin-top: 10px; font-size: 14px; line-height: 1.5; color: #4B5563; }
+  .sheet .row {
+    display: flex; justify-content: space-between; padding: 12px 0;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 14px;
+  }
+  .sheet .row dt { color: #6B7280; font-weight: 500; }
+  .sheet .row dd { color: #111827; font-weight: 600; }
+  .sheet .actions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px;
+  }
+  .sheet .actions button {
+    height: 46px; border-radius: 12px; border: 0;
+    font-size: 14px; font-weight: 700; letter-spacing: -0.01em;
+    cursor: pointer;
+  }
+  .sheet .actions .b1 { background: #F3F4F6; color: #111827; }
+  .sheet .actions .b2 { background: var(--color-primary); color: var(--color-on-primary); }
+
+  /* end card */
+  .endcard {
+    position: absolute; inset: 0; display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px;
+    background: radial-gradient(80% 60% at 50% 30%, #1f1f1f 0%, #000 100%);
+    z-index: 35;
+    gap: 14px; text-align: center;
+  }
+  .endcard.show { display: flex; }
+  .endcard h2 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+  .endcard p { font-size: 14px; opacity: 0.7; }
+  .endcard .row { display: flex; gap: 8px; margin-top: 10px; }
+  .endcard .row button {
+    height: 46px; padding: 0 18px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.3); background: transparent;
+    color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .endcard .row .pr { background: var(--color-primary); border-color: var(--color-primary); }
+
+  /* sr */
+  .sr { position: absolute; left: -9999px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .progress-row .seg.active .bar { animation-duration: 99999s; }
+    .slide.active .info > * { animation: none; }
+    .badge { animation: none; }
+    .swipe-hint { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+
+  <div class="progress-row" id="progressRow" aria-hidden="true"></div>
+
+  <div class="header">
+    <div class="logo" aria-hidden="true">동</div>
+    <div class="store-meta">
+      <div class="name">동네마트 강남점</div>
+      <div class="when">5월 둘째 주 · 5/13–5/19</div>
+    </div>
+    <button class="icon-btn" id="pauseBtn" aria-label="일시정지">
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="닫기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="slides" id="slides"></div>
+
+  <div class="tap-zones">
+    <div class="zone" data-act="prev"></div>
+    <div class="zone mid" data-act="pause"></div>
+    <div class="zone" data-act="next"></div>
+  </div>
+
+  <div class="swipe-hint" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    위로 밀어 상세 보기
+  </div>
+
+  <div class="cta-bar">
+    <button class="ghost" aria-label="찜">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+    </button>
+    <button class="primary" id="ctaAdd">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 7h14l-1.5 11a2 2 0 0 1-2 1.8H8.5a2 2 0 0 1-2-1.8L5 7zM9 7V5a3 3 0 0 1 6 0v2"/></svg>
+      장바구니 담기
+    </button>
+  </div>
+
+  <!-- sheet -->
+  <div class="sheet-scrim" id="sheetScrim"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="상품 상세">
+    <div class="grabber"></div>
+    <h3 id="sheetName">—</h3>
+    <p class="ai-copy" id="sheetCopy">—</p>
+    <dl style="margin-top: 14px;">
+      <div class="row"><dt>단위</dt><dd id="sheetUnit">—</dd></div>
+      <div class="row"><dt>원산지</dt><dd id="sheetOrigin">—</dd></div>
+      <div class="row"><dt>카드 할인</dt><dd id="sheetCard">—</dd></div>
+      <div class="row"><dt>유효 기간</dt><dd>5/13 (수) — 5/19 (화)</dd></div>
+      <div class="row"><dt>매장</dt><dd>동네마트 강남점</dd></div>
+    </dl>
+    <div class="actions">
+      <button class="b1">길찾기</button>
+      <button class="b2">장바구니 담기</button>
+    </div>
+  </div>
+
+  <!-- end card -->
+  <div class="endcard" id="endcard">
+    <h2>전체 상품 6개<br>한눈에 보기</h2>
+    <p>이번 주 행사 상품을 그리드로 확인하세요</p>
+    <div class="row">
+      <button onclick="restart()">처음부터</button>
+      <button class="pr">전체 보기 →</button>
+    </div>
+  </div>
+
+  <div class="sr" id="srLive" aria-live="polite"></div>
+</div>
+
+<script>
+  // Mock data (per spec §4-2, flattened to a flat product array for STORY's 1상품 1슬라이드)
+  const ALL_ITEMS = [
+    { name: "삼겹살",   cat: "축산", originalPrice: 14900, salePrice: 9900,  badge: "30% 할인",     unit: "600g",  origin: "국산",     cardDiscount: "삼성카드 5% 추가", aiCopy: "주말 바베큐엔 역시 두툼한 삼겹살. 600g 한 팩으로 4인 가족도 든든하게.", bg: "#5b2222", emoji: "🥓" },
+    { name: "한우 등심", cat: "축산", originalPrice: 49900, salePrice: 39900, badge: "한정 20개",    unit: "300g",  origin: "국산 1++", cardDiscount: "현대카드 7% 추가", aiCopy: "가족 모임용 프리미엄 한우 1++. 등심 본연의 마블링.",          bg: "#7c1f1f", emoji: "🥩" },
+    { name: "청양고추", cat: "청과", originalPrice: 2990,  salePrice: 1990,  badge: "33% 할인",     unit: "200g",  origin: "국산",     cardDiscount: "—",                  aiCopy: "매운맛 진한 청양고추. 찌개·볶음 어디든 든든한 한 봉지.",        bg: "#1f5a2a", emoji: "🌶️" },
+    { name: "한라봉",   cat: "청과", originalPrice: 24900, salePrice: 19900, badge: "20% 할인",     unit: "5kg",   origin: "제주산",   cardDiscount: "BC카드 3% 추가",   aiCopy: "달콤 새콤한 제철 제주 한라봉 한 박스. 아이 간식·선물용.",       bg: "#7a3815", emoji: "🍊" },
+    { name: "활전복",   cat: "수산", originalPrice: 49900, salePrice: 39900, badge: "20% 할인",     unit: "10미",  origin: "완도산",   cardDiscount: "신한카드 5% 추가", aiCopy: "오늘 입고된 완도 활전복 10미. 회·죽·구이 어디든.",             bg: "#1e3a5f", emoji: "🐚" },
+    { name: "우유",     cat: "공산", originalPrice: 5290,  salePrice: 4290,  badge: "1+1",          unit: "1.8L",  origin: "—",        cardDiscount: "—",                  aiCopy: "아침 식탁의 든든한 한 잔. 1.8L 1+1 행사.",                       bg: "#3a3a4a", emoji: "🥛" },
+  ];
+
+  const SLIDE_DURATION = 5000;
+  let idx = 0;
+  let paused = false;
+  let advanceTimer = null;
+  let timerStart = 0;
+  let remaining = SLIDE_DURATION;
+
+  // build slides
+  const slidesEl = document.getElementById('slides');
+  const progRow  = document.getElementById('progressRow');
+  ALL_ITEMS.forEach((it, i) => {
+    const seg = document.createElement('div');
+    seg.className = 'seg' + (i === 0 ? ' active' : '');
+    seg.setAttribute('role', 'progressbar');
+    seg.setAttribute('aria-valuenow', i === 0 ? '0' : (i < 0 ? '100' : '0'));
+    seg.innerHTML = '<div class="bar"></div>';
+    progRow.appendChild(seg);
+
+    const sl = document.createElement('div');
+    sl.className = 'slide' + (i === 0 ? ' active' : '');
+    sl.setAttribute('aria-label', `${i+1} / ${ALL_ITEMS.length} · ${it.name}`);
+    sl.innerHTML = `
+      <div class="hero">
+        <div class="ph" style="--ph-bg:${it.bg}; --ph-emoji:'${it.emoji}';"></div>
+        <div class="mask"></div>
+      </div>
+      <div class="info">
+        <span class="chip"><span class="dot"></span>${it.cat} · 오늘의 핫딜</span>
+        <div class="pname">${it.name}</div>
+        <div class="pmeta">${it.unit} · ${it.origin}${it.cardDiscount && it.cardDiscount !== '—' ? ' · ' + it.cardDiscount : ''}</div>
+        <div class="price-row">
+          <span class="price-orig price-num">${fmt(it.originalPrice)}원</span>
+          <span class="price-sale price-num">${fmt(it.salePrice)}<span class="won">원</span></span>
+        </div>
+        <div class="badge-row">
+          <span class="badge">${it.badge}</span>
+          <span class="badge outline">${pctOff(it.originalPrice, it.salePrice)}% OFF</span>
+        </div>
+      </div>
+    `;
+    slidesEl.appendChild(sl);
+  });
+
+  function fmt(n) { return n.toLocaleString('ko-KR'); }
+  function pctOff(o, s) { return Math.round((1 - s/o) * 100); }
+
+  function showSlide(n) {
+    const slides = slidesEl.querySelectorAll('.slide');
+    const segs = progRow.querySelectorAll('.seg');
+    if (n >= ALL_ITEMS.length) {
+      stopAdvance();
+      document.getElementById('endcard').classList.add('show');
+      return;
+    }
+    if (n < 0) n = 0;
+    document.getElementById('endcard').classList.remove('show');
+
+    slides.forEach((s, i) => s.classList.toggle('active', i === n));
+    segs.forEach((seg, i) => {
+      seg.classList.remove('active');
+      const bar = seg.querySelector('.bar');
+      // reset by replacing
+      bar.style.animation = 'none';
+      bar.offsetHeight; // reflow
+      if (i < n) seg.classList.add('done');
+      else seg.classList.remove('done');
+      if (i === n) {
+        seg.classList.add('active');
+        bar.style.animation = '';
+      }
+    });
+    idx = n;
+    document.getElementById('srLive').textContent = `${n+1} / ${ALL_ITEMS.length} · ${ALL_ITEMS[n].name}`;
+    startAdvance(SLIDE_DURATION);
+  }
+
+  function startAdvance(ms) {
+    stopAdvance();
+    remaining = ms;
+    timerStart = Date.now();
+    if (!paused) advanceTimer = setTimeout(() => showSlide(idx + 1), ms);
+  }
+  function stopAdvance() {
+    if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
+  }
+  function pauseToggle() {
+    paused = !paused;
+    document.getElementById('stage').classList.toggle('paused', paused);
+    const btn = document.getElementById('pauseBtn');
+    if (paused) {
+      stopAdvance();
+      remaining = remaining - (Date.now() - timerStart);
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      btn.setAttribute('aria-label', '재생');
+    } else {
+      timerStart = Date.now();
+      advanceTimer = setTimeout(() => showSlide(idx + 1), Math.max(remaining, 400));
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+      btn.setAttribute('aria-label', '일시정지');
+    }
+  }
+
+  // tap zones
+  document.querySelectorAll('.tap-zones .zone').forEach(z => {
+    z.addEventListener('click', e => {
+      const act = z.dataset.act;
+      if (act === 'prev') showSlide(idx - 1);
+      else if (act === 'next') showSlide(idx + 1);
+      else pauseToggle();
+    });
+  });
+
+  // pause btn
+  document.getElementById('pauseBtn').addEventListener('click', e => { e.stopPropagation(); pauseToggle(); });
+
+  // long press = pause
+  let pressTimer = null;
+  document.getElementById('stage').addEventListener('pointerdown', () => {
+    pressTimer = setTimeout(() => { if (!paused) pauseToggle(); }, 350);
+  });
+  document.getElementById('stage').addEventListener('pointerup', () => {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  });
+
+  // swipe up -> open sheet
+  let startY = 0;
+  const stage = document.getElementById('stage');
+  stage.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
+  stage.addEventListener('touchend', e => {
+    const endY = (e.changedTouches[0] || {}).clientY ?? startY;
+    if (startY - endY > 60) openSheet();
+  }, {passive: true});
+
+  // keyboard for desktop preview
+  window.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') showSlide(idx - 1);
+    else if (e.key === 'ArrowRight') showSlide(idx + 1);
+    else if (e.key === ' ') { e.preventDefault(); pauseToggle(); }
+    else if (e.key === 'ArrowUp') openSheet();
+    else if (e.key === 'Escape') closeSheet();
+  });
+
+  function openSheet() {
+    if (!paused) pauseToggle();
+    const it = ALL_ITEMS[idx];
+    document.getElementById('sheetName').textContent = it.name;
+    document.getElementById('sheetCopy').textContent = it.aiCopy || '';
+    document.getElementById('sheetUnit').textContent = it.unit || '—';
+    document.getElementById('sheetOrigin').textContent = it.origin || '—';
+    document.getElementById('sheetCard').textContent = it.cardDiscount || '—';
+    document.getElementById('sheet').classList.add('open');
+    document.getElementById('sheetScrim').classList.add('open');
+  }
+  function closeSheet() {
+    document.getElementById('sheet').classList.remove('open');
+    document.getElementById('sheetScrim').classList.remove('open');
+    if (paused) pauseToggle();
+  }
+  document.getElementById('sheetScrim').addEventListener('click', closeSheet);
+
+  function restart() {
+    document.getElementById('endcard').classList.remove('show');
+    showSlide(0);
+  }
+  window.restart = restart;
+
+  // end-of-anim transitions tied to setTimeout fallback covered by startAdvance
+  // Apply ?season=
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+
+  // boot
+  showSlide(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 — 이번 주 정성 가득</title>
+<meta property="og:title" content="동네마트 강남점 · 5월 둘째 주">
+<meta property="og:description" content="이번 주 사장님이 직접 고른 6가지">
+<meta property="og:image" content="https://placehold.co/1200x630/F5F1EB/171717?text=동네마트+5월+둘째주">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #F97316;
+    --color-accent: #EF4444;
+    --color-on-primary: #FFFFFF;
+    --color-text-strong: #171717;
+    --color-text-weak: #6B7280;
+    --color-paper: #F5F1EB;
+    --color-paper-deep: #ECE6DA;
+    --color-rule: #DDD5C5;
+    --color-discount: #DC2626;
+    --cat-meat: #B91C1C;
+    --cat-prod: #166534;
+    --cat-fish: #1E40AF;
+    --cat-dry:  #5B4636;
+    --space-3: 16px; --space-4: 24px; --space-5: 40px;
+    --radius-md: 16px; --radius-lg: 24px;
+    --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; }
+  html[data-season="summer"]    { --color-primary:#06B6D4; --color-accent:#0891B2; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--color-paper); color: var(--color-text-strong); }
+  body {
+    font-family: 'Pretendard Variable', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  img { display: block; }
+  .price-num { font-variant-numeric: tabular-nums; }
+
+  /* paper grain */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+    opacity: 0.5; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.2  0 0 0 0 0.18  0 0 0 0 0.14  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  /* ===== chapter 0: cover ===== */
+  .cover {
+    min-height: 100vh; padding: 32px 24px 40px;
+    display: flex; flex-direction: column;
+    background: var(--color-paper);
+    position: relative;
+  }
+  .masthead {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 2px solid var(--color-text-strong);
+    border-bottom: 1px solid var(--color-text-strong);
+    padding: 10px 0;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .masthead .issue { font-weight: 800; }
+  .cover-eyebrow {
+    margin-top: 60px;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--color-text-weak);
+  }
+  .cover-eyebrow::before {
+    content: ""; display: inline-block; width: 36px; height: 1px;
+    background: var(--color-text-weak); margin-right: 12px; vertical-align: middle;
+  }
+  .cover h1 {
+    margin-top: 18px;
+    font-size: 64px; font-weight: 800; line-height: 0.95;
+    letter-spacing: -0.045em; text-wrap: balance;
+  }
+  .cover h1 em {
+    font-style: normal;
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-decoration-thickness: 8px;
+    text-underline-offset: -2px;
+    text-decoration-skip-ink: none;
+    background-image: linear-gradient(transparent 70%, var(--color-primary) 70%, var(--color-primary) 85%, transparent 85%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    text-decoration: none;
+  }
+  .cover-byline {
+    margin-top: 28px; font-size: 14px; line-height: 1.6;
+    color: #2a2a2a; max-width: 320px;
+  }
+  .cover-foot {
+    margin-top: auto; padding-top: 40px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-top: 1px solid var(--color-rule);
+    padding-top: 16px;
+  }
+  .cover-foot .store {
+    font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+  }
+  .cover-foot .when {
+    font-size: 12px; color: var(--color-text-weak); margin-top: 2px; letter-spacing: 0.04em;
+  }
+  .cover-foot .pages {
+    font-size: 11px; letter-spacing: 0.18em; color: var(--color-text-weak);
+    text-transform: uppercase;
+  }
+
+  .scroll-hint {
+    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+    font-size: 10px; letter-spacing: 0.2em; color: var(--color-text-weak);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    animation: bounce 1800ms ease-in-out infinite;
+  }
+  .scroll-hint svg { width: 14px; height: 14px; }
+  @keyframes bounce { 0%,100% { transform: translate(-50%, 0);} 50% { transform: translate(-50%, 5px);} }
+
+  /* ===== category chapter head ===== */
+  .cat-head {
+    height: 60vh; min-height: 380px;
+    padding: 28px 24px; display: flex; flex-direction: column;
+    justify-content: space-between;
+    color: #fff;
+    position: relative; overflow: hidden;
+  }
+  .cat-head.meat { background: #4b1818; }
+  .cat-head.prod { background: #1f4a26; }
+  .cat-head.fish { background: #122a52; }
+  .cat-head.dry  { background: #3d2f24; }
+  .cat-head::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(50% 38% at 70% 32%, rgba(255,255,255,0.18), transparent 60%),
+      radial-gradient(40% 28% at 18% 78%, rgba(255,255,255,0.12), transparent 60%);
+    mix-blend-mode: screen;
+  }
+  .cat-head::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 6px);
+  }
+  .cat-head .label {
+    position: relative;
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,0.7); font-weight: 600;
+  }
+  .cat-head h2 {
+    position: relative;
+    font-size: 60px; font-weight: 800; letter-spacing: -0.045em;
+    line-height: 0.96; max-width: 320px;
+  }
+  .cat-head p {
+    position: relative;
+    margin-top: 18px; font-size: 15px; line-height: 1.55; opacity: 0.85;
+    max-width: 320px;
+  }
+  .cat-head .meta {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 11px; letter-spacing: 0.16em; opacity: 0.7;
+  }
+  .cat-head .meta .num {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.4);
+    display: grid; place-items: center; font-weight: 700; font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  /* ===== product chapter ===== */
+  .product {
+    min-height: 100vh; padding: 56px 24px 80px;
+    display: grid; grid-template-rows: 1fr auto;
+    gap: 28px;
+    position: relative;
+    background: var(--color-paper);
+  }
+  .product .num {
+    position: absolute; top: 28px; right: 24px;
+    font-size: 11px; letter-spacing: 0.2em; color: var(--color-text-weak);
+  }
+  .product .num b { color: var(--color-text-strong); font-weight: 800; }
+  .product .pic {
+    position: relative; aspect-ratio: 4/5;
+    border-radius: 4px; overflow: hidden;
+    box-shadow: 0 14px 32px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .product .pic .img {
+    position: absolute; inset: -8% 0 -12% 0;
+    will-change: transform;
+  }
+  .product .pic .frame-label {
+    position: absolute; left: 12px; bottom: 12px;
+    font-size: 10px; letter-spacing: 0.18em; color: #fff;
+    background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 2px;
+    backdrop-filter: blur(4px);
+  }
+  .ph {
+    position: absolute; inset: 0;
+    background: var(--ph-bg, #ccc);
+    display: grid; place-items: center;
+  }
+  .ph::after {
+    content: var(--ph-emoji, "");
+    font-size: 180px; line-height: 1;
+    filter: drop-shadow(0 12px 24px rgba(0,0,0,0.25));
+  }
+  .product .body {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .product .kicker {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--color-text-weak); font-weight: 600;
+  }
+  .product h3 {
+    font-size: 36px; font-weight: 800; letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+  .product .specline {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 4px;
+    font-size: 13px; color: var(--color-text-weak); font-weight: 500;
+  }
+  .product .specline .sep { color: var(--color-rule); }
+  .product .copy {
+    margin-top: 10px;
+    font-size: 15px; line-height: 1.55; color: #2a2a2a;
+    max-width: 340px;
+    text-wrap: pretty;
+  }
+  .product .price-block {
+    display: flex; align-items: baseline; gap: 14px; margin-top: 14px;
+  }
+  .product .orig {
+    font-size: 14px; color: var(--color-text-weak);
+    text-decoration: line-through;
+  }
+  .product .sale {
+    font-size: 52px; font-weight: 900; letter-spacing: -0.045em;
+    line-height: 1; color: var(--color-text-strong);
+  }
+  .product .sale .won { font-size: 22px; margin-left: 2px; font-weight: 800; }
+  .product .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .product .b1 {
+    background: var(--color-primary); color: var(--color-on-primary);
+    padding: 6px 10px; border-radius: 4px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0;
+  }
+  .product .b2 {
+    border: 1px solid var(--color-text-strong);
+    padding: 6px 10px; border-radius: 4px;
+    font-size: 12px; font-weight: 600;
+  }
+  .product .pull {
+    margin-top: 26px;
+    border-left: 3px solid var(--color-primary);
+    padding-left: 14px;
+    font-size: 14px; line-height: 1.5; color: #4a4a4a; font-style: italic;
+    max-width: 320px;
+  }
+
+  /* fade-in on enter */
+  [data-reveal] {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 700ms ease, transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  [data-reveal].in { opacity: 1; transform: none; }
+
+  .price-pop { display: inline-block; }
+  .price-pop.fire {
+    animation: pricePop 800ms var(--motion-spring) both;
+  }
+  @keyframes pricePop {
+    0% { transform: scale(0.92); }
+    40% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  /* ===== outro ===== */
+  .outro {
+    min-height: 100vh; padding: 60px 24px 40px;
+    background: var(--color-text-strong); color: #fff;
+    display: flex; flex-direction: column; gap: 22px;
+    position: relative;
+  }
+  .outro h2 {
+    font-size: 52px; font-weight: 800; letter-spacing: -0.04em;
+    line-height: 0.98;
+  }
+  .outro h2 em { font-style: normal; color: var(--color-accent); }
+  .outro .lead {
+    font-size: 15px; line-height: 1.6; opacity: 0.78;
+    max-width: 320px; margin-top: 6px;
+  }
+  .outro .infogrid {
+    display: grid; gap: 16px; margin-top: 18px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .outro .infogrid .cell {
+    border-top: 1px solid rgba(255,255,255,0.16); padding-top: 10px;
+  }
+  .outro .infogrid .cell .k {
+    font-size: 10px; letter-spacing: 0.18em; opacity: 0.6;
+    text-transform: uppercase;
+  }
+  .outro .infogrid .cell .v {
+    margin-top: 4px; font-size: 16px; font-weight: 700;
+  }
+  .outro .cta {
+    margin-top: auto;
+    height: 60px; border-radius: 999px; border: 0;
+    background: var(--color-primary); color: var(--color-on-primary);
+    font-size: 17px; font-weight: 800; letter-spacing: -0.01em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    cursor: pointer;
+  }
+  .outro .cta svg { width: 20px; height: 20px; }
+  .outro .share {
+    display: flex; gap: 8px;
+  }
+  .outro .share button {
+    flex: 1; height: 44px; border-radius: 999px;
+    background: transparent; border: 1px solid rgba(255,255,255,0.24);
+    color: #fff; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .outro-meta {
+    margin-top: 24px;
+    display: flex; justify-content: space-between;
+    font-size: 10px; letter-spacing: 0.18em; opacity: 0.5;
+  }
+
+  /* progress dot ribbon (left, fixed) */
+  .dots {
+    position: fixed; right: 16px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 8px; z-index: 60;
+    mix-blend-mode: difference;
+  }
+  .dots .d {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+    transition: transform 200ms, background 200ms;
+  }
+  .dots .d.active { background: #fff; transform: scale(1.6); }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] { transition: none; opacity: 1; transform: none; }
+    .price-pop.fire { animation: none; }
+    .scroll-hint { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- chapter 0: cover -->
+<section class="cover" id="ch-cover">
+  <div class="masthead">
+    <span class="issue">VOL. 24</span>
+    <span>WEEKLY · 5월 13–19일</span>
+    <span>₩</span>
+  </div>
+  <div class="cover-eyebrow">이번 주 사장님이 골랐습니다</div>
+  <h1 data-reveal>
+    이번 주,<br>
+    <em>진짜 싸요.</em><br>
+    정직하게.
+  </h1>
+  <p class="cover-byline" data-reveal>
+    동네마트 강남점이 발행하는 주간 매대 매거진.<br>
+    이번 호엔 축산 2종 · 청과 2종 · 수산 1종 · 공산 1종.
+    사장님이 새벽 시장에서 직접 본 것만 담았습니다.
+  </p>
+  <div class="cover-foot">
+    <div>
+      <div class="store">동네마트 강남점</div>
+      <div class="when">2026.05.13 WED – 05.19 TUE</div>
+    </div>
+    <div class="pages">PP. 01 – 06</div>
+  </div>
+  <div class="scroll-hint">
+    SCROLL
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  </div>
+</section>
+
+<!-- chapter 1: meat -->
+<section class="cat-head meat" id="cat-meat">
+  <div class="label">CHAPTER 01 · 축산</div>
+  <div>
+    <h2 data-reveal>두툼하게,<br>주말의 한 끼.</h2>
+    <p data-reveal>새벽 도착한 국산 삼겹살과 1++ 등급 한우. 손이 가기 좋은 두께로 직접 손질했습니다.</p>
+  </div>
+  <div class="meta">
+    <span class="num">2</span> ITEMS · MEAT
+  </div>
+</section>
+
+<article class="product" data-num="01">
+  <div class="num"><b>01</b> / 06 · 축산</div>
+  <div class="pic" data-reveal>
+    <div class="img"><div class="ph" style="--ph-bg:#fbe4d6; --ph-emoji:'🥓';"></div></div>
+    <div class="frame-label">DOMESTIC PORK BELLY · 600G</div>
+  </div>
+  <div class="body">
+    <div class="kicker" data-reveal>이번 주의 한 줄 — 주말 바베큐</div>
+    <h3 data-reveal>삼겹살<br>600g 한 팩.</h3>
+    <div class="specline" data-reveal>
+      <span>600g</span><span class="sep">·</span><span>국산</span><span class="sep">·</span><span>1팩</span>
+    </div>
+    <p class="copy" data-reveal>주말 가족 모임에 부담 없는 두께 1.5cm. 사장님이 직접 절단해 균일하게 포장했고, 진열 직전 다시 한 번 살결을 정리했습니다.</p>
+    <div class="price-block" data-reveal>
+      <span class="orig price-num">14,900원</span>
+      <span class="sale price-num"><span class="price-pop">9,900</span><span class="won">원</span></span>
+    </div>
+    <div class="badges" data-reveal>
+      <span class="b1">30% 할인</span>
+      <span class="b2">삼성카드 5% 추가</span>
+    </div>
+    <div class="pull" data-reveal>"두꺼운 게 좋아. 익혀도 안 오그라들어." — 새벽 도매시장 단골 거래처</div>
+  </div>
+</article>
+
+<article class="product" data-num="02">
+  <div class="num"><b>02</b> / 06 · 축산</div>
+  <div class="pic" data-reveal>
+    <div class="img"><div class="ph" style="--ph-bg:#f5d0d0; --ph-emoji:'🥩';"></div></div>
+    <div class="frame-label">KOREAN BEEF SIRLOIN · 1++ · 300G</div>
+  </div>
+  <div class="body">
+    <div class="kicker" data-reveal>한정 20개 · 사장님 선별</div>
+    <h3 data-reveal>한우 등심<br>1++ 마블링.</h3>
+    <div class="specline" data-reveal>
+      <span>300g</span><span class="sep">·</span><span>국산 1++</span><span class="sep">·</span><span>진공포장</span>
+    </div>
+    <p class="copy" data-reveal>가족 모임을 위한 한 끼. 결을 살린 1cm 두께로 잘랐습니다. 진공 포장해 풍미 손실을 줄였고, 5℃ 이하 콜드체인.</p>
+    <div class="price-block" data-reveal>
+      <span class="orig price-num">49,900원</span>
+      <span class="sale price-num"><span class="price-pop">39,900</span><span class="won">원</span></span>
+    </div>
+    <div class="badges" data-reveal>
+      <span class="b1">한정 20개</span>
+      <span class="b2">현대카드 7% 추가</span>
+    </div>
+  </div>
+</article>
+
+<!-- chapter 2: produce -->
+<section class="cat-head prod" id="cat-prod">
+  <div class="label">CHAPTER 02 · 청과/야채</div>
+  <div>
+    <h2 data-reveal>햇과일이<br>도착했어요.</h2>
+    <p data-reveal>제주 한라봉과 매운맛 깊은 청양고추. 두 가지 모두 새벽 산지에서 바로 올라왔습니다.</p>
+  </div>
+  <div class="meta">
+    <span class="num">2</span> ITEMS · PRODUCE
+  </div>
+</section>
+
+<article class="product" data-num="03">
+  <div class="num"><b>03</b> / 06 · 청과</div>
+  <div class="pic" data-reveal>
+    <div class="img"><div class="ph" style="--ph-bg:#dcefd5; --ph-emoji:'🌶️';"></div></div>
+    <div class="frame-label">GREEN CHILI · 200G · DOMESTIC</div>
+  </div>
+  <div class="body">
+    <div class="kicker" data-reveal>매운맛 진하게</div>
+    <h3 data-reveal>청양고추<br>200g 한 봉.</h3>
+    <div class="specline" data-reveal>
+      <span>200g</span><span class="sep">·</span><span>국산</span><span class="sep">·</span><span>진열일 5/13</span>
+    </div>
+    <p class="copy" data-reveal>찌개·볶음·장아찌 어디든. 캡사이신이 잘 오른 5월산. 깨끗이 세척하지 않은 상태로 진열해 보존이 길게 갑니다.</p>
+    <div class="price-block" data-reveal>
+      <span class="orig price-num">2,990원</span>
+      <span class="sale price-num"><span class="price-pop">1,990</span><span class="won">원</span></span>
+    </div>
+    <div class="badges" data-reveal>
+      <span class="b1">33% 할인</span>
+    </div>
+  </div>
+</article>
+
+<article class="product" data-num="04">
+  <div class="num"><b>04</b> / 06 · 청과</div>
+  <div class="pic" data-reveal>
+    <div class="img"><div class="ph" style="--ph-bg:#fde0c5; --ph-emoji:'🍊';"></div></div>
+    <div class="frame-label">JEJU HALLABONG · 5KG BOX</div>
+  </div>
+  <div class="body">
+    <div class="kicker" data-reveal>제주산 제철</div>
+    <h3 data-reveal>한라봉<br>5kg 한 박스.</h3>
+    <div class="specline" data-reveal>
+      <span>5kg</span><span class="sep">·</span><span>제주산</span><span class="sep">·</span><span>당도 13Brix↑</span>
+    </div>
+    <p class="copy" data-reveal>제주 농가에서 직송. 당도 검수를 거친 13Brix 이상만 선별했습니다. 아이 간식·선물용으로 한 박스.</p>
+    <div class="price-block" data-reveal>
+      <span class="orig price-num">24,900원</span>
+      <span class="sale price-num"><span class="price-pop">19,900</span><span class="won">원</span></span>
+    </div>
+    <div class="badges" data-reveal>
+      <span class="b1">20% 할인</span>
+      <span class="b2">BC카드 3% 추가</span>
+    </div>
+  </div>
+</article>
+
+<!-- chapter 3: fish -->
+<section class="cat-head fish" id="cat-fish">
+  <div class="label">CHAPTER 03 · 수산</div>
+  <div>
+    <h2 data-reveal>오늘<br>완도에서<br>왔습니다.</h2>
+    <p data-reveal>새벽 4시 완도산 활전복 한 박스. 산소포장으로 활기를 살렸습니다.</p>
+  </div>
+  <div class="meta">
+    <span class="num">1</span> ITEM · SEAFOOD
+  </div>
+</section>
+
+<article class="product" data-num="05">
+  <div class="num"><b>05</b> / 06 · 수산</div>
+  <div class="pic" data-reveal>
+    <div class="img"><div class="ph" style="--ph-bg:#d6e6f7; --ph-emoji:'🐚';"></div></div>
+    <div class="frame-label">LIVE ABALONE · WANDO · 10PCS</div>
+  </div>
+  <div class="body">
+    <div class="kicker" data-reveal>오늘 입고</div>
+    <h3 data-reveal>활전복<br>10미 한 박스.</h3>
+    <div class="specline" data-reveal>
+      <span>10미</span><span class="sep">·</span><span>완도산</span><span class="sep">·</span><span>활어 산소포장</span>
+    </div>
+    <p class="copy" data-reveal>회·죽·구이 어디든. 사장님이 새벽 4시 완도 활어차에서 직접 받아 매장으로 가져왔습니다. 한정 12박스.</p>
+    <div class="price-block" data-reveal>
+      <span class="orig price-num">49,900원</span>
+      <span class="sale price-num"><span class="price-pop">39,900</span><span class="won">원</span></span>
+    </div>
+    <div class="badges" data-reveal>
+      <span class="b1">20% 할인</span>
+      <span class="b2">신한카드 5% 추가</span>
+    </div>
+  </div>
+</article>
+
+<!-- chapter 4: dry -->
+<section class="cat-head dry" id="cat-dry">
+  <div class="label">CHAPTER 04 · 공산</div>
+  <div>
+    <h2 data-reveal>한 잔이<br>두 잔이 되는<br>주간.</h2>
+    <p data-reveal>가족 우유 1.8L. 이번 주만 1+1.</p>
+  </div>
+  <div class="meta">
+    <span class="num">1</span> ITEM · DRY GOODS
+  </div>
+</section>
+
+<article class="product" data-num="06">
+  <div class="num"><b>06</b> / 06 · 공산</div>
+  <div class="pic" data-reveal>
+    <div class="img"><div class="ph" style="--ph-bg:#eaeaea; --ph-emoji:'🥛';"></div></div>
+    <div class="frame-label">FRESH MILK · 1.8L · 1+1</div>
+  </div>
+  <div class="body">
+    <div class="kicker" data-reveal>이번 주만 1+1</div>
+    <h3 data-reveal>가족 우유<br>1.8L 두 개.</h3>
+    <div class="specline" data-reveal>
+      <span>1.8L</span><span class="sep">·</span><span>국산 1등급 원유</span><span class="sep">·</span><span>유통기한 5/20</span>
+    </div>
+    <p class="copy" data-reveal>아침 식탁의 한 잔. 한 개 가격으로 두 개. 일주일치 든든하게.</p>
+    <div class="price-block" data-reveal>
+      <span class="orig price-num">5,290원</span>
+      <span class="sale price-num"><span class="price-pop">4,290</span><span class="won">원</span></span>
+    </div>
+    <div class="badges" data-reveal>
+      <span class="b1">1+1</span>
+    </div>
+  </div>
+</article>
+
+<!-- outro -->
+<section class="outro" id="ch-outro">
+  <div>
+    <div class="cover-eyebrow" style="color: rgba(255,255,255,0.6);">VOL. 24 · 마치며</div>
+    <h2 data-reveal>이번 주<br><em>매장에서</em><br>만나요.</h2>
+    <p class="lead" data-reveal>주문은 매장 방문 또는 카톡 채널 한 줄. 사장님이 직접 받습니다.</p>
+  </div>
+  <div class="infogrid">
+    <div class="cell"><div class="k">영업 시간</div><div class="v">09:00 – 22:00</div></div>
+    <div class="cell"><div class="k">전화</div><div class="v">02-1234-5678</div></div>
+    <div class="cell"><div class="k">주소</div><div class="v">서울 강남구<br>역삼로 14길</div></div>
+    <div class="cell"><div class="k">행사 기간</div><div class="v">5/13 – 5/19</div></div>
+  </div>
+  <div class="share">
+    <button>카톡 공유</button>
+    <button>링크 복사</button>
+  </div>
+  <button class="cta">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 11l9-7 9 7v9a2 2 0 0 1-2 2h-3v-7H10v7H7a2 2 0 0 1-2-2v-9z"/></svg>
+    매장 방문하기
+  </button>
+  <div class="outro-meta">
+    <span>HANJUL · WEEKLY</span>
+    <span>EDITED 2026 · 동네마트 강남점</span>
+  </div>
+</section>
+
+<div class="dots" aria-hidden="true">
+  <div class="d" data-target="ch-cover"></div>
+  <div class="d" data-target="cat-meat"></div>
+  <div class="d" data-target="cat-prod"></div>
+  <div class="d" data-target="cat-fish"></div>
+  <div class="d" data-target="cat-dry"></div>
+  <div class="d" data-target="ch-outro"></div>
+</div>
+
+<script>
+  // reveal on enter
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        // fire price-pop late
+        if (e.target.matches('.product .price-block')) {
+          const pp = e.target.querySelector('.price-pop');
+          if (pp) setTimeout(() => pp.classList.add('fire'), 380);
+        }
+      }
+    });
+  }, { threshold: 0.18 });
+  document.querySelectorAll('[data-reveal]').forEach(el => io.observe(el));
+
+  // parallax on product photos
+  const pics = document.querySelectorAll('.product .pic');
+  function onScroll() {
+    const vh = innerHeight;
+    pics.forEach(pic => {
+      const r = pic.getBoundingClientRect();
+      // progress from 0 (entering bottom) to 1 (leaving top)
+      const t = Math.max(0, Math.min(1, 1 - (r.top + r.height/2) / vh + 0.5));
+      const img = pic.querySelector('.img');
+      if (img) img.style.transform = `translateY(${(t - 0.5) * -60}px)`;
+    });
+    // dots
+    let activeId = null;
+    document.querySelectorAll('section, article').forEach(s => {
+      const r = s.getBoundingClientRect();
+      if (r.top <= vh * 0.4 && r.bottom > vh * 0.4) activeId = s.id || activeId;
+    });
+    document.querySelectorAll('.dots .d').forEach(d => {
+      d.classList.toggle('active', d.dataset.target === activeId);
+    });
+  }
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // dot nav
+  document.querySelectorAll('.dots .d').forEach(d => {
+    d.addEventListener('click', () => {
+      const t = document.getElementById(d.dataset.target);
+      if (t) window.scrollTo({ top: t.offsetTop, behavior: 'smooth' });
+    });
+  });
+
+  // season
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 — 진짜 싸요!</title>
+<meta property="og:title" content="동네마트 강남점 · 진짜 싸요">
+<meta property="og:description" content="삼겹살 9,900 · 한우 39,900 · 활전복 39,900">
+<meta property="og:image" content="https://placehold.co/1200x630/F5F1EB/171717?text=진짜+싸요">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #F97316;
+    --color-accent: #EF4444;
+    --color-on-primary: #FFFFFF;
+    --ink: #181612;
+    --ink-soft: #4A4438;
+    --paper: #F2EBDC;
+    --paper-deep: #E8DEC8;
+    --rule: #1B1611;
+    --discount: #C8261A;  /* print red */
+    --yellow: #F2C84A;     /* sticker yellow */
+    --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; --discount:#CD2A19; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; --discount:#1E40AF; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; --discount:#15803D; }
+  html[data-season="summer"]    { --color-primary:#06B6D4; --color-accent:#0891B2; --discount:#0E7490; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; --discount:#BE123C; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; --discount:#1C1917; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; --discount:#C8261A; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--paper); color: var(--ink); }
+  body {
+    font-family: 'Pretendard Variable', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    padding-bottom: 32px;
+  }
+  .price-num { font-variant-numeric: tabular-nums; }
+
+  /* paper grain */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200;
+    opacity: 0.65; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.13  0 0 0 0 0.08  0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  /* fold shadow center */
+  body::after {
+    content: ""; position: fixed; left: 50%; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.10) 50%, rgba(0,0,0,0.04));
+    z-index: 199; pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  /* ===== hero (slogan) ===== */
+  .hero {
+    position: relative;
+    padding: 36px 22px 28px;
+    border-bottom: 4px solid var(--rule);
+    overflow: hidden;
+  }
+  .heroBg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(70% 50% at 0% 0%, rgba(200,38,26,0.10), transparent 60%),
+      radial-gradient(60% 40% at 100% 100%, rgba(242,200,74,0.18), transparent 60%);
+  }
+  .hero .topline {
+    position: relative; z-index: 1;
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  .hero .topline .right { display: inline-flex; align-items: center; gap: 8px; }
+  .hero .topline .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--rule); }
+  .hero h1 {
+    position: relative; z-index: 1;
+    margin-top: 14px;
+    font-size: 96px; font-weight: 900; line-height: 0.88;
+    letter-spacing: -0.055em;
+    color: var(--ink);
+  }
+  .hero h1 .red { color: var(--discount); }
+  .hero h1 .underline {
+    position: relative; display: inline-block;
+  }
+  .hero h1 .underline::after {
+    content: ""; position: absolute; left: -2px; right: -2px;
+    bottom: 6px; height: 14px;
+    background: var(--yellow);
+    z-index: -1;
+    transform: skewY(-1deg);
+  }
+  /* split-letter entry */
+  .hero h1 .char {
+    display: inline-block;
+    animation: charIn 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes charIn {
+    from { opacity: 0; transform: translateY(40px) skewY(6deg); }
+    to   { opacity: 1; transform: translateY(0) skewY(0); }
+  }
+
+  .hero .signByline {
+    position: relative; z-index: 1;
+    margin-top: 18px;
+    display: flex; align-items: baseline; gap: 12px;
+    font-family: 'Gowun Dodum', sans-serif;
+    font-size: 16px; color: var(--ink-soft);
+  }
+  .hero .signByline .store {
+    font-family: 'Nanum Pen Script', cursive;
+    font-size: 30px; color: var(--ink); font-weight: 400;
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .hero .period {
+    position: relative; z-index: 1;
+    margin-top: 8px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+    color: var(--ink);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .hero .period .line {
+    width: 24px; height: 2px; background: var(--ink);
+  }
+
+  /* sticker rotated */
+  .sticker {
+    position: absolute; right: 6px; top: 16px; z-index: 3;
+    width: 132px; height: 132px;
+    background: var(--discount); color: #fff;
+    border-radius: 50%;
+    display: grid; place-items: center; text-align: center;
+    box-shadow: 0 8px 24px rgba(200,38,26,0.35);
+    transform: rotate(-12deg);
+    animation: stickerWobble 2200ms ease-in-out infinite alternate;
+    border: 4px dashed rgba(255,255,255,0.5);
+    line-height: 1;
+  }
+  @keyframes stickerWobble {
+    from { transform: rotate(-14deg) scale(1); }
+    to   { transform: rotate(-7deg) scale(1.04); }
+  }
+  .sticker .l1 {
+    font-family: 'Nanum Pen Script', cursive;
+    font-size: 36px; font-weight: 400; letter-spacing: -0.02em;
+    margin-top: 4px;
+  }
+  .sticker .l2 {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.08em; margin-top: 2px;
+  }
+  .sticker .l3 {
+    font-size: 22px; font-weight: 900; letter-spacing: -0.02em; margin-top: 2px;
+  }
+
+  /* ===== section markers ===== */
+  .secmark {
+    margin: 26px 22px 14px;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .secmark .num {
+    background: var(--ink); color: var(--paper);
+    padding: 2px 6px;
+    font-size: 11px; letter-spacing: 0;
+  }
+  .secmark .line { flex: 1; height: 2px; background: var(--ink); }
+
+  /* ===== product slab ===== */
+  .slab {
+    margin: 0 22px 14px;
+    border: 3px solid var(--rule);
+    background: var(--paper);
+    position: relative;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 540ms ease, transform 540ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .slab.in { opacity: 1; transform: none; }
+  .slab .hdr {
+    background: var(--ink); color: var(--paper);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.05em;
+  }
+  .slab .hdr .id { font-variant-numeric: tabular-nums; }
+  .slab .hdr .right { display: inline-flex; align-items: center; gap: 8px; }
+  .slab .hdr .pill {
+    background: var(--paper); color: var(--ink);
+    padding: 2px 8px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+  }
+  .slab .body {
+    display: grid; grid-template-columns: 132px 1fr; gap: 12px;
+    padding: 12px;
+  }
+  .slab .pic {
+    position: relative; aspect-ratio: 1/1;
+    border: 2px solid var(--rule);
+    background: var(--paper-deep);
+  }
+  .ph { position: absolute; inset: 0; display: grid; place-items: center; background: var(--ph-bg, #ddd); }
+  .ph::after { content: var(--ph-emoji, ""); font-size: 88px; line-height: 1; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18)); }
+
+  .slab .pic .stamp {
+    position: absolute; right: -8px; top: -8px;
+    background: var(--discount); color: #fff;
+    padding: 4px 8px;
+    font-size: 11px; font-weight: 900; letter-spacing: 0.02em;
+    transform: rotate(6deg);
+    border: 2px solid var(--rule);
+  }
+  .slab .pic .stamp.dark { background: var(--ink); }
+
+  .slab .info {
+    display: flex; flex-direction: column;
+  }
+  .slab .name {
+    font-size: 22px; font-weight: 900; letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+  .slab .spec {
+    margin-top: 4px;
+    font-size: 12px; font-weight: 600; color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+  .slab .priceCol {
+    margin-top: auto;
+    padding-top: 8px;
+  }
+  .slab .priceCol .orig {
+    font-size: 13px; color: var(--ink-soft); text-decoration: line-through;
+    text-decoration-thickness: 2px;
+  }
+  .slab .priceCol .saleRow {
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .slab .priceCol .sale {
+    font-size: 56px; font-weight: 900; letter-spacing: -0.045em;
+    line-height: 0.95;
+    color: var(--discount);
+    transform-origin: left bottom;
+  }
+  .slab.in .priceCol .sale { animation: priceStamp 760ms var(--motion-spring) both 200ms; }
+  @keyframes priceStamp {
+    0%   { transform: scale(0.6) rotate(-3deg); opacity: 0; }
+    60%  { transform: scale(1.1) rotate(0); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .slab .priceCol .won { font-size: 22px; font-weight: 900; margin-left: 2px; color: var(--discount); }
+  .slab .priceCol .bang {
+    font-size: 28px; font-weight: 900; color: var(--discount); margin-left: 2px;
+    letter-spacing: -0.02em;
+  }
+  .slab .priceCol .unitp {
+    margin-top: 4px;
+    font-size: 11px; font-weight: 700; color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+
+  .slab .footrow {
+    border-top: 2px solid var(--rule);
+    display: grid; grid-template-columns: 1fr 1fr;
+  }
+  .slab .footrow .cell {
+    padding: 8px 12px;
+    font-size: 11px; font-weight: 700; color: var(--ink);
+    letter-spacing: 0.02em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .slab .footrow .cell:first-child {
+    border-right: 2px solid var(--rule);
+  }
+  .slab .footrow .cell .k {
+    font-size: 9px; letter-spacing: 0.18em; color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+
+  /* full-width emphasis slab (for hero product) */
+  .slab.feature .body {
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+  .slab.feature .pic {
+    aspect-ratio: 4/3; border: 0; border-bottom: 2px solid var(--rule);
+  }
+  .slab.feature .info { padding: 14px 14px 0; }
+  .slab.feature .sale { font-size: 80px; }
+  .slab.feature .won { font-size: 30px; }
+
+  /* ===== sale strip ===== */
+  .stripe {
+    margin: 18px 0;
+    background: var(--ink); color: var(--paper);
+    padding: 10px 0;
+    overflow: hidden; white-space: nowrap;
+    border-top: 4px solid var(--rule);
+    border-bottom: 4px solid var(--rule);
+  }
+  .stripe .track {
+    display: inline-flex; gap: 24px;
+    animation: marquee 18s linear infinite;
+    font-size: 17px; font-weight: 800; letter-spacing: 0.04em;
+  }
+  .stripe .track span .red { color: var(--yellow); }
+  .stripe .track .star { color: var(--discount); }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ===== footer (store info) ===== */
+  .footer {
+    margin: 30px 22px 0;
+    border-top: 3px dashed var(--rule);
+    padding-top: 18px;
+  }
+  .footer .scissors {
+    position: relative;
+    margin-top: -32px; padding-bottom: 14px;
+    text-align: center; font-size: 16px;
+  }
+  .footer .scissors span {
+    display: inline-block; background: var(--paper); padding: 0 8px;
+  }
+  .footer .footName {
+    font-family: 'Nanum Pen Script', cursive;
+    font-size: 34px;
+    letter-spacing: -0.02em; line-height: 1;
+  }
+  .footer .footLines {
+    margin-top: 12px;
+    display: grid; gap: 6px;
+    font-size: 13px; font-weight: 600;
+  }
+  .footer .footLines .ln {
+    display: grid; grid-template-columns: 64px 1fr; align-items: baseline;
+    gap: 8px;
+  }
+  .footer .footLines .k {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 800;
+  }
+  .footer .ctas {
+    margin-top: 16px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .footer .ctas button {
+    height: 50px; border: 2px solid var(--rule); background: var(--paper);
+    color: var(--ink); font-family: inherit; font-weight: 800;
+    font-size: 14px; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer;
+  }
+  .footer .ctas button.fill { background: var(--ink); color: var(--paper); }
+  .footer .ctas svg { width: 16px; height: 16px; }
+  .footer .small {
+    margin-top: 14px;
+    font-size: 10px; color: var(--ink-soft); letter-spacing: 0.04em;
+    text-align: center; padding: 8px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sticker { animation: none; }
+    .slab.in .priceCol .sale { animation: none; }
+    .stripe .track { animation: none; }
+    .hero h1 .char { animation: none; opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="heroBg"></div>
+  <div class="topline">
+    <span>HANJUL · VOL. 24</span>
+    <span class="right"><span class="dot"></span>5/13 WED – 5/19 TUE</span>
+  </div>
+
+  <h1 id="slogan" aria-label="이번 주 진짜 싸요"></h1>
+
+  <div class="signByline">
+    <span class="store">동네마트 강남점</span>
+    <span style="font-family:inherit; font-size:13px; font-weight:700; letter-spacing:0.02em; color:var(--ink);">사장님 직접 인쇄</span>
+  </div>
+  <div class="period">
+    <span class="line"></span>
+    행사 기간 · 5/13 — 5/19 (7일간)
+  </div>
+
+  <div class="sticker" role="img" aria-label="오늘만 30% 특가">
+    <div>
+      <div class="l1">오늘만!</div>
+      <div class="l2">TODAY ONLY</div>
+      <div class="l3">30% OFF</div>
+    </div>
+  </div>
+</section>
+
+<div class="secmark">
+  <span class="num">01</span>
+  <span>이번 주 핵심 / WEEK PICK</span>
+  <span class="line"></span>
+</div>
+
+<article class="slab feature" data-num="01">
+  <div class="hdr">
+    <span class="id">NO. 01 · 축산</span>
+    <span class="right">
+      <span class="pill">한정 50팩</span>
+      <span>국산 · 1팩</span>
+    </span>
+  </div>
+  <div class="body">
+    <div class="pic">
+      <div class="ph" style="--ph-bg:#fbe4d6; --ph-emoji:'🥓';"></div>
+      <div class="stamp">한정 특가!</div>
+    </div>
+    <div class="info">
+      <div class="name">국산 삼겹살 600g</div>
+      <div class="spec">600g · 국산 · 진열 5/13 새벽 입고</div>
+      <div class="priceCol">
+        <div class="orig price-num">정가 14,900원</div>
+        <div class="saleRow">
+          <span class="sale price-num">9,900<span class="won">원</span><span class="bang">!!</span></span>
+        </div>
+        <div class="unitp">100g당 1,650원 · 두툼한 컷</div>
+      </div>
+    </div>
+  </div>
+  <div class="footrow">
+    <div class="cell"><div><div class="k">CARD</div>삼성카드 5% 추가</div></div>
+    <div class="cell"><div><div class="k">LIMIT</div>한 가구 2팩</div></div>
+  </div>
+</article>
+
+<div class="secmark">
+  <span class="num">02</span>
+  <span>오늘만 / TODAY DEAL</span>
+  <span class="line"></span>
+</div>
+
+<article class="slab" data-num="02">
+  <div class="hdr">
+    <span class="id">NO. 02 · 축산</span>
+    <span class="right"><span class="pill">한정 20개</span><span>국산 1++</span></span>
+  </div>
+  <div class="body">
+    <div class="pic">
+      <div class="ph" style="--ph-bg:#f5d2d2; --ph-emoji:'🥩';"></div>
+      <div class="stamp dark">PREMIUM</div>
+    </div>
+    <div class="info">
+      <div class="name">한우 등심 1++ · 300g</div>
+      <div class="spec">국산 1++ · 진공포장 · 5℃ 콜드체인</div>
+      <div class="priceCol">
+        <div class="orig price-num">정가 49,900원</div>
+        <div class="saleRow"><span class="sale price-num">39,900<span class="won">원</span></span></div>
+        <div class="unitp">100g당 13,300원 · 가족 모임용</div>
+      </div>
+    </div>
+  </div>
+  <div class="footrow">
+    <div class="cell"><div><div class="k">CARD</div>현대카드 7% 추가</div></div>
+    <div class="cell"><div><div class="k">SAVE</div>10,000원 ↓</div></div>
+  </div>
+</article>
+
+<article class="slab" data-num="03">
+  <div class="hdr">
+    <span class="id">NO. 03 · 청과</span>
+    <span class="right"><span class="pill">33% ↓</span><span>국산 200g</span></span>
+  </div>
+  <div class="body">
+    <div class="pic">
+      <div class="ph" style="--ph-bg:#dceedb; --ph-emoji:'🌶️';"></div>
+      <div class="stamp">신선!</div>
+    </div>
+    <div class="info">
+      <div class="name">청양고추 · 200g</div>
+      <div class="spec">국산 · 새벽 입고 · 매운맛 깊은 5월산</div>
+      <div class="priceCol">
+        <div class="orig price-num">정가 2,990원</div>
+        <div class="saleRow"><span class="sale price-num">1,990<span class="won">원</span></span></div>
+        <div class="unitp">100g당 995원 · 한 봉</div>
+      </div>
+    </div>
+  </div>
+  <div class="footrow">
+    <div class="cell"><div><div class="k">FRESH</div>당일 입고</div></div>
+    <div class="cell"><div><div class="k">SAVE</div>1,000원 ↓</div></div>
+  </div>
+</article>
+
+<div class="stripe" aria-hidden="true">
+  <div class="track">
+    <span>★ 이번 주 진짜 싸요 · 5/13 – 5/19 · 동네마트 강남점 · ★ 카드 추가할인 · 한정 특가 · ★</span>
+    <span>★ 이번 주 진짜 싸요 · 5/13 – 5/19 · 동네마트 강남점 · ★ 카드 추가할인 · 한정 특가 · ★</span>
+  </div>
+</div>
+
+<article class="slab" data-num="04">
+  <div class="hdr">
+    <span class="id">NO. 04 · 청과</span>
+    <span class="right"><span class="pill">제주산</span><span>5kg 박스</span></span>
+  </div>
+  <div class="body">
+    <div class="pic">
+      <div class="ph" style="--ph-bg:#fde2c2; --ph-emoji:'🍊';"></div>
+      <div class="stamp">제철!</div>
+    </div>
+    <div class="info">
+      <div class="name">제주 한라봉 · 5kg 박스</div>
+      <div class="spec">제주산 · 당도 13Brix 이상 · 농가직송</div>
+      <div class="priceCol">
+        <div class="orig price-num">정가 24,900원</div>
+        <div class="saleRow"><span class="sale price-num">19,900<span class="won">원</span></span></div>
+        <div class="unitp">1kg당 3,980원 · 선물용</div>
+      </div>
+    </div>
+  </div>
+  <div class="footrow">
+    <div class="cell"><div><div class="k">CARD</div>BC카드 3% 추가</div></div>
+    <div class="cell"><div><div class="k">SAVE</div>5,000원 ↓</div></div>
+  </div>
+</article>
+
+<article class="slab" data-num="05">
+  <div class="hdr">
+    <span class="id">NO. 05 · 수산</span>
+    <span class="right"><span class="pill">한정 12박스</span><span>완도산 10미</span></span>
+  </div>
+  <div class="body">
+    <div class="pic">
+      <div class="ph" style="--ph-bg:#d8e6f7; --ph-emoji:'🐚';"></div>
+      <div class="stamp">오늘 입고!</div>
+    </div>
+    <div class="info">
+      <div class="name">완도 활전복 · 10미</div>
+      <div class="spec">완도산 · 활어 산소포장 · 새벽 4시 입고</div>
+      <div class="priceCol">
+        <div class="orig price-num">정가 49,900원</div>
+        <div class="saleRow"><span class="sale price-num">39,900<span class="won">원</span></span></div>
+        <div class="unitp">미당 3,990원 · 회·죽·구이</div>
+      </div>
+    </div>
+  </div>
+  <div class="footrow">
+    <div class="cell"><div><div class="k">CARD</div>신한카드 5% 추가</div></div>
+    <div class="cell"><div><div class="k">FRESH</div>당일 한정</div></div>
+  </div>
+</article>
+
+<article class="slab" data-num="06">
+  <div class="hdr">
+    <span class="id">NO. 06 · 공산</span>
+    <span class="right"><span class="pill">1+1</span><span>1.8L 두 개</span></span>
+  </div>
+  <div class="body">
+    <div class="pic">
+      <div class="ph" style="--ph-bg:#eef0f3; --ph-emoji:'🥛';"></div>
+      <div class="stamp dark">1+1!</div>
+    </div>
+    <div class="info">
+      <div class="name">가족 우유 · 1.8L</div>
+      <div class="spec">국산 1등급 원유 · 유통기한 5/20</div>
+      <div class="priceCol">
+        <div class="orig price-num">정가 5,290원</div>
+        <div class="saleRow"><span class="sale price-num">4,290<span class="won">원</span></span></div>
+        <div class="unitp">100ml당 238원 · 1+1 두 개 가격</div>
+      </div>
+    </div>
+  </div>
+  <div class="footrow">
+    <div class="cell"><div><div class="k">DEAL</div>1+1 한 묶음</div></div>
+    <div class="cell"><div><div class="k">SAVE</div>5,290원 ↓</div></div>
+  </div>
+</article>
+
+<footer class="footer">
+  <div class="scissors"><span>━━ ✂ ━━ 절취선 ━━ ✂ ━━</span></div>
+  <div class="footName">동네마트 강남점</div>
+  <div class="footLines">
+    <div class="ln"><span class="k">영업</span><span>09:00 — 22:00 · 연중무휴</span></div>
+    <div class="ln"><span class="k">전화</span><span>02-1234-5678</span></div>
+    <div class="ln"><span class="k">주소</span><span>서울 강남구 역삼로 14길 8 · 1F</span></div>
+    <div class="ln"><span class="k">기간</span><span>2026.05.13 — 05.19 (7일간)</span></div>
+  </div>
+  <div class="ctas">
+    <button>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      길찾기
+    </button>
+    <button class="fill">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.97.37 1.92.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.33 1.84.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      전화 걸기
+    </button>
+  </div>
+  <div class="small">PRINTED VIA HANJUL · 한 줄 전단 · NO. 24 · 출력일 2026.05.13</div>
+</footer>
+
+<script>
+  // animate slogan letters
+  (function() {
+    const target = document.getElementById('slogan');
+    const html = `<span>이번 주,</span><br><span class="red"><span class="underline">진짜</span> 싸요</span><span class="red">!</span>`;
+    target.innerHTML = html;
+    // wrap each char in span.char for stagger
+    target.querySelectorAll('span').forEach(s => {
+      // Skip wrapper red/underline spans whose children we'll handle
+      if (s.querySelector('span')) return;
+      const text = s.textContent;
+      s.textContent = '';
+      [...text].forEach((c, i) => {
+        const ch = document.createElement('span');
+        ch.className = 'char';
+        ch.style.animationDelay = (i * 55) + 'ms';
+        ch.textContent = c;
+        s.appendChild(ch);
+      });
+    });
+  })();
+
+  // reveal slabs
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.18 });
+  document.querySelectorAll('.slab').forEach(s => io.observe(s));
+
+  // season
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>

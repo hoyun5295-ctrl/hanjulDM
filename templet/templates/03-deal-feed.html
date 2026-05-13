@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 — 오늘의 핫딜</title>
+<meta property="og:title" content="오늘의 핫딜 · 동네마트 강남점">
+<meta property="og:description" content="삼겹살 9,900원 · 마감 임박">
+<meta property="og:image" content="https://placehold.co/1200x630/F97316/FFFFFF?text=오늘의+핫딜">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #F97316;
+    --color-accent: #EF4444;
+    --color-on-primary: #FFFFFF;
+    --color-text-strong: #171717;
+    --color-text-weak: #6B7280;
+    --color-bg: #F4F4F5;
+    --color-card: #FFFFFF;
+    --color-rule: #E5E7EB;
+    --color-discount: #DC2626;
+    --color-amber: #F59E0B;
+    --color-red:   #EF4444;
+    --shadow-card: 0 1px 0 rgba(0,0,0,0.04), 0 6px 18px -8px rgba(0,0,0,0.10);
+    --shadow-lift: 0 12px 32px -8px rgba(0,0,0,0.18);
+    --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; }
+  html[data-season="summer"]    { --color-primary:#06B6D4; --color-accent:#0891B2; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--color-bg); color: var(--color-text-strong); }
+  body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; }
+  .price-num { font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; }
+
+  /* ===== top banner ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    color: var(--color-on-primary);
+    background:
+      radial-gradient(120% 80% at 0% 0%, color-mix(in oklab, var(--color-primary), white 14%), transparent 60%),
+      linear-gradient(135deg, var(--color-primary) 0%, color-mix(in oklab, var(--color-primary), var(--color-accent) 60%) 100%);
+    padding: 14px 16px 12px;
+  }
+  .topbar .row1 {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.95;
+  }
+  .topbar .row1 .pulse {
+    width: 8px; height: 8px; border-radius: 50%; background: #fff;
+    box-shadow: 0 0 0 0 rgba(255,255,255,0.7);
+    animation: pulseDot 1400ms ease-out infinite;
+  }
+  @keyframes pulseDot {
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+    80%, 100% { box-shadow: 0 0 0 12px rgba(255,255,255,0); }
+  }
+  .topbar h1 {
+    margin-top: 4px;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+  }
+  .topbar .count {
+    font-variant-numeric: tabular-nums;
+    font-size: 26px; font-weight: 900; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 0;
+  }
+  .topbar .count .sep { padding: 0 1px; opacity: 0.7; }
+  .topbar .sub {
+    margin-top: 4px;
+    font-size: 12px; opacity: 0.85; font-weight: 500;
+  }
+  /* category chips row */
+  .chips {
+    position: sticky; top: 0; z-index: 25;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-rule);
+    padding: 10px 0;
+  }
+  .chips-scroll {
+    display: flex; gap: 6px; padding: 0 14px;
+    overflow-x: auto; scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .chips-scroll::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: 0 0 auto; scroll-snap-align: start;
+    height: 34px; padding: 0 14px; border-radius: 999px;
+    background: #fff; border: 1px solid var(--color-rule);
+    color: var(--color-text-strong);
+    font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer;
+  }
+  .chip.active {
+    background: var(--color-text-strong); color: #fff; border-color: var(--color-text-strong);
+  }
+  .chip .num {
+    font-size: 11px; opacity: 0.7;
+    background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 999px;
+  }
+  .chip.active .num { background: rgba(255,255,255,0.15); opacity: 0.9; }
+
+  /* sort row */
+  .sort {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 0;
+    font-size: 13px; font-weight: 600; color: var(--color-text-weak);
+  }
+  .sort .opts { display: flex; gap: 4px; }
+  .sort .opt { padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+  .sort .opt.active { background: #fff; color: var(--color-text-strong); border: 1px solid var(--color-rule); }
+  .sort .total { font-size: 12px; }
+  .sort .total b { color: var(--color-text-strong); font-weight: 800; }
+
+  /* ===== card ===== */
+  .feed { padding: 12px 16px 100px; display: flex; flex-direction: column; gap: 12px; }
+  .card {
+    background: var(--color-card); border-radius: 18px; padding: 12px;
+    box-shadow: var(--shadow-card);
+    position: relative; overflow: hidden;
+    transition: transform 200ms ease, box-shadow 200ms ease;
+    opacity: 0; transform: translateY(16px);
+  }
+  .card.in { opacity: 1; transform: none; transition: opacity 420ms ease, transform 420ms ease; }
+  .card.urgent { animation: borderPulse 900ms ease-in-out infinite; }
+  @keyframes borderPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45), var(--shadow-card); }
+    50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.0), var(--shadow-card); }
+  }
+
+  .card .top {
+    display: grid; grid-template-columns: 128px 1fr; gap: 12px;
+    align-items: stretch;
+  }
+  .pic {
+    position: relative; aspect-ratio: 1/1; width: 128px;
+    border-radius: 12px; overflow: hidden;
+    background: #f3f4f6;
+  }
+  .ph { position: absolute; inset: 0; display: grid; place-items: center;
+        background: var(--ph-bg, #ddd); }
+  .ph::after {
+    content: var(--ph-emoji, "");
+    font-size: 78px; line-height: 1;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.12));
+  }
+  /* shimmer placeholder */
+  .shimmer {
+    position: absolute; inset: 0;
+    background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+    background-size: 220% 100%; animation: shimmer 1500ms linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -120% 0; }
+  }
+
+  .pic .stickerBadge {
+    position: absolute; top: 8px; left: 8px;
+    background: var(--color-text-strong); color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: -0.01em;
+    padding: 4px 8px; border-radius: 999px;
+  }
+  .pic .stickerBadge.hot { background: var(--color-discount); }
+
+  .pic .countdown {
+    position: absolute; left: 8px; right: 8px; bottom: 8px;
+    height: 22px; border-radius: 6px;
+    background: rgba(0,0,0,0.7); color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .pic .countdown.amber { background: var(--color-amber); }
+  .pic .countdown.red   { background: var(--color-red); animation: shake 800ms ease infinite; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-1px); }
+    75% { transform: translateX(1px); }
+  }
+  .pic .countdown svg { width: 11px; height: 11px; }
+
+  .info {
+    display: flex; flex-direction: column; min-width: 0;
+  }
+  .info .cat {
+    font-size: 10px; letter-spacing: 0.08em; color: var(--color-text-weak);
+    font-weight: 600; text-transform: uppercase;
+  }
+  .info .name {
+    margin-top: 2px;
+    font-size: 16px; font-weight: 700; letter-spacing: -0.02em;
+    line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .info .spec {
+    margin-top: 4px;
+    font-size: 12px; color: var(--color-text-weak); font-weight: 500;
+  }
+  .info .price {
+    margin-top: 6px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .info .price .orig {
+    font-size: 12px; color: var(--color-text-weak); text-decoration: line-through;
+  }
+  .info .price .sale {
+    font-size: 22px; font-weight: 900; letter-spacing: -0.02em;
+    color: var(--color-text-strong);
+  }
+  .info .price .sale .won { font-size: 13px; font-weight: 800; margin-left: 1px; }
+  .info .price .off {
+    font-size: 13px; font-weight: 800; color: var(--color-discount);
+  }
+  .info .extra {
+    margin-top: 4px;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--color-text-weak); font-weight: 600;
+  }
+  .info .extra::before {
+    content: ""; width: 12px; height: 12px; display: inline-block;
+    background: var(--color-primary); border-radius: 3px;
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><rect x='3' y='6' width='18' height='13' rx='2'/><rect x='3' y='9' width='18' height='3'/></svg>") center/contain no-repeat;
+            mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><rect x='3' y='6' width='18' height='13' rx='2'/><rect x='3' y='9' width='18' height='3'/></svg>") center/contain no-repeat;
+  }
+
+  /* progress bar */
+  .progress {
+    margin-top: 12px;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .progress .lbl {
+    display: flex; justify-content: space-between;
+    font-size: 11px; font-weight: 600; color: var(--color-text-weak);
+  }
+  .progress .lbl b { color: var(--color-discount); font-weight: 800; }
+  .progress .bar {
+    height: 6px; border-radius: 6px; background: #F1F1F1; overflow: hidden;
+    position: relative;
+  }
+  .progress .bar .fill {
+    position: absolute; inset: 0;
+    width: var(--sold, 0%);
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    border-radius: 6px;
+    transition: width 800ms cubic-bezier(0.4, 0.7, 0.2, 1);
+  }
+  .progress .bar.hot .fill { background: linear-gradient(90deg, #F59E0B, var(--color-discount)); }
+
+  /* actions row */
+  .actions {
+    margin-top: 12px;
+    display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center;
+  }
+  .iconbtn {
+    height: 38px; padding: 0 12px; border-radius: 10px;
+    background: #F4F4F5; border: 0;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: var(--color-text-strong);
+    cursor: pointer; position: relative;
+  }
+  .iconbtn svg { width: 16px; height: 16px; }
+  .iconbtn.liked .heart { color: var(--color-discount); fill: var(--color-discount); }
+  .iconbtn.liked .heart-stroke { stroke: var(--color-discount); }
+  .iconbtn.pop .heart { animation: heartPop 600ms var(--motion-spring); }
+  @keyframes heartPop {
+    0% { transform: scale(0.6); }
+    40% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+  /* hearts that fly up */
+  .iconbtn .particles {
+    position: absolute; inset: 0; pointer-events: none;
+  }
+  .iconbtn .particles span {
+    position: absolute; left: 16px; top: 12px;
+    font-size: 14px; color: var(--color-discount);
+    opacity: 0;
+  }
+  .iconbtn.pop .particles span {
+    animation: floatUp 800ms ease-out forwards;
+  }
+  .iconbtn.pop .particles span:nth-child(2) { animation-delay: 60ms; left: 10px; }
+  .iconbtn.pop .particles span:nth-child(3) { animation-delay: 120ms; left: 22px; }
+  .iconbtn.pop .particles span:nth-child(4) { animation-delay: 180ms; left: 4px; }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(0.6); }
+    100% { opacity: 0; transform: translateY(-32px) scale(1); }
+  }
+
+  .actions .cta {
+    height: 38px; border-radius: 10px;
+    background: var(--color-text-strong); color: #fff;
+    border: 0;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13px; font-weight: 800; letter-spacing: -0.01em;
+    cursor: pointer;
+  }
+  .actions .cta svg { width: 14px; height: 14px; }
+  .actions .cta.added {
+    background: var(--color-primary);
+  }
+
+  /* loading skeleton card */
+  .skel {
+    background: #fff; border-radius: 18px; padding: 12px;
+    box-shadow: var(--shadow-card);
+    display: grid; grid-template-columns: 128px 1fr; gap: 12px;
+  }
+  .skel .picSk { aspect-ratio: 1/1; width: 128px; border-radius: 12px; background: #efefef; overflow: hidden; position: relative; }
+  .skel .picSk::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.7) 50%, transparent 100%);
+    background-size: 220% 100%; animation: shimmer 1500ms linear infinite;
+  }
+  .skel .lines { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+  .skel .ln { height: 10px; border-radius: 4px; background: #eee; position: relative; overflow: hidden; }
+  .skel .ln::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.85) 50%, transparent 100%);
+    background-size: 220% 100%; animation: shimmer 1500ms linear infinite; }
+  .skel .ln.w70 { width: 70%; }
+  .skel .ln.w40 { width: 40%; }
+  .skel .ln.w90 { width: 90%; }
+
+  /* toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 30px);
+    padding: 12px 16px; border-radius: 999px;
+    background: rgba(23,23,23,0.94); color: #fff;
+    font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+    opacity: 0; pointer-events: none;
+    z-index: 80;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+    transition: opacity 200ms, transform 200ms;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card.urgent, .pic .countdown.red, .topbar .row1 .pulse { animation: none; }
+    .iconbtn.pop .heart { animation: none; }
+    .iconbtn.pop .particles span { animation: none; opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar" role="banner">
+  <div class="row1"><span class="pulse"></span>LIVE · 오늘의 핫딜 · 동네마트 강남점</div>
+  <h1>
+    <span>지금만 이 가격</span>
+    <span class="count" id="cdTop">
+      <span id="h">00</span><span class="sep">:</span><span id="m">00</span><span class="sep">:</span><span id="s">00</span>
+    </span>
+  </h1>
+  <div class="sub" id="topSub">오늘 자정 마감 · 카드 7장</div>
+</header>
+
+<nav class="chips" aria-label="카테고리">
+  <div class="chips-scroll">
+    <button class="chip active">전체 <span class="num">7</span></button>
+    <button class="chip">축산 <span class="num">2</span></button>
+    <button class="chip">청과 <span class="num">2</span></button>
+    <button class="chip">수산 <span class="num">1</span></button>
+    <button class="chip">공산 <span class="num">1</span></button>
+    <button class="chip">음료 <span class="num">1</span></button>
+  </div>
+</nav>
+
+<div class="sort">
+  <div class="opts">
+    <span class="opt active">마감순</span>
+    <span class="opt">할인율순</span>
+    <span class="opt">가격순</span>
+  </div>
+  <div class="total"><b>7</b>개 행사 중</div>
+</div>
+
+<main class="feed" id="feed"></main>
+
+<div class="toast" id="toast">담음</div>
+
+<script>
+  // mock — extended with deal-specific fields (endsAt, soldPct, likes, limit)
+  const NOW = Date.now();
+  const min = 60_000, hour = 3600_000;
+  const DEALS = [
+    { name:"삼겹살",   cat:"축산", originalPrice:14900, salePrice:9900,  badge:"30% 할인",  unit:"600g",  origin:"국산",     cardDiscount:"삼성카드 5% 추가", limit:30, soldPct:62, likes:142, endsAt: NOW + 2*hour + 14*min + 33_000, bg:"#fde4d8", emoji:"🥓" },
+    { name:"한라봉",   cat:"청과", originalPrice:24900, salePrice:19900, badge:"20% 할인",  unit:"5kg",   origin:"제주산",   cardDiscount:"BC카드 3% 추가",   limit:50, soldPct:84, likes:208, endsAt: NOW + 8*min + 4_000,    bg:"#fde2c2", emoji:"🍊" },
+    { name:"활전복",   cat:"수산", originalPrice:49900, salePrice:39900, badge:"한정 12박스", unit:"10미",  origin:"완도산",   cardDiscount:"신한카드 5% 추가", limit:12, soldPct:50, likes:67,  endsAt: NOW + 5*hour + 22*min,  bg:"#d8e6f7", emoji:"🐚" },
+    { name:"한우 등심", cat:"축산", originalPrice:49900, salePrice:39900, badge:"한정 20개",   unit:"300g",  origin:"국산 1++", cardDiscount:"현대카드 7% 추가", limit:20, soldPct:30, likes:48,  endsAt: NOW + 9*hour + 5*min,   bg:"#f5d2d2", emoji:"🥩" },
+    { name:"청양고추", cat:"청과", originalPrice:2990,  salePrice:1990,  badge:"33% 할인",   unit:"200g",  origin:"국산",     cardDiscount:"",                  limit:100,soldPct:42, likes:31,  endsAt: NOW + 11*hour + 12*min, bg:"#dceedb", emoji:"🌶️" },
+    { name:"우유",     cat:"공산", originalPrice:5290,  salePrice:4290,  badge:"1+1",        unit:"1.8L",  origin:"국산",     cardDiscount:"",                  limit:80, soldPct:71, likes:96,  endsAt: NOW + 23*hour + 59*min, bg:"#eef0f3", emoji:"🥛" },
+    { name:"제주 감귤 주스", cat:"음료", originalPrice:3990, salePrice:2490, badge:"38% 할인", unit:"1L", origin:"제주 100%", cardDiscount:"", limit:60, soldPct:18, likes:22, endsAt: NOW + 49*min + 12_000, bg:"#fde7c2", emoji:"🧃" },
+  ];
+
+  const feed = document.getElementById('feed');
+  const fmt = n => n.toLocaleString('ko-KR');
+  const pct = (o,s) => Math.round((1 - s/o) * 100);
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function dStr(ms) {
+    if (ms <= 0) return '00:00:00';
+    const tot = Math.floor(ms / 1000);
+    const h = Math.floor(tot / 3600);
+    const m = Math.floor((tot % 3600) / 60);
+    const s = tot % 60;
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+  function band(ms) {
+    if (ms <= 10*min) return 'red';
+    if (ms <= 60*min) return 'amber';
+    return 'default';
+  }
+
+  function buildCard(d, i) {
+    const off = pct(d.originalPrice, d.salePrice);
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.dataset.endsAt = d.endsAt;
+    card.dataset.soldPct = d.soldPct;
+    card.style.setProperty('--sold', d.soldPct + '%');
+    card.innerHTML = `
+      <div class="top">
+        <div class="pic">
+          <div class="ph" style="--ph-bg:${d.bg}; --ph-emoji:'${d.emoji}';"></div>
+          <span class="stickerBadge ${d.limit <= 20 ? 'hot' : ''}">${d.limit <= 30 ? `한정 ${d.limit}` : '핫딜'}</span>
+          <div class="countdown" data-cd>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 3h4"/></svg>
+            <span data-cd-text>00:00:00</span>
+          </div>
+        </div>
+        <div class="info">
+          <div class="cat">${d.cat} · #${i+1}</div>
+          <div class="name">${d.name}</div>
+          <div class="spec">${d.unit} · ${d.origin}</div>
+          <div class="price">
+            <span class="orig price-num">${fmt(d.originalPrice)}원</span>
+          </div>
+          <div class="price">
+            <span class="sale price-num">${fmt(d.salePrice)}<span class="won">원</span></span>
+            <span class="off">${off}%↓</span>
+          </div>
+          ${d.cardDiscount ? `<span class="extra">${d.cardDiscount}</span>` : ''}
+        </div>
+      </div>
+      <div class="progress">
+        <div class="lbl"><span>잔여 ${d.limit - Math.round(d.limit * d.soldPct/100)}개 · 한정 ${d.limit}개</span><b>${d.soldPct}% 판매</b></div>
+        <div class="bar ${d.soldPct >= 70 ? 'hot' : ''}"><div class="fill"></div></div>
+      </div>
+      <div class="actions">
+        <button class="iconbtn like" aria-label="좋아요" data-likes="${d.likes}">
+          <svg class="heart" viewBox="0 0 24 24" fill="none"><path class="heart-stroke" stroke="currentColor" stroke-width="2" d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+          <span class="lcount">${d.likes}</span>
+          <span class="particles" aria-hidden="true"><span>♥</span><span>♥</span><span>♥</span><span>♥</span></span>
+        </button>
+        <button class="iconbtn share" aria-label="공유">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          <span>공유</span>
+        </button>
+        <button class="cta add" aria-label="장바구니 담기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 7h14l-1.5 11a2 2 0 0 1-2 1.8H8.5a2 2 0 0 1-2-1.8L5 7zM9 7V5a3 3 0 0 1 6 0v2"/></svg>
+          담기
+        </button>
+      </div>
+    `;
+    return card;
+  }
+
+  // initial skeletons then swap in
+  for (let i = 0; i < 3; i++) {
+    const s = document.createElement('div');
+    s.className = 'skel';
+    s.innerHTML = `
+      <div class="picSk"></div>
+      <div class="lines">
+        <div class="ln w40"></div>
+        <div class="ln w90"></div>
+        <div class="ln w70"></div>
+        <div class="ln w40"></div>
+        <div class="ln w70"></div>
+      </div>`;
+    feed.appendChild(s);
+  }
+
+  setTimeout(() => {
+    feed.innerHTML = '';
+    DEALS.forEach((d, i) => feed.appendChild(buildCard(d, i)));
+    requestAnimationFrame(() => {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.card').forEach(c => io.observe(c));
+      // staggered initial reveal
+      [...document.querySelectorAll('.card')].slice(0, 4).forEach((c, i) => {
+        setTimeout(() => c.classList.add('in'), 80 * i);
+      });
+    });
+    bindActions();
+    tick(); // initial render so countdowns aren't 00:00 for 1 frame
+  }, 600);
+
+  // top bar global countdown -> use the soonest deal
+  function tick() {
+    const now = Date.now();
+    // per-card countdowns
+    document.querySelectorAll('.card').forEach(card => {
+      const endsAt = +card.dataset.endsAt;
+      const ms = endsAt - now;
+      const txt = card.querySelector('[data-cd-text]');
+      const cd = card.querySelector('.countdown');
+      if (!txt || !cd) return;
+      txt.textContent = dStr(ms);
+      cd.classList.remove('amber', 'red');
+      const b = band(ms);
+      if (b === 'amber') cd.classList.add('amber');
+      if (b === 'red')   cd.classList.add('red');
+      card.classList.toggle('urgent', b === 'red');
+    });
+    // header: soonest
+    const next = DEALS.reduce((acc, d) => Math.min(acc, d.endsAt), Infinity) - now;
+    const total = Math.max(0, Math.floor(next / 1000));
+    document.getElementById('h').textContent = pad(Math.floor(total / 3600));
+    document.getElementById('m').textContent = pad(Math.floor((total % 3600) / 60));
+    document.getElementById('s').textContent = pad(total % 60);
+    document.getElementById('topSub').textContent =
+      `다음 마감 임박: ${DEALS.slice().sort((a,b)=>a.endsAt-b.endsAt)[0].name}`;
+  }
+  setInterval(tick, 1000);
+
+  // actions
+  function bindActions() {
+    document.querySelectorAll('.like').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const liked = btn.classList.toggle('liked');
+        btn.classList.add('pop');
+        setTimeout(() => btn.classList.remove('pop'), 800);
+        const span = btn.querySelector('.lcount');
+        let n = +span.textContent;
+        n += liked ? 1 : -1;
+        span.textContent = n;
+      });
+    });
+    document.querySelectorAll('.add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.card');
+        const name = card.querySelector('.name').textContent;
+        btn.classList.add('added');
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></svg>담음`;
+        showToast(`${name} 담음`);
+      });
+    });
+    document.querySelectorAll('.share').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const card = btn.closest('.card');
+        const name = card.querySelector('.name').textContent;
+        if (navigator.share) {
+          try { await navigator.share({ title: name, text: `${name} 핫딜!`, url: location.href }); }
+          catch(e) {}
+        } else {
+          showToast('공유 링크 복사됨');
+        }
+      });
+    });
+    // chips
+    document.querySelectorAll('.chip').forEach(ch => {
+      ch.addEventListener('click', () => {
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        ch.classList.add('active');
+      });
+    });
+    document.querySelectorAll('.sort .opt').forEach(o => {
+      o.addEventListener('click', () => {
+        document.querySelectorAll('.sort .opt').forEach(c => c.classList.remove('active'));
+        o.classList.add('active');
+      });
+    });
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1700);
+  }
+
+  // season
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>

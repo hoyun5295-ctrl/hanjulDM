@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>동네마트 강남점 — 가로 카탈로그</title>
+<meta property="og:title" content="동네마트 강남점 · 카탈로그">
+<meta property="og:description" content="청과/정육/수산 카테고리별 추천 상품">
+<meta property="og:image" content="https://placehold.co/1200x630/F97316/FFFFFF?text=동네마트+카탈로그">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  :root {
+    --color-primary: #F97316;
+    --color-accent: #EF4444;
+    --color-on-primary: #FFFFFF;
+    --color-text-strong: #1B1410;
+    --color-text-weak: #6B5E52;
+    --color-bg: #EFE6D7;
+    --color-soft: #F7F1E5;
+    --color-card: #FFFCF7;
+    --color-rule: #E0D4BD;
+    --color-discount: #DC2626;
+    --shadow-card: 0 1px 0 rgba(0,0,0,0.04), 0 10px 22px -10px rgba(60,40,20,0.20);
+    --shadow-shelf: 0 18px 30px -18px rgba(60,40,20,0.45);
+    --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  html[data-season="newyear"]   { --color-primary:#DC2626; --color-accent:#CA8A04; }
+  html[data-season="chuseok"]   { --color-primary:#1E40AF; --color-accent:#F59E0B; }
+  html[data-season="christmas"] { --color-primary:#15803D; --color-accent:#DC2626; }
+  html[data-season="summer"]    { --color-primary:#06B6D4; --color-accent:#0891B2; }
+  html[data-season="winter"]    { --color-primary:#BE123C; --color-accent:#FB7185; }
+  html[data-season="grand_open"]{ --color-primary:#1C1917; --color-accent:#FBBF24; }
+  html[data-season="urgent"]    { --color-primary:#171717; --color-accent:#EF4444; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--color-bg); color: var(--color-text-strong); }
+  body {
+    font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased;
+    /* wood grain backdrop */
+    background-color: var(--color-bg);
+    background-image:
+      repeating-linear-gradient(91deg, rgba(120, 78, 40, 0.045) 0 2px, transparent 2px 9px),
+      repeating-linear-gradient(89deg, rgba(80, 50, 20, 0.035) 0 1px, transparent 1px 11px),
+      radial-gradient(140% 60% at 50% 0%, rgba(140, 90, 50, 0.08), transparent 60%);
+    padding-bottom: 32px;
+  }
+  button { font-family: inherit; }
+  .price-num { font-variant-numeric: tabular-nums; }
+
+  /* ===== top bar minimal ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    height: 50px; padding: 0 14px;
+    background: rgba(239, 230, 215, 0.85);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--color-rule);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .topbar .back, .topbar .iconbtn {
+    width: 36px; height: 36px; border: 0; background: transparent;
+    display: grid; place-items: center; color: var(--color-text-strong);
+    cursor: pointer;
+  }
+  .topbar svg { width: 20px; height: 20px; }
+  .topbar .crumbs {
+    flex: 1; display: flex; flex-direction: column;
+  }
+  .topbar .crumbs .e1 { font-size: 10px; color: var(--color-text-weak); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+  .topbar .crumbs .e2 { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; margin-top: -2px; }
+
+  /* ===== store card ===== */
+  .store {
+    margin: 16px 14px 4px;
+    border-radius: 22px; overflow: hidden;
+    position: relative; height: 220px;
+    color: #fff;
+    box-shadow: var(--shadow-card);
+  }
+  .store .bg {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.85) 100%),
+      linear-gradient(135deg, #6b4f33 0%, #34221a 100%);
+  }
+  /* tiled shelf bg pattern */
+  .store .bg::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(120% 60% at 20% 10%, rgba(255,200,150,0.18), transparent 60%),
+      radial-gradient(120% 60% at 90% 30%, rgba(255,170,90,0.14), transparent 60%);
+    mix-blend-mode: screen;
+  }
+  .store .seasonStamp {
+    position: absolute; right: 14px; top: 14px;
+    padding: 5px 10px; border-radius: 999px;
+    background: rgba(255,255,255,0.18); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.32);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  }
+  .store .content {
+    position: absolute; inset: auto 18px 16px 18px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .store .name { font-size: 24px; font-weight: 900; letter-spacing: -0.025em; }
+  .store .meta {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 600; opacity: 0.85;
+  }
+  .store .meta .star { color: #FBBF24; font-weight: 800; }
+  .store .meta .sep { width: 3px; height: 3px; border-radius: 50%; background: rgba(255,255,255,0.4); }
+  .store .hours {
+    margin-top: 6px;
+    font-size: 12px; font-weight: 500; opacity: 0.85;
+  }
+  .store .hours .open {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: #4ADE80; font-weight: 700;
+  }
+  .store .hours .open .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ADE80; box-shadow: 0 0 8px #4ADE80; }
+  .store .actions {
+    margin-top: 12px; display: flex; gap: 8px;
+  }
+  .store .actions button {
+    flex: 1; height: 38px; border-radius: 10px;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer; backdrop-filter: blur(6px);
+  }
+  .store .actions button svg { width: 14px; height: 14px; }
+  .store .actions .primary {
+    background: var(--color-primary); border-color: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  /* ===== category row ===== */
+  .row { padding-top: 22px; }
+  .row .head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 18px 10px;
+  }
+  .row .head .titles {
+    display: flex; flex-direction: column;
+  }
+  .row .head .titles .cat {
+    font-size: 21px; font-weight: 800; letter-spacing: -0.025em;
+    display: inline-flex; align-items: baseline; gap: 6px;
+  }
+  .row .head .titles .cat small {
+    font-size: 11px; font-weight: 600; color: var(--color-text-weak);
+    letter-spacing: 0;
+  }
+  .row .head .titles .copy {
+    font-size: 12px; color: var(--color-text-weak); margin-top: 2px;
+  }
+  .row .head .more {
+    background: transparent; border: 0;
+    font-size: 12px; font-weight: 700; color: var(--color-text-strong);
+    display: inline-flex; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .row .head .more svg { width: 12px; height: 12px; }
+
+  /* shelf with wood plank */
+  .shelf {
+    position: relative;
+    padding: 6px 0 22px;
+  }
+  .shelf::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0;
+    height: 12px;
+    background:
+      linear-gradient(180deg, rgba(80,55,25,0.18), rgba(80,55,25,0.04)),
+      repeating-linear-gradient(90deg, rgba(120,80,40,0.10) 0 3px, transparent 3px 10px);
+    border-top: 1px solid rgba(80,55,25,0.18);
+  }
+
+  .swipe {
+    display: flex; gap: 12px;
+    overflow-x: auto; padding: 4px 14px 0;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .swipe::-webkit-scrollbar { display: none; }
+  .swipe::before, .swipe::after {
+    content: ""; flex: 0 0 4px;
+  }
+
+  /* product card */
+  .pcard {
+    flex: 0 0 156px;
+    scroll-snap-align: start;
+    background: var(--color-card);
+    border-radius: 16px;
+    padding: 8px 8px 10px;
+    box-shadow: var(--shadow-shelf);
+    position: relative;
+    transition: transform 200ms ease, filter 200ms ease, opacity 200ms ease;
+    cursor: pointer;
+  }
+  .pcard.hold {
+    transform: scale(1.12); z-index: 5;
+    box-shadow: 0 24px 40px -12px rgba(0,0,0,0.4);
+  }
+  .row.holding .pcard:not(.hold) { filter: blur(2px); opacity: 0.4; }
+
+  .pcard .pic {
+    position: relative; aspect-ratio: 1/1;
+    border-radius: 10px; overflow: hidden;
+    background: var(--color-soft);
+  }
+  .ph { position: absolute; inset: 0; display: grid; place-items: center; background: var(--ph-bg, #ddd); }
+  .ph::after { content: var(--ph-emoji, ""); font-size: 86px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.18)); }
+
+  .pcard .b1 {
+    position: absolute; left: 6px; top: 6px;
+    padding: 3px 7px; border-radius: 4px;
+    background: var(--color-discount); color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: -0.01em;
+  }
+  .pcard .b1.tag { background: var(--color-text-strong); }
+
+  .pcard .nm {
+    margin-top: 8px;
+    font-size: 13px; font-weight: 700; letter-spacing: -0.01em;
+    line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    min-height: 32px;
+  }
+  .pcard .unit { font-size: 10px; color: var(--color-text-weak); font-weight: 500; margin-top: 1px; }
+  .pcard .price {
+    display: flex; align-items: baseline; gap: 4px; margin-top: 4px;
+  }
+  .pcard .price .off { font-size: 12px; font-weight: 800; color: var(--color-discount); }
+  .pcard .price .sale { font-size: 15px; font-weight: 900; letter-spacing: -0.02em; }
+  .pcard .price .sale .won { font-size: 10px; font-weight: 800; }
+  .pcard .orig { font-size: 11px; color: var(--color-text-weak); text-decoration: line-through; }
+
+  /* expanded info that appears on hold */
+  .pcard .more {
+    position: absolute; left: 0; right: 0; top: 100%;
+    margin-top: 6px;
+    padding: 10px 12px;
+    background: var(--color-text-strong); color: #fff;
+    border-radius: 12px;
+    font-size: 11px; line-height: 1.5;
+    opacity: 0; pointer-events: none;
+    transform: translateY(-6px);
+    transition: opacity 200ms, transform 200ms;
+    z-index: 6;
+  }
+  .pcard.hold .more { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .pcard .more .label { opacity: 0.6; text-transform: uppercase; letter-spacing: 0.06em; font-size: 9px; font-weight: 600; margin-right: 4px; }
+
+  /* "more" sentinel card */
+  .pcard.moreBtn {
+    background: transparent;
+    border: 2px dashed var(--color-rule);
+    box-shadow: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--color-text-weak);
+  }
+  .pcard.moreBtn .pic { background: transparent; }
+  .pcard.moreBtn .pic .icon {
+    position: absolute; inset: 0; display: grid; place-items: center; font-size: 28px;
+  }
+
+  /* swipe indicator */
+  .swipeIndicator {
+    height: 3px; border-radius: 2px;
+    background: var(--color-rule);
+    margin: 0 18px;
+    overflow: hidden; position: relative;
+  }
+  .swipeIndicator .thumb {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 32%; min-width: 14%;
+    background: var(--color-text-strong); border-radius: 2px;
+    transition: left 100ms linear, width 200ms ease;
+  }
+
+  /* footer brand */
+  .brand {
+    margin: 24px 18px 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-rule);
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: var(--color-text-weak);
+    letter-spacing: 0.1em;
+  }
+  .brand strong { color: var(--color-text-strong); font-weight: 800; letter-spacing: -0.01em; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pcard, .row.holding .pcard:not(.hold), .pcard .more { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="crumbs">
+    <div class="e1">WEEKLY · 5/13 – 5/19</div>
+    <div class="e2">동네마트 강남점</div>
+  </div>
+  <button class="iconbtn" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+  <button class="iconbtn" aria-label="공유"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.5 8.5 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></button>
+</header>
+
+<section class="store">
+  <div class="bg"></div>
+  <span class="seasonStamp">이번 주 행사 · 5월 둘째 주</span>
+  <div class="content">
+    <div class="name">동네마트 강남점</div>
+    <div class="meta">
+      <span><span class="star">★</span> 4.7</span>
+      <span class="sep"></span>
+      <span>리뷰 1,284</span>
+      <span class="sep"></span>
+      <span>도보 3분</span>
+    </div>
+    <div class="hours">
+      <span class="open"><span class="dot"></span>영업 중</span> · 09:00 – 22:00
+    </div>
+    <div class="actions">
+      <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.97.37 1.92.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.33 1.84.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>전화</button>
+      <button class="primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>길찾기</button>
+    </div>
+  </div>
+</section>
+
+<main id="main"></main>
+
+<div class="brand">
+  <strong>HANJUL</strong>
+  <span>· 한 줄 전단 · 카탈로그 모드</span>
+</div>
+
+<script>
+  const DATA = [
+    {
+      name: "축산",
+      copy: "두툼하게, 주말의 한 끼.",
+      count: 8,
+      items: [
+        { name:"국산 삼겹살", originalPrice:14900, salePrice:9900,  badge:"30%↓",     unit:"600g",  origin:"국산",     cardDiscount:"삼성카드 5% 추가", aiCopy:"주말 바베큐엔 두툼한 삼겹살.", bg:"#fbe4d6", emoji:"🥓" },
+        { name:"한우 등심 1++", originalPrice:49900, salePrice:39900, badge:"한정",     unit:"300g", origin:"국산 1++", cardDiscount:"현대카드 7% 추가", aiCopy:"가족 모임용 프리미엄 한우 1++.", bg:"#f5d2d2", emoji:"🥩" },
+        { name:"양념 LA 갈비",  originalPrice:38900, salePrice:29900, badge:"23%↓",   unit:"1.2kg", origin:"미국산",   cardDiscount:"", aiCopy:"불판 위 바로 굽는 양념 LA 갈비.", bg:"#f6d8b8", emoji:"🍖" },
+        { name:"흑돼지 목살",   originalPrice:18900, salePrice:14900, badge:"21%↓",   unit:"500g",  origin:"제주산",   cardDiscount:"", aiCopy:"제주 흑돼지 결대로 손질.", bg:"#e8d5be", emoji:"🐖" },
+        { name:"닭볶음용 토막", originalPrice:7900,  salePrice:5900,  badge:"25%↓",   unit:"1kg",   origin:"국산",     cardDiscount:"", aiCopy:"국물 잘 우러나는 토막 컷.", bg:"#fcf0d3", emoji:"🍗" },
+      ]
+    },
+    {
+      name: "청과",
+      copy: "햇과일이 도착했어요.",
+      count: 12,
+      items: [
+        { name:"청양고추", originalPrice:2990, salePrice:1990, badge:"33%↓", unit:"200g", origin:"국산", cardDiscount:"", aiCopy:"매운맛 진한 청양고추.", bg:"#dceedb", emoji:"🌶️" },
+        { name:"제주 한라봉",  originalPrice:24900, salePrice:19900, badge:"20%↓", unit:"5kg",  origin:"제주산", cardDiscount:"BC카드 3%", aiCopy:"제주산 13Brix 한라봉.", bg:"#fde2c2", emoji:"🍊" },
+        { name:"강원 감자",    originalPrice:7900,  salePrice:5900,  badge:"25%↓", unit:"2kg",  origin:"강원산", cardDiscount:"", aiCopy:"포실한 강원 감자.", bg:"#ebe1cd", emoji:"🥔" },
+        { name:"수박 한 통",   originalPrice:19900, salePrice:14900, badge:"25%↓", unit:"7kg",  origin:"고창산", cardDiscount:"", aiCopy:"당도 12Brix 햇수박.", bg:"#d4ecd1", emoji:"🍉" },
+        { name:"방울토마토",   originalPrice:5990,  salePrice:3990,  badge:"33%↓", unit:"500g", origin:"전남산", cardDiscount:"", aiCopy:"빨갛게 익은 방울토마토.", bg:"#fad9d2", emoji:"🍅" },
+        { name:"청송 사과",    originalPrice:21900, salePrice:17900, badge:"18%↓", unit:"3kg",  origin:"청송산", cardDiscount:"", aiCopy:"꿀맛 청송 부사 사과.", bg:"#fbd9d2", emoji:"🍎" },
+      ]
+    },
+    {
+      name: "수산",
+      copy: "오늘 입고된 활어.",
+      count: 5,
+      items: [
+        { name:"완도 활전복", originalPrice:49900, salePrice:39900, badge:"한정 12박스", unit:"10미",  origin:"완도산", cardDiscount:"신한카드 5%", aiCopy:"오늘 입고된 완도 활전복.", bg:"#d8e6f7", emoji:"🐚" },
+        { name:"굴비 5미",    originalPrice:24900, salePrice:18900, badge:"24%↓",     unit:"5미",   origin:"영광산", cardDiscount:"", aiCopy:"영광 굴비 5미 진공.", bg:"#e2dccf", emoji:"🐟" },
+        { name:"노르웨이 연어",originalPrice:18900, salePrice:13900, badge:"26%↓",     unit:"400g",  origin:"노르웨이", cardDiscount:"", aiCopy:"회·구이용 연어 필렛.", bg:"#fcd6c4", emoji:"🍣" },
+        { name:"동해 오징어",  originalPrice:9900,  salePrice:6900,  badge:"30%↓",     unit:"3미",   origin:"동해산", cardDiscount:"", aiCopy:"산지직송 통오징어.", bg:"#dbe6ec", emoji:"🦑" },
+      ]
+    },
+    {
+      name: "공산/음료",
+      copy: "이번 주만 1+1.",
+      count: 6,
+      items: [
+        { name:"가족 우유 1.8L",  originalPrice:5290, salePrice:4290, badge:"1+1",  unit:"1.8L", origin:"국산", cardDiscount:"", aiCopy:"1.8L 1+1 행사.", bg:"#eef0f3", emoji:"🥛" },
+        { name:"제주 감귤주스",   originalPrice:3990, salePrice:2490, badge:"38%↓", unit:"1L",   origin:"제주 100%", cardDiscount:"", aiCopy:"제주 감귤 100% 주스.", bg:"#fde7c2", emoji:"🧃" },
+        { name:"오트밀 그래놀라", originalPrice:8900, salePrice:5900, badge:"33%↓", unit:"500g", origin:"수입산", cardDiscount:"", aiCopy:"든든한 아침 한 끼.", bg:"#f0e2cb", emoji:"🥣" },
+        { name:"생수 2L x 6",     originalPrice:5980, salePrice:3980, badge:"33%↓", unit:"12L",  origin:"제주산", cardDiscount:"", aiCopy:"12L 한 박스.", bg:"#d6e6e9", emoji:"💧" },
+      ]
+    },
+  ];
+
+  const fmt = n => n.toLocaleString('ko-KR');
+  const main = document.getElementById('main');
+
+  DATA.forEach((cat, ci) => {
+    const row = document.createElement('section');
+    row.className = 'row';
+    row.innerHTML = `
+      <div class="head">
+        <div class="titles">
+          <div class="cat">${cat.name} <small>${cat.count}</small></div>
+          <div class="copy">"${cat.copy}"</div>
+        </div>
+        <button class="more">더 보기 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="shelf">
+        <div class="swipe" data-row="${ci}"></div>
+      </div>
+      <div class="swipeIndicator"><div class="thumb"></div></div>
+    `;
+    const swipe = row.querySelector('.swipe');
+    cat.items.forEach(it => {
+      const card = document.createElement('article');
+      card.className = 'pcard';
+      const off = Math.round((1 - it.salePrice/it.originalPrice) * 100);
+      card.innerHTML = `
+        <div class="pic">
+          <div class="ph" style="--ph-bg:${it.bg}; --ph-emoji:'${it.emoji}';"></div>
+          <span class="b1 ${it.badge.includes('한정') || it.badge.includes('1+1') ? 'tag' : ''}">${it.badge}</span>
+        </div>
+        <div class="nm">${it.name}</div>
+        <div class="unit">${it.unit} · ${it.origin}</div>
+        <div class="price">
+          <span class="off">${off}%</span>
+          <span class="sale price-num">${fmt(it.salePrice)}<span class="won">원</span></span>
+        </div>
+        <div class="orig price-num">${fmt(it.originalPrice)}원</div>
+        <div class="more">
+          <div><span class="label">한 줄</span>${it.aiCopy || ''}</div>
+          <div style="margin-top:6px;"><span class="label">원산지</span>${it.origin}</div>
+          ${it.cardDiscount ? `<div style="margin-top:4px;"><span class="label">카드</span>${it.cardDiscount}</div>` : ''}
+        </div>
+      `;
+
+      // long-press → hold class
+      let lpTimer, holding = false;
+      const start = (e) => {
+        lpTimer = setTimeout(() => {
+          holding = true;
+          row.classList.add('holding');
+          card.classList.add('hold');
+        }, 350);
+      };
+      const end = () => {
+        clearTimeout(lpTimer);
+        if (holding) {
+          holding = false;
+          setTimeout(() => {
+            row.classList.remove('holding');
+            card.classList.remove('hold');
+          }, 1400);
+        }
+      };
+      card.addEventListener('pointerdown', start);
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => card.addEventListener(ev, end));
+      swipe.appendChild(card);
+    });
+
+    // "more" sentinel
+    const sentinel = document.createElement('article');
+    sentinel.className = 'pcard moreBtn';
+    sentinel.innerHTML = `
+      <div class="pic"><span class="icon">→</span></div>
+      <div class="nm" style="text-align:center; min-height: 32px; display:flex; align-items:center; justify-content:center;">전체 ${cat.count}개<br>보기</div>
+      <div class="unit" style="text-align:center;">${cat.name}</div>
+    `;
+    swipe.appendChild(sentinel);
+
+    // swipe indicator
+    const thumb = row.querySelector('.thumb');
+    function updateThumb() {
+      const w = swipe.scrollWidth - swipe.clientWidth;
+      const p = w > 0 ? swipe.scrollLeft / w : 0;
+      const tw = Math.max(14, (swipe.clientWidth / swipe.scrollWidth) * 100);
+      thumb.style.width = tw + '%';
+      thumb.style.left = (p * (100 - tw)) + '%';
+    }
+    swipe.addEventListener('scroll', updateThumb, { passive: true });
+    requestAnimationFrame(updateThumb);
+
+    main.appendChild(row);
+  });
+
+  // season
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  if (seasonParam) document.documentElement.setAttribute('data-season', seasonParam);
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'season' && d.value) document.documentElement.setAttribute('data-season', d.value);
+  });
+</script>
+</body>
+</html>
