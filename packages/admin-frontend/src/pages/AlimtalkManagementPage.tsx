@@ -95,9 +95,11 @@ export default function AlimtalkManagementPage() {
 
   const loadCompanies = async () => {
     try {
-      const res = await fetch('/api/admin/flyer/companies?limit=500', { headers: authHeader() });
+      // backend GET /api/admin/flyer/companies 응답: { items: [...], total, page, pageSize }
+      // pageSize=20 hardcoded. 다음 페이지 필요 시 향후 페이지네이션 처리.
+      const res = await fetch('/api/admin/flyer/companies?page=1', { headers: authHeader() });
       const data = await res.json();
-      const list = data.companies || data.rows || data || [];
+      const list = data.items || data.companies || data.rows || data || [];
       setCompanies(
         Array.isArray(list)
           ? list.map((c: any) => ({ id: c.id, company_name: c.company_name || c.name || c.id }))
