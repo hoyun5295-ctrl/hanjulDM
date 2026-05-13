@@ -1018,7 +1018,10 @@ const PREVIEW_THEMES: Record<string, { hero: string; price: string; bg: string; 
   butcher_giftset:  { hero: 'linear-gradient(160deg,#78350f,#b45309)', price: '#92400e', bg: '#fdf2f8', badge: 'linear-gradient(135deg,#d97706,#b45309)', chip: '#fef3c7', chipC: '#78350f' },
 };
 
-function FlyerPreviewRenderer({ title, storeName, periodStart, periodEnd, categories, template }: {
+// ★ D154 PHASE 0 — 옛 V3 React 미러 (dead code, cleanup PHASE 1)
+//   neuer 미리보기는 FlyerPreview (components/FlyerPreview.tsx) iframe + backend V4 6 엔진 활용.
+//   본 함수 export로 noUnusedLocals 경고 회피 + module 외부 활용 시 즉시 PHASE 1 cleanup.
+export function FlyerPreviewRenderer({ title, storeName, periodStart, periodEnd, categories, template }: {
   title: string; storeName: string; periodStart: string; periodEnd: string;
   categories: FlyerCategory[]; template: string;
 }) {
