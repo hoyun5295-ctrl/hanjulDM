@@ -8,11 +8,48 @@
  * ★ hanjulDM 분리 (2026-05-12): DM Builder 라우트 제거. DM은 한줄AI 본진 hanjul.ai/d/{code} 전용
  */
 
-import { Request, Response, Router } from 'express';
+import express, { Request, Response, Router } from 'express';
 import { query } from '../../config/database';
-import { renderTemplate } from '../../utils/flyer/product/flyer-templates';
+import { renderTemplate, type FlyerRenderData } from '../../utils/flyer/product/flyer-templates';
 
 const router = Router();
+
+// ============================================================
+// ★ D154 PHASE 0 — POST /preview-html
+// 사장님 화면 실시간 미리보기용 (미발행 전단 + 옵션 변경 즉시 반영)
+// 인증 불필요 (사장님 입력 데이터 그대로 렌더, DB 변경 0)
+// ============================================================
+const previewParser = express.json({ limit: '512kb' });
+router.post('/preview-html', previewParser, async (req: Request, res: Response) => {
+  try {
+    const body = req.body || {};
+    if (!body.title && !body.store_name && (!body.categories || body.categories.length === 0)) {
+      return res.status(400).send('Empty payload');
+    }
+
+    const data: FlyerRenderData = {
+      storeName: body.store_name || '',
+      title: body.title || '',
+      period: body.period || '',
+      categories: Array.isArray(body.categories) ? body.categories : [],
+      periodStart: body.period_start || null,
+      periodEnd: body.period_end || null,
+      externalLinks: body.extra_data?.externalLinks,
+      announcements: body.extra_data?.announcements,
+      bannerGifUrl: body.extra_data?.bannerGifUrl,
+    };
+
+    const templateCode = body.template || 'grid_hero';
+    const html = renderTemplate(templateCode, data);
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store'); // 실시간 미리보기는 캐싱 X
+    return res.send(html);
+  } catch (err: any) {
+    console.error('[preview-html] 생성 실패:', err && err.message ? err.message : err);
+    return res.status(500).send('Internal error');
+  }
+});
 
 // ============================================================
 // GET /:code — 전단지 공개 페이지 렌더링 + 클릭 로그

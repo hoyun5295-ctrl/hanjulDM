@@ -4,6 +4,8 @@ import AlertModal from '../components/AlertModal';
 import { SectionCard, Button, Input, Badge, EmptyState, ConfirmModal, Toast } from '../components/ui';
 import { getProductDisplay } from '../utils/product-images';
 import ExcelUploadModal, { type MappedProduct } from '../components/ExcelUploadModal';
+// ★ D154 PHASE 0 — backend V4 6 엔진 iframe 미리보기 (옛 V3 React 미러 대체)
+import FlyerPreview from '../components/FlyerPreview';
 
 interface FlyerItem { name: string; originalPrice: number; salePrice: number; badge?: string; imageUrl?: string; unit?: string; origin?: string; cardDiscount?: string; aiCopy?: string; }
 interface FlyerCategory { name: string; items: FlyerItem[]; }
@@ -368,7 +370,7 @@ export default function FlyerPage({ token, businessType = 'mart' }: { token: str
                   {/* 콘텐츠 */}
                   <div className="overflow-y-auto" style={{ height: 460 }}>
                     {/* ★ 수정 모드에서도 항상 실시간 렌더러 사용 — 템플릿 변경이 즉시 반영되도록 */}
-                    <FlyerPreviewRenderer title={title} storeName={storeName} periodStart={periodStart} periodEnd={periodEnd} categories={categories} template={template} />
+                    <FlyerPreview title={title} storeName={storeName} periodStart={periodStart} periodEnd={periodEnd} categories={categories} template={template} />
                   </div>
                   {/* 홈 인디케이터 */}
                   <div className="flex justify-center py-2 bg-white">
