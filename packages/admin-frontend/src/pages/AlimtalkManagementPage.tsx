@@ -73,7 +73,8 @@ type SenderFilter = 'all' | 'APPROVED' | 'PENDING_APPROVAL' | 'REJECTED';
 type TemplateFilter = 'all' | 'DRAFT' | 'pending' | 'APPROVED' | 'REJECTED';
 
 function getToken() {
-  return localStorage.getItem('flyerSuperToken') || '';
+  // App.tsx L11 동일 키 — 슈퍼관리자 로그인 시 admin_token에 박힘
+  return localStorage.getItem('admin_token') || '';
 }
 
 export default function AlimtalkManagementPage() {
