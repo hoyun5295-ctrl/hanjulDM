@@ -143,7 +143,7 @@ export async function canFlyerStoreSend(userId: string): Promise<{ ok: boolean; 
 export async function deductFlyerPrepaid(
   userId: string,
   count: number,
-  messageType: 'SMS' | 'LMS' | 'MMS'
+  messageType: 'SMS' | 'LMS' | 'MMS' | 'ALIMTALK'
 ): Promise<{ ok: boolean; deducted?: number; balance?: number; reason?: string }> {
   // 단가 조회
   const priceRes = await query(
@@ -154,10 +154,13 @@ export async function deductFlyerPrepaid(
   if (priceRes.rows.length === 0) return { ok: false, reason: '매장 정보를 찾을 수 없습니다' };
 
   const u = priceRes.rows[0];
+  // ★ D158 알림톡 단가 임시 = SMS 단가 (가장 저렴 보수적 — 실제 IMC 알림톡 ≈ 7~13원).
+  //   Phase 1+ 본격화 시 flyer_users.alimtalk_unit_price 컬럼 ALTER + 별도 단가 매핑 (별건).
   const priceMap: Record<string, number> = {
-    SMS: Number(u.sms_unit_price || 9),
-    LMS: Number(u.lms_unit_price || 29),
-    MMS: Number(u.mms_unit_price || 80),
+    SMS:      Number(u.sms_unit_price || 9),
+    LMS:      Number(u.lms_unit_price || 29),
+    MMS:      Number(u.mms_unit_price || 80),
+    ALIMTALK: Number(u.sms_unit_price || 9),
   };
   const unitPrice = priceMap[messageType] || 9;
   const totalAmount = Math.ceil(unitPrice * count);
