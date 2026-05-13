@@ -47,6 +47,17 @@ export default function SendPage({ token }: { token: string }) {
   const [selectedProfileId, setSelectedProfileId] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [alimtalkLoading, setAlimtalkLoading] = useState(false);
+  // ★ D158 알림톡 사용자 입력 변수 (customer DB 표준 변수 외, 사용자가 직접 입력하는 변수 #{주문번호} 등)
+  const [alimtalkCustomVars, setAlimtalkCustomVars] = useState<Record<string, string>>({});
+
+  // 표준 변수 매핑 (backend CT-F05 VAR_ALIAS_TO_KEY 정합) — 사용자 입력 불요, customer DB에서 자동 치환
+  const STANDARD_VARS = useMemo(() => new Set([
+    '이름', '고객명', '성명',
+    '전화', '전화번호', '휴대폰',
+    '성별', '생일', '생년월일',
+    '이메일', '주소',
+    '등급', '포인트', '최근방문', '최근구매', '누적구매', '방문횟수', '구매횟수',
+  ]), []);
 
   const [msgType, setMsgType] = useState<MsgType>('SMS');
   const [subject, setSubject] = useState('');
@@ -161,12 +172,68 @@ export default function SendPage({ token }: { token: string }) {
       .finally(() => setAlimtalkLoading(false));
   }, [channelMode, selectedProfileId]);
 
-  // ★ D158 알림톡: 템플릿 선택 시 본문 자동 박힘
+  // ★ D158 알림톡: 템플릿 선택 시 본문 자동 박힘 + customVars 초기화
   useEffect(() => {
     if (channelMode !== 'alimtalk' || !selectedTemplateId) return;
     const t = alimtalkTemplates.find(tt => tt.id === selectedTemplateId);
-    if (t) setMessage(t.content);
+    if (t) {
+      setMessage(t.content);
+      setAlimtalkCustomVars({});
+    }
   }, [selectedTemplateId, alimtalkTemplates, channelMode]);
+
+  // ★ D158 알림톡: 본문에서 #{변수명} 자동 추출 + 표준 변수/사용자 입력 변수 분리
+  const alimtalkVars = useMemo(() => {
+    if (channelMode !== 'alimtalk' || !message) return { standard: [] as string[], custom: [] as string[] };
+    const re = /#\{([^}]+)\}/g;
+    const set = new Set<string>();
+    let m;
+    while ((m = re.exec(message)) !== null) {
+      const v = m[1].trim();
+      if (v) set.add(v);
+    }
+    const all = Array.from(set);
+    return {
+      standard: all.filter(v => STANDARD_VARS.has(v)),
+      custom: all.filter(v => !STANDARD_VARS.has(v)),
+    };
+  }, [message, channelMode, STANDARD_VARS]);
+
+  // ★ D158 알림톡 미리보기 — 첫 수신자 샘플 치환된 본문
+  const alimtalkPreview = useMemo(() => {
+    if (channelMode !== 'alimtalk' || !message) return '';
+    const sampleCustomer: Record<string, string> = {
+      '이름': '홍길동',
+      '고객명': '홍길동',
+      '성명': '홍길동',
+      '전화': '010-1234-5678',
+      '전화번호': '010-1234-5678',
+      '휴대폰': '010-1234-5678',
+      '주소': '서울시 강남구',
+      '등급': 'VIP',
+      '포인트': '12,500',
+    };
+    return message.replace(/#\{([^}]+)\}/g, (_match, varName) => {
+      const trimmed = varName.trim();
+      if (alimtalkCustomVars[trimmed]) return alimtalkCustomVars[trimmed];
+      if (sampleCustomer[trimmed]) return sampleCustomer[trimmed];
+      return `《${trimmed}》`;
+    });
+  }, [message, channelMode, alimtalkCustomVars]);
+
+  // 선택된 발신프로필/템플릿 객체 (정보 카드용)
+  const selectedAlimtalkProfile = useMemo(
+    () => alimtalkProfiles.find(p => p.id === selectedProfileId),
+    [alimtalkProfiles, selectedProfileId]
+  );
+  const selectedAlimtalkTemplate = useMemo(
+    () => alimtalkTemplates.find(t => t.id === selectedTemplateId),
+    [alimtalkTemplates, selectedTemplateId]
+  );
+
+  const MSG_TYPE_LABELS: Record<string, string> = {
+    BA: '기본형', EX: '부가 정보형', AD: '채널 추가형', MI: '복합형',
+  };
 
   const byteCount = useMemo(() => {
     let full = message;
@@ -406,6 +473,18 @@ export default function SendPage({ token }: { token: string }) {
           setSending(false);
           return;
         }
+        // ★ D158 사용자 입력 변수 검증 — 미입력 시 발송 차단
+        const missingCustomVars = alimtalkVars.custom.filter(v => !alimtalkCustomVars[v]?.trim());
+        if (missingCustomVars.length > 0) {
+          setAlert({
+            show: true,
+            title: '변수 입력 필요',
+            message: `사용자 입력 변수가 비어 있습니다: ${missingCustomVars.map(v => `#{${v}}`).join(', ')}`,
+            type: 'error',
+          });
+          setSending(false);
+          return;
+        }
         body = {
           recipients: finalRecipients.map(r => ({ phone: r.phone })),
           message: message, // 변수 치환은 backend에서 (#{변수명})
@@ -419,6 +498,7 @@ export default function SendPage({ token }: { token: string }) {
           sender_key: profile.profile_key,
           kakao_buttons: tpl.buttons || undefined,
           emphasize_title: tpl.emphasize_title || undefined,
+          custom_vars: Object.keys(alimtalkCustomVars).length > 0 ? alimtalkCustomVars : undefined,
           flyer_id: selectedFlyer || undefined,
           is_ad: false, // 알림톡 자체는 (광고) 미부착
         };
@@ -488,6 +568,7 @@ export default function SendPage({ token }: { token: string }) {
 
           {channelMode === 'alimtalk' ? (
             <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-card">
+              {/* 발신프로필 + 템플릿 선택 */}
               <div className="px-4 pt-4 space-y-3">
                 <Select value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
                   <option value="">발신프로필 선택</option>
@@ -506,18 +587,87 @@ export default function SendPage({ token }: { token: string }) {
                   <p className="text-xs text-warning-600">등록된 발신프로필이 없습니다. 운영팀에 신청해주세요. (알림톡 메뉴에서 안내 확인)</p>
                 )}
               </div>
+
+              {/* 템플릿 정보 카드 */}
+              {selectedAlimtalkTemplate && (
+                <div className="mx-4 mt-3 p-3 bg-bg rounded-lg text-xs space-y-1">
+                  <div className="flex gap-2">
+                    <span className="text-text-muted">유형:</span>
+                    <span className="font-semibold text-text">{MSG_TYPE_LABELS[selectedAlimtalkTemplate.message_type] || selectedAlimtalkTemplate.message_type}</span>
+                    {selectedAlimtalkTemplate.emphasize_title && (
+                      <span className="text-warning-600">· 강조: {selectedAlimtalkTemplate.emphasize_title}</span>
+                    )}
+                  </div>
+                  {selectedAlimtalkProfile && (
+                    <div className="flex gap-2">
+                      <span className="text-text-muted">발신:</span>
+                      <span className="text-text">{selectedAlimtalkProfile.profile_name}</span>
+                      <span className="text-text-muted">· 회신 {selectedAlimtalkProfile.admin_phone_number || '-'}</span>
+                    </div>
+                  )}
+                  {selectedAlimtalkTemplate.buttons && Array.isArray(selectedAlimtalkTemplate.buttons) && selectedAlimtalkTemplate.buttons.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      <span className="text-text-muted">버튼:</span>
+                      {selectedAlimtalkTemplate.buttons.map((b: any, i: number) => (
+                        <span key={i} className="px-1.5 py-0.5 bg-surface border border-border rounded text-text">{b.name || `버튼${i + 1}`}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 본문 */}
               <div className="p-4">
                 <textarea
                   value={message}
                   onChange={e => setMessage(e.target.value)}
-                  placeholder={selectedTemplateId ? "템플릿 본문 — #{변수명} 부분에 수신자 정보가 자동 치환됩니다" : "템플릿을 선택하면 본문이 자동 입력됩니다"}
+                  placeholder={selectedTemplateId ? "템플릿 본문 (IMC 검수 통과 후 잠금)" : "템플릿을 선택하면 본문이 자동 입력됩니다"}
                   readOnly={!selectedTemplateId}
-                  className="w-full resize-none border-0 focus:outline-none text-sm leading-relaxed text-text h-[180px] disabled:bg-bg"
+                  className="w-full resize-none border-0 focus:outline-none text-sm leading-relaxed text-text h-[140px] disabled:bg-bg"
                 />
               </div>
-              <div className="px-4 py-2 bg-bg border-t border-border flex items-center justify-end">
+
+              {/* 변수 입력 */}
+              {selectedTemplateId && (alimtalkVars.standard.length > 0 || alimtalkVars.custom.length > 0) && (
+                <div className="px-4 pb-3 space-y-2">
+                  <div className="text-xs text-text-secondary font-semibold">변수 ({alimtalkVars.standard.length + alimtalkVars.custom.length}개)</div>
+                  {alimtalkVars.standard.length > 0 && (
+                    <div className="text-[11px] text-text-muted">
+                      자동 치환(고객DB): {alimtalkVars.standard.map(v => (
+                        <span key={v} className="inline-block px-1 mr-1 bg-success-100 text-success-700 rounded">#{`{${v}}`}</span>
+                      ))}
+                    </div>
+                  )}
+                  {alimtalkVars.custom.map(v => (
+                    <div key={v} className="flex items-center gap-2">
+                      <span className="text-[11px] text-warning-700 font-mono w-24 flex-shrink-0">#{`{${v}}`}</span>
+                      <input
+                        type="text"
+                        value={alimtalkCustomVars[v] || ''}
+                        onChange={e => setAlimtalkCustomVars(prev => ({ ...prev, [v]: e.target.value }))}
+                        placeholder="값 입력"
+                        className="flex-1 px-2 py-1 text-xs border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 미리보기 */}
+              {selectedTemplateId && message && (
+                <div className="px-4 pb-3">
+                  <div className="text-xs text-text-secondary font-semibold mb-1">미리보기 (샘플 수신자: 홍길동)</div>
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-text whitespace-pre-wrap">
+                    {alimtalkPreview}
+                  </div>
+                </div>
+              )}
+
+              <div className="px-4 py-2 bg-bg border-t border-border flex items-center justify-between">
                 <span className="text-xs text-text-muted">IMC 카카오 알림톡</span>
+                <span className="text-xs text-text-muted">{message.length}자 / 1000자</span>
               </div>
+
               <div className="px-4 py-3 border-t border-border flex gap-2">
                 <Button className="flex-1" size="lg"
                   disabled={sending || totalRecipientCount === 0 || !selectedTemplateId || !message.trim()}
