@@ -69,6 +69,35 @@ if [ ! -d "$DIST_NEW/routes" ] || [ ! -d "$DIST_NEW/utils" ]; then
   exit 1
 fi
 
+# 3-1. 정적 파일 복사 (D160) — tsc 미처리 .json/.html/.css/.svg/.ttf
+# 인쇄전단 V3 templates/assets/design-tokens 영역 (Template not found 영구 차단)
+echo "[atomic-build] 정적 파일 복사 → dist-new/utils/flyer/product/print"
+PRINT_SRC="$BACKEND_DIR/src/utils/flyer/product/print"
+PRINT_DST="$DIST_NEW/utils/flyer/product/print"
+
+if [ -d "$PRINT_SRC/templates" ]; then
+  mkdir -p "$PRINT_DST/templates"
+  cp -r "$PRINT_SRC/templates"/* "$PRINT_DST/templates/"
+  TPL_COUNT=$(ls -1 "$PRINT_DST/templates" | wc -l)
+  echo "   templates 복사 완료: $TPL_COUNT 폴더"
+  if [ "$TPL_COUNT" -lt 1 ]; then
+    echo "[atomic-build] FAIL — templates 복사 0건"
+    rm -rf "$DIST_NEW"
+    exit 1
+  fi
+fi
+
+if [ -d "$PRINT_SRC/assets" ]; then
+  mkdir -p "$PRINT_DST/assets"
+  cp -r "$PRINT_SRC/assets"/* "$PRINT_DST/assets/" 2>/dev/null || true
+  echo "   assets 복사 완료"
+fi
+
+if [ -f "$PRINT_SRC/design-tokens.json" ]; then
+  cp "$PRINT_SRC/design-tokens.json" "$PRINT_DST/design-tokens.json"
+  echo "   design-tokens.json 복사 완료"
+fi
+
 # 4. atomic swap — 옛 dist 백업 + dist-new를 dist로 mv
 if [ -d "$DIST_OLD" ]; then
   rm -rf "$DIST_OLD"
