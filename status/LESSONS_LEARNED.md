@@ -334,6 +334,86 @@ PDF MediaBox 실측 (시장조사 가이드 편집 사이즈 정합):
 - 한국 마트 전단지 사이즈는 ISO 규격과 다름. PAPER-SIZES.ts B4=260×374 / B3=374×524 / B2=524×752 (재단). 도련 사방 2mm = 편집 사이즈 +4mm. CSS @page `bleed: 2mm`로 자동 처리. 시장조사 가이드 `C:\Users\ceo\Downloads\마트전단지_인쇄용_PDF_가이드.pdf` 정독 필수.
 - 외부 라이브러리 의심 사고 발생 시 unpkg/CDN으로 소스 직접 정독 절차 의무 — 가설 X.
 
+## 13. ★ D162 5종 print template 안전망 — 사장님 자유 입력 + 자동 숨김 (2026-05-14)
+
+### 13-1. 사고
+
+D161 백지 fix 후 print_magazine_grid_v1 운영 발행 시 추가 사고 다수 노출:
+- hero_title "가정의달 특가" 6자 한 줄 입력 → 폰트 22mm + 컨테이너 너비 96mm 충돌 → 한국어 한 줄이 잘림 (word-break 미정의)
+- fillTextSlot textContent 평문화 → manifest fallback `<br/>`/`<em>` 마크업이 사장님 입력 시 사라짐 + 사장님 \n 줄바꿈 미반영
+- "다음 4주 행사 캘린더" + "매장 멤버 혜택" 등 정적 영역 — 사장님 입력 무관 항상 노출 (dummy data 그대로 인쇄 발주 사고 위험)
+- 5종 manifest fallback 7건 "사장님이 (직접) 박는..." 안내 텍스트 — 사장님 미입력 시 인쇄 발주 시 그대로 노출
+- 상품 이미지 placeholder 표시 안 됨 (실제로는 표시되는데 grid row auto 압축으로 작아짐)
+
+### 13-2. Root cause
+
+1. **CSS 한국어 텍스트 줄바꿈 미정의** — 한국어는 단어 사이 공백 없으면 `word-break: normal` 동작 X → 한 줄 텍스트가 컨테이너 넘침
+2. **fillTextSlot textContent 한정** — innerHTML 분기 없음 → 마크업 평문화. 사장님 \n 입력 시 줄바꿈 사라짐
+3. **정적 fallback HTML 다수** — slot 데이터 미입력 시 template.html의 정적 HTML 그대로 표시 (자동 숨김 메커니즘 부재)
+
+### 13-3. 정답
+
+**slot-filler.ts CT 확장 (FILL_RUNTIME 신규 헬퍼):**
+
+```ts
+// server-side
+function sanitizeMarkup(raw: string, allowedTags: string[]): string {
+  // 1. \n → 임시 sentinel + 허용 태그 임시 보존 + 외 entity escape + sentinel 복원
+}
+function resolveTextSlot(slot, input) {
+  // allowedTags 정의 시 {value, html} 반환, 미정의 시 {value} (기존)
+}
+
+// browser-side (FILL_RUNTIME)
+function fillTextSlot(slotEl, value) {
+  // value.html 박혀 있으면 innerHTML, 없으면 textContent
+}
+function isSlotEmpty(value) { /* value/html/text/items 4 필드 검사 */ }
+// data-empty-hide + isSlotEmpty 시 data-optional-wrapper 부모 또는 자기 자신 display:none
+```
+
+**5종 manifest 정정:**
+- typography/text slot에 `allowedTags: ["br","em","strong"]` 추가 (5종)
+- fallback "사장님이 박는..." 7건 → 깨끗한 더미 안내로 정정 (5종)
+
+**5종 template.html 정정:**
+- 정적 영역 wrapper에 `data-optional-wrapper` 추가
+- slot element에 `data-empty-hide` 추가 (사장님 미입력 시 영역 자동 숨김)
+- print_classic_v1 hero `data-bind="copy.headline"` 오기재 → `data-slot="hero_title"` 정정
+
+**5종 template.css 정정 (4종 set 의무):**
+```css
+.hero-title h2 {
+  font-size: clamp(MIN, VW, MAX);  /* 동적 사이즈 */
+  word-break: keep-all;              /* 한국어 어절 단위 줄바꿈 */
+  overflow-wrap: anywhere;           /* 긴 단어 강제 줄바꿈 */
+  line-height: 1.0;                  /* 줄간격 조정 */
+}
+```
+
+### 13-4. 검증
+
+- tsc 0 errors
+- test-render 5종 PDF 모드: page count 2 + PDF 597KB~2,279KB 정상
+- test-render PNG 모드 print_magazine_grid_v1: heroTitle "가정의달\n특가" → 자동 2줄 표시 정합 / 헤더 안 잘림 / 멤버 혜택/캘린더 영역 자동 숨김 / 상품 placeholder 표시
+
+### 13-5. How to apply
+
+1. 신규 print template 추가 시 typography/text slot에 `allowedTags: ["br","em","strong"]` 정의 의무
+2. fallback에 "사장님이 작성하는..." 같은 안내 텍스트 금지 — 깨끗한 더미 또는 공백 (사장님 미입력 시 인쇄 발주 시 그대로 노출 차단)
+3. 정적 영역(레시피/캘린더/인터뷰 등) → `data-slot` 전환 + `data-empty-hide` + 부모 wrapper `data-optional-wrapper` 의무
+4. 큰 폰트(>10mm) 텍스트 slot은 CSS 4종 set(clamp + word-break: keep-all + overflow-wrap: anywhere + line-height 1.0) 의무 — 한국어 자동 줄바꿈 보장
+5. 매장 사장님 입력 시 `\n` → `<br/>` 자동 변환 (resolveTextSlot의 sanitizeMarkup 처리). allowedTags 외 태그 entity escape
+
+### 13-6. 미해결 잠재 사고 (별 단계 fix)
+
+| # | 영역 | 우선순위 |
+|---|---|---|
+| 6 | 폰트 외부 CDN 의존 (Pretendard / Noto Serif KR / JetBrains Mono) — self-host 인프라 변경 | MED |
+| 7 | sRGB → CMYK 변환 미적용 (시장조사 가이드 PDF/X-1a 권장 비정합) | MED |
+| 9 | maxLength 정의 누락 슬롯 — 사장님 긴 입력 시 디자인 깨짐 가능 | MED |
+| 10 | minItems 미달 시 grid 빈 영역 — 사장님 데이터 부족 시 dummy 자동 채움 또는 빈 영역 처리 | MED |
+
 ## 11. 향후 누적될 영역
 
 - PHASE 0 트랙 A·B 진행 중 사고

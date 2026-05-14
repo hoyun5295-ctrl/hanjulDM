@@ -145,18 +145,59 @@ function toCardViewModel(p: RawProduct, index = 0) {
 // 슬롯 타입별 resolver
 // ============================================================
 
+/**
+ * ★ D162: 사장님 입력 마크업 sanitize
+ *   - \n → <br/> 변환 (사장님이 줄바꿈 직접 입력 가능)
+ *   - allowedTags 외 < > 문자는 entity escape (XSS 차단)
+ *   - allowedTags 내 태그(<br>, <em>, <strong> 등)는 보존
+ */
+function sanitizeMarkup(raw: string, allowedTags: string[]): string {
+  let s = String(raw);
+  // 1. \n → 임시 sentinel (entity escape 전 보존)
+  s = s.replace(/\r\n/g, '\n').replace(/\n/g, '\x00BR\x00');
+  // 2. 허용 태그를 임시 sentinel로 보존
+  const tagMap: Record<string, string> = {};
+  let tagIdx = 0;
+  for (const tag of allowedTags) {
+    const re = new RegExp('<(' + tag + ')\\s*/?>|<(' + tag + ')>([\\s\\S]*?)</' + tag + '>', 'gi');
+    s = s.replace(re, (m) => {
+      const key = '\x00T' + (tagIdx++) + '\x00';
+      tagMap[key] = m;
+      return key;
+    });
+  }
+  // 3. 남은 < > & escape
+  s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // 4. sentinel 복원
+  s = s.replace(/\x00BR\x00/g, '<br/>');
+  for (const [key, val] of Object.entries(tagMap)) {
+    s = s.split(key).join(val);
+  }
+  return s;
+}
+
 function resolveTextSlot(slot: SlotDefinition, input: RawFlyerInput): any {
   const ov = input.slotOverrides?.[slot.id];
-  if (ov && typeof ov === 'object' && typeof ov.value === 'string') return { value: ov.value };
-  if (typeof ov === 'string' && ov.length > 0) return { value: ov };
+  let raw: string | undefined;
+  if (ov && typeof ov === 'object' && typeof ov.value === 'string') raw = ov.value;
+  else if (typeof ov === 'string' && ov.length > 0) raw = ov;
+  else if (slot.id === 'hero_title' && input.heroTitle) raw = input.heroTitle;
+  else if (slot.id === 'hero_subcopy' && input.heroSubcopy) raw = input.heroSubcopy;
 
-  // id 매핑 예약어
-  if (slot.id === 'hero_title' && input.heroTitle) return { value: input.heroTitle };
-  if (slot.id === 'hero_subcopy' && input.heroSubcopy) return { value: input.heroSubcopy };
+  if (raw === undefined) {
+    // 입력 없음 = SLOT_DATA에 데이터 미포함 → FILL_RUNTIME continue → 자식 fallback HTML 보존
+    // (단 data-empty-hide 정의 시 FILL_RUNTIME가 영역 자동 숨김)
+    return undefined;
+  }
 
-  // 입력 없음 = SLOT_DATA에 박지 않음 → FILL_RUNTIME continue → 자식 fallback HTML 보존
-  // (typography/rich_text fallback에 박힌 <em>/<br>/<strong> 마크업 유지)
-  return undefined;
+  // ★ D162 사고 #2/#8 fix: typography/rich_text slot의 allowedTags 정의 시 마크업 처리
+  //   기존 fillTextSlot textContent 평문화 → 사장님 입력 \n 줄바꿈 사라짐 사고 영구 차단.
+  //   manifest의 allowedTags: ["br","em","strong"] 정의 시 활성화.
+  const allowedTags = (slot as any).allowedTags;
+  if (Array.isArray(allowedTags) && allowedTags.length > 0) {
+    return { value: raw, html: sanitizeMarkup(raw, allowedTags) };
+  }
+  return { value: raw };
 }
 
 function resolveSectionBanner(slot: SlotDefinition, input: RawFlyerInput): any {
@@ -440,8 +481,31 @@ export const FILL_RUNTIME = String.raw`
 
   function fillTextSlot(slotEl, value) {
     if (!value) return;
-    if (typeof value === 'string') slotEl.textContent = value;
-    else if (value.value != null) slotEl.textContent = String(value.value);
+    if (typeof value === 'string') {
+      slotEl.textContent = value;
+    } else if (typeof value === 'object') {
+      // ★ D162 사고 #2/#8 fix: sanitize된 html 박혀 있으면 innerHTML 사용 (마크업 보존)
+      //   resolveTextSlot에서 allowedTags 정의 시 value.html 박힘 → 사장님 \n 줄바꿈 + <em>/<strong> 보존
+      if (value.html != null) {
+        slotEl.innerHTML = String(value.html);
+      } else if (value.value != null) {
+        slotEl.textContent = String(value.value);
+      }
+    }
+  }
+
+  // ★ D162 사고 #4 fix: data-empty-hide 박혀 있으면 사장님 미입력 시 영역 자체 숨김
+  //   정적 영역(예: "다음 4주 행사 캘린더") → data-slot 전환 + 자동 숨김 패턴.
+  //   data-optional-wrapper 부모 정의 시 wrapper 자체 숨김 (영역 통째로 사라짐).
+  function isSlotEmpty(value) {
+    if (value === undefined || value === null) return true;
+    if (typeof value === 'string') return value === '';
+    if (typeof value !== 'object') return false;
+    var hasValue = value.value !== undefined && value.value !== '' && value.value !== null;
+    var hasHtml = value.html !== undefined && value.html !== '' && value.html !== null;
+    var hasText = value.text !== undefined && value.text !== '' && value.text !== null;
+    var hasItems = Array.isArray(value.items) && value.items.length > 0;
+    return !hasValue && !hasHtml && !hasText && !hasItems;
   }
 
   function fillSectionBanner(slotEl, value) {
@@ -507,12 +571,21 @@ export const FILL_RUNTIME = String.raw`
   }
 
   // 각 슬롯 ID별로 채우기 (v3 — D159 자동 감지. 클래스명 hard-coding 폐기.
-  // 옛 종(mart_*) 회귀 0 + 신규 종(print_*) 끌로드 원본 클래스명 그대로 박음 가능)
+  // 옛 종(mart_*) 회귀 0 + 신규 종(print_*) 끌로드 원본 클래스명 그대로 사용 가능)
   var slotEls = document.querySelectorAll('[data-slot]');
   for (var i = 0; i < slotEls.length; i++) {
     var el = slotEls[i];
     var id = el.getAttribute('data-slot');
     var value = data[id];
+
+    // ★ D162 사고 #4 fix: data-empty-hide 슬롯 — 사장님 미입력 시 영역 자동 숨김
+    //   data-optional-wrapper 부모 정의 시 wrapper 전체 숨김 (디자인 영역 통째로 사라짐).
+    if (el.hasAttribute('data-empty-hide') && isSlotEmpty(value)) {
+      var wrapper = el.closest('[data-optional-wrapper]');
+      (wrapper || el).style.display = 'none';
+      continue;
+    }
+
     if (value === undefined) continue;
 
     // 1) 그리드 — items 배열 + template[data-role="card"] 자식 존재

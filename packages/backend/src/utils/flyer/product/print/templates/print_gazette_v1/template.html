@@ -208,8 +208,8 @@
       </article>
     </section>
 
-    <!-- ═══ MD INTERVIEW ═══ -->
-    <section class="interview">
+    <!-- ═══ MD INTERVIEW (사장님 미입력 시 영역 자동 숨김) ═══ -->
+    <section class="interview" data-optional-wrapper>
       <div class="iv-photo">
         <div class="ph">[ MD 포트레이트 ]</div>
         <span class="caption">매장 MD · 매주 화요일 새벽 산지 직접 방문</span>
@@ -219,7 +219,7 @@
         <h2>
           "<em>한 가지</em>만 잘 골라도<br/>일주일이 달라진다."
         </h2>
-        <p class="quote" data-slot="md_interview">
+        <p class="quote" data-slot="md_interview" data-empty-hide>
           매주 화요일 새벽, 가락동 시장을 직접 갑니다. 좋은 산지를 만나면 그 자리에서 도장을 찍어요.
           이번 주는 <strong>충남 논산의 설향 딸기</strong>, 그리고 <strong>통영 한산도 생굴</strong>이 정말 좋았어요.
           식탁은 한 가지만 잘 골라도 그 주의 분위기가 바뀝니다. 이번 주는 그 한 가지로 <em>봄</em>을 권합니다.
@@ -230,12 +230,12 @@
 
     <!-- ═══ NEXT ISSUE PREVIEW ═══ -->
     <section class="next-strip">
-      <article class="next-card">
+      <article class="next-card" data-optional-wrapper>
         <span class="l">NEXT ISSUE · 다음 호 예고</span>
         <span class="date">VOL.027 · 다음 주 발행</span>
         <h3>다음 주 <em>특집호</em></h3>
-        <p class="body" data-slot="next_issue">
-          <strong>다음 주 행사 예고.</strong> 사장님이 박는 다음 주 시그니처 카피.
+        <p class="body" data-slot="next_issue" data-empty-hide>
+          <strong>다음 주 행사 예고.</strong> 다음 주 시그니처 카피 작성 영역.
         </p>
       </article>
       <article class="next-card">

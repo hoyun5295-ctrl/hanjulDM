@@ -312,12 +312,12 @@
       </div>
     </section>
 
-    <!-- ═══ MEMBERSHIP + CALENDAR ═══ -->
+    <!-- ═══ MEMBERSHIP + CALENDAR (사장님 미입력 시 영역 자동 숨김) ═══ -->
     <section class="info-row">
-      <article class="tier-card">
+      <article class="tier-card" data-optional-wrapper>
         <span class="l">MEMBERSHIP</span>
         <h3>매장 멤버 혜택</h3>
-        <div class="tier-table" data-slot="member_tier">
+        <div class="tier-table" data-slot="member_tier" data-empty-hide>
           <span class="t-name">BASIC</span>
           <span class="t-desc">앱 가입 즉시 자동 적용</span>
           <span class="t-pct">+3%</span>
@@ -332,12 +332,12 @@
         </div>
       </article>
 
-      <article class="cal-card">
+      <article class="cal-card" data-optional-wrapper>
         <div class="head">
           <h3>다음 4주 행사 캘린더</h3>
           <span class="l">UPCOMING · CALENDAR</span>
         </div>
-        <div class="cal-list" data-slot="calendar_grid">
+        <div class="cal-list" data-slot="calendar_grid" data-empty-hide>
           <div class="cal-row now">
             <span class="wk">THIS</span>
             <span class="date">05.14 — 05.20</span>

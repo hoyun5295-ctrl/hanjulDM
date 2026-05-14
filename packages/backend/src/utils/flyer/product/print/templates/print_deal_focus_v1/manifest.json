@@ -26,6 +26,7 @@
       "required": true,
       "editable": true,
       "maxLength": 40,
+      "allowedTags": ["br", "em", "strong"],
       "fallback": "딱 한 가지, <em>40%</em> 더 좋게.",
       "position": { "css": ".hero-headline" }
     },
@@ -87,7 +88,7 @@
       "required": false,
       "editable": true,
       "allowedTags": ["br", "strong", "em"],
-      "fallback": "사장님이 직접 박는 4 STEPS 레시피. (요리·보관 팁·페어링 가이드 등 자유 박음)",
+      "fallback": "이 상품 100% 활용 4단계 가이드 — 매장 사장님이 직접 작성하는 레시피·보관·페어링 영역.",
       "position": { "css": ".recipe" }
     },
     {
@@ -125,7 +126,7 @@
       "required": false,
       "editable": true,
       "allowedTags": ["br", "strong"],
-      "fallback": "<strong>다음 주 행사 예고</strong> · 사장님이 직접 박는 한 줄 카피.",
+      "fallback": "<strong>다음 주 행사 예고</strong> — 매장 사장님이 직접 작성하는 한 줄 카피.",
       "position": { "css": ".next-week .body" }
     },
     {

@@ -26,6 +26,7 @@
       "required": true,
       "editable": true,
       "maxLength": 30,
+      "allowedTags": ["br", "em", "strong"],
       "fallback": "식탁에 <em>봄</em>이<br/>다시 들어왔다.",
       "position": { "css": ".hs-lead h2" }
     },
@@ -211,7 +212,7 @@
       "required": false,
       "editable": true,
       "allowedTags": ["br", "strong", "em"],
-      "fallback": "사장님이 직접 박는 매장 MD 인터뷰. 매장 시그니처 + 이번 주 추천 + 산지 이야기 자유 박음.",
+      "fallback": "매장 MD 인터뷰 — 시그니처 메뉴·이번 주 추천·산지 이야기 자유 작성 영역.",
       "position": { "css": ".iv-body .quote" }
     },
     {
@@ -220,7 +221,7 @@
       "required": false,
       "editable": true,
       "allowedTags": ["br", "strong", "em"],
-      "fallback": "<strong>다음 호 예고.</strong> 사장님이 박는 다음 주 행사 한 줄 카피.",
+      "fallback": "<strong>다음 호 예고</strong> — 다음 주 행사 한 줄 카피 작성 영역.",
       "position": { "css": ".next-card .body" }
     },
 

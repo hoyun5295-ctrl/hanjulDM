@@ -144,10 +144,12 @@ html, body {
 .hero-headline {
   grid-column: 1 / -1;
   margin: 0 0 5mm;
-  font-size: 18mm;
+  font-size: clamp(10mm, 3.6vw, 18mm);
   font-weight: 900;
   letter-spacing: -0.055em;
-  line-height: 0.88;
+  line-height: 1.0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .hero-headline em {
   font-family: var(--f-ser);

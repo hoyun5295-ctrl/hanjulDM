@@ -358,10 +358,12 @@ html, body {
 }
 .tile.type-banner h2 {
   margin: 2mm 0 0;
-  font-size: 18mm;
+  font-size: clamp(10mm, 3.6vw, 18mm);
   font-weight: 900;
   letter-spacing: -0.05em;
-  line-height: 0.92;
+  line-height: 1.0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .tile.type-banner h2 em {
   font-family: var(--f-ser);
@@ -397,10 +399,12 @@ html, body {
 }
 .tile.banner h2 {
   margin: 1.6mm 0 0;
-  font-size: 11mm;
+  font-size: clamp(7mm, 2.2vw, 11mm);
   font-weight: 900;
   letter-spacing: -0.045em;
-  line-height: 0.95;
+  line-height: 1.0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .tile.banner h2 em {
   font-family: var(--f-ser);

@@ -160,10 +160,12 @@ html, body {
 }
 .hero-title h2 {
   margin: 4.7mm 0 3mm;
-  font-size: 22mm;
+  font-size: clamp(11mm, 4.2vw, 22mm);
   font-weight: 900;
   letter-spacing: -0.05em;
-  line-height: 0.92;
+  line-height: 1.0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .hero-title h2 em {
   font-family: var(--f-ser);

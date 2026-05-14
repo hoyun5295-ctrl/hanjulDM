@@ -26,6 +26,7 @@
       "required": true,
       "editable": true,
       "maxLength": 30,
+      "allowedTags": ["br", "em", "strong"],
       "fallback": "식탁에 다가온<br/><em>봄</em>, 오롯이.",
       "position": { "css": ".hero-title h2" }
     },
@@ -35,6 +36,7 @@
       "required": false,
       "editable": true,
       "maxLength": 80,
+      "allowedTags": ["br", "strong"],
       "fallback": "제철 식재료부터 주말 장보기 필수템까지 — 30종을 한 페이지에.",
       "position": { "css": ".hero-title .sub" }
     },
@@ -279,7 +281,7 @@
       "required": false,
       "editable": true,
       "allowedTags": ["br", "strong"],
-      "fallback": "사장님이 박는 멤버십 등급 (BASIC / PLUS / VIP).",
+      "fallback": "BASIC +3% · PLUS +5% · VIP +8% · 매장 회원 등급별 자동 적용.",
       "position": { "css": ".tier-card .tier-table" }
     },
     {
@@ -288,7 +290,7 @@
       "required": false,
       "editable": true,
       "allowedTags": ["br", "strong"],
-      "fallback": "사장님이 박는 다음 4주 행사 캘린더 미리보기.",
+      "fallback": "이번 주 행사 + 다음 3주 예고 — 매장 사장님이 직접 입력하는 캘린더 영역.",
       "position": { "css": ".cal-list" }
     },
 

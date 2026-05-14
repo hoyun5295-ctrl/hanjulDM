@@ -109,8 +109,8 @@
       <span class="page">PAGE 2 / 2</span>
     </header>
 
-    <!-- ═══ RECIPE ═══ -->
-    <section class="recipe" data-slot="recipe_steps">
+    <!-- ═══ RECIPE (사장님 미입력 시 영역 자동 숨김) ═══ -->
+    <section class="recipe" data-slot="recipe_steps" data-empty-hide>
       <div class="head">
         <div class="left">
           <span class="eyebrow">HOW TO COOK</span>
@@ -184,16 +184,16 @@
       </article>
 
       <div class="info-stack">
-        <article class="member-card">
+        <article class="member-card" data-optional-wrapper>
           <span class="l">MEMBERSHIP</span>
           <h4>매장 멤버 혜택</h4>
-          <p class="body" data-slot="member_card">
+          <p class="body" data-slot="member_card" data-empty-hide>
             전 품목 추가 <strong>5% 할인</strong> · 한우/수산 신선 주말 <strong>10%</strong> · 가입 즉시 <strong>3,000원 쿠폰</strong> 지급.
           </p>
         </article>
-        <article class="next-week">
+        <article class="next-week" data-optional-wrapper>
           <span class="l">NEXT WEEK · 다음 주 예고</span>
-          <p class="body" data-slot="next_issue">
+          <p class="body" data-slot="next_issue" data-empty-hide>
             <strong>다음 주 행사 예고</strong> · 사장님이 직접 박는 한 줄 카피.
           </p>
         </article>

@@ -26,8 +26,9 @@
       "required": true,
       "editable": true,
       "maxLength": 30,
+      "allowedTags": ["br", "em", "strong"],
       "fallback": "식탁에 다가온 <em>봄</em>.",
-      "position": { "css": ".hero-title h2[data-bind=\"copy.headline\"]" }
+      "position": { "css": ".hero-title h2" }
     },
     {
       "id": "hero_subline",
@@ -35,8 +36,9 @@
       "required": false,
       "editable": true,
       "maxLength": 60,
+      "allowedTags": ["br", "strong"],
       "fallback": "제철 식재료 22종 · 전 품목 회원가",
-      "position": { "css": ".hero-title .sub[data-bind=\"copy.subline\"]" }
+      "position": { "css": ".hero-title .sub" }
     },
 
     {

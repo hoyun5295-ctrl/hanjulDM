@@ -27,6 +27,7 @@
       "required": true,
       "editable": true,
       "maxLength": 30,
+      "allowedTags": ["br", "em", "strong"],
       "fallback": "식탁에<br/>다가온 <em>봄</em>.",
       "position": { "css": ".tile.type-banner h2" }
     },
@@ -187,6 +188,7 @@
       "required": false,
       "editable": true,
       "maxLength": 30,
+      "allowedTags": ["br", "em", "strong"],
       "fallback": "봄 정육<br/><em>특집</em>.",
       "position": { "css": ".tile.banner h2" }
     },
@@ -247,7 +249,7 @@
       "required": false,
       "editable": true,
       "allowedTags": ["br", "strong"],
-      "fallback": "사장님이 박는 매장 운영 안내. 영업시간 + 주차 + 배송 정보 자유 박음.",
+      "fallback": "매장 운영 안내 — 영업시간·주차·배송 정보 자유 작성 영역.",
       "position": { "css": ".tile.g" }
     },
     {

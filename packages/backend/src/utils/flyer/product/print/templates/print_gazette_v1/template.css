@@ -171,9 +171,11 @@ html, body {
   margin: 0;
   font-family: var(--f-ser);
   font-weight: 900;
-  font-size: 16mm;
+  font-size: clamp(10mm, 3.4vw, 16mm);
   letter-spacing: -0.04em;
-  line-height: 0.98;
+  line-height: 1.05;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .hs-lead h2 em {
   font-style: italic;
