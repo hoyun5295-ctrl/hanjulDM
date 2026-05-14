@@ -6,7 +6,8 @@
   <style>{{INLINE_CSS}}</style>
 </head>
 <body>
-  <article class="print-canvas page-front" data-template="print_deal_focus" data-paper="B4" data-page="1">
+  <section class="page-front">
+    <article class="print-canvas" data-template="print_deal_focus" data-paper="B4" data-page="1">
 
     <!-- ═══ HEADER (얇은 스트립) ═══ -->
     <header class="ph-header" data-slot="masthead">
@@ -91,9 +92,11 @@
       <div class="qr" data-slot="footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
     </footer>
 
-  </article>
+    </article>
+  </section>
 
-  <article class="print-canvas page-back" data-template="print_deal_focus" data-paper="B4" data-page="2">
+  <section class="page-back">
+    <article class="print-canvas" data-template="print_deal_focus" data-paper="B4" data-page="2">
 
     <!-- ═══ MINI HEADER ═══ -->
     <header class="pb-mini" data-slot="pb_mini_header">
@@ -208,6 +211,7 @@
       </div>
     </footer>
 
-  </article>
+    </article>
+  </section>
 </body>
 </html>

@@ -6,7 +6,8 @@
   <style>{{INLINE_CSS}}</style>
 </head>
 <body>
-  <article class="pc page-front" data-template="print_bento" data-paper="B4" data-page="1">
+  <section class="page-front">
+    <article class="pc" data-template="print_bento" data-paper="B4" data-page="1">
 
     <!-- ═══ HEADER ═══ -->
     <header class="head" data-slot="masthead">
@@ -192,9 +193,11 @@
       <div class="qr" data-slot="footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
     </footer>
 
-  </article>
+    </article>
+  </section>
 
-  <article class="pc page-back" data-template="print_bento" data-paper="B4" data-page="2">
+  <section class="page-back">
+    <article class="pc" data-template="print_bento" data-paper="B4" data-page="2">
 
     <!-- ═══ MINI HEADER ═══ -->
     <header class="head" data-slot="pb_header">
@@ -359,6 +362,7 @@
       <div class="qr" data-slot="back_footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
     </footer>
 
-  </article>
+    </article>
+  </section>
 </body>
 </html>

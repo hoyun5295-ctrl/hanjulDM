@@ -6,7 +6,8 @@
   <style>{{INLINE_CSS}}</style>
 </head>
 <body>
-  <article class="pc page-front" data-template="print_gazette" data-paper="B3" data-page="1">
+  <section class="page-front">
+    <article class="pc" data-template="print_gazette" data-paper="B3" data-page="1">
 
     <!-- ═══ MASTHEAD (신문 제호) ═══ -->
     <header class="mast" data-slot="masthead">
@@ -130,9 +131,11 @@
       <div class="qr" data-slot="footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
     </footer>
 
-  </article>
+    </article>
+  </section>
 
-  <article class="pc page-back" data-template="print_gazette" data-paper="B3" data-page="2">
+  <section class="page-back">
+    <article class="pc" data-template="print_gazette" data-paper="B3" data-page="2">
 
     <!-- ═══ MINI MASTHEAD ═══ -->
     <header class="mast-mini" data-slot="pb_mast_mini">
@@ -258,6 +261,7 @@
       <div class="qr" data-slot="back_footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
     </footer>
 
-  </article>
+    </article>
+  </section>
 </body>
 </html>
