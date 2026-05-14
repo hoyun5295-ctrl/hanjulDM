@@ -30,6 +30,7 @@ export type PaperSizeKey =
   | 'j8'         // 8절
   | 'j16'        // 16절
   | 'A3'
+  | 'B3'         // ★ D159 신규 — 대형 마트 타블로이드 (PRINT_MAGAZINE_GRID / PRINT_GAZETTE)
   | 'B4'
   | 'A4'
   | 'tabloid';
@@ -111,6 +112,15 @@ export const PAPER_SIZES: Record<PaperSizeKey, PaperSize> = {
     widthMm: 297,
     heightMm: 420,
     category: 'international',
+  },
+  B3: {
+    key: 'B3',
+    label: 'B3',
+    labelKo: 'B3 (한국 인쇄 실무)',
+    widthMm: 374,
+    heightMm: 524,
+    category: 'international',
+    note: '★ D159 신규 — 대형 마트 타블로이드 (PRINT_MAGAZINE_GRID/PRINT_GAZETTE 전용)',
   },
   B4: {
     key: 'B4',

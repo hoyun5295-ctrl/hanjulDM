@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>PRINT_BENTO · B4 모자이크</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root {
+    --c-ink: #1A1A1A;
+    --c-paper: #FAFAFA;
+    --c-mute: #6B7280;
+    --c-rule: #E5E2DD;
+    --c-accent: #E63946;
+    --c-mustard: #D4A93B;
+    --c-cream: #F2EBD8;
+    --c-dark: #1A1A1A;
+
+    --f-dis: 'Pretendard Variable', sans-serif;
+    --f-ser: 'Noto Serif KR', serif;
+    --f-mon: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  html, body { margin: 0; background: #E5E2DD; color: var(--c-ink); font-family: var(--f-dis); -webkit-font-smoothing: antialiased; display: flex; justify-content: center; padding: 40px 20px; }
+
+  .pc {
+    width: 660px; height: 945px;
+    background: var(--c-paper);
+    box-sizing: border-box;
+    padding: 22px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.14);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+    overflow: hidden;
+  }
+
+  /* ═══ HEADER ═══ */
+  .head {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--c-ink);
+  }
+  .head .mark {
+    width: 32px; height: 32px;
+    background: var(--c-ink);
+    color: var(--c-paper);
+    display: grid; place-items: center;
+    font-family: var(--f-ser);
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: -0.04em;
+  }
+  .head h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+  .head h1 .br { font-weight: 500; color: var(--c-mute); font-size: 11px; margin-left: 6px; }
+  .head .vol {
+    font-family: var(--f-mon);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--c-mute);
+    text-align: right;
+    line-height: 1.4;
+  }
+  .head .vol strong { display: block; color: var(--c-ink); font-weight: 500; font-size: 11px; }
+  .head .pill {
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: var(--c-paper);
+    background: var(--c-accent);
+    padding: 4px 8px 3px;
+  }
+
+  /* ═══ BENTO MOSAIC ═══ */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 8px;
+    grid-template-areas:
+      "H H H T T T"
+      "H H H T T T"
+      "H H H s1 s2 s3"
+      "B B C C D D"
+      "B B C C D D"
+      "E E E F F G"
+      "E E E F F G"
+      "I I J J K K"
+      "I I J J K K";
+    min-height: 0;
+  }
+
+  .tile {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* image tile baseline */
+  .tile.img {
+    background: var(--c-cream);
+  }
+  .tile.img .ph {
+    flex: 1;
+    background-image: repeating-linear-gradient(135deg, #E4DCC0 0, #E4DCC0 8px, #ECE4CC 8px, #ECE4CC 16px);
+    display: grid; place-items: center;
+    font-family: var(--f-mon);
+    font-size: 9px;
+    color: #8B7E66;
+    letter-spacing: 0.05em;
+    text-align: center;
+    padding: 6px;
+  }
+  .tile.img .cap {
+    padding: 8px 10px 10px;
+    background: var(--c-paper);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tile.img .cap .name {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile.img .cap .unit {
+    font-family: var(--f-mon);
+    font-size: 8px;
+    color: var(--c-mute);
+    letter-spacing: 0.05em;
+  }
+  .tile.img .cap .price {
+    font-family: var(--f-dis);
+    font-weight: 900;
+    font-size: 17px;
+    letter-spacing: -0.04em;
+    color: var(--c-accent);
+    margin-top: 2px;
+    line-height: 0.9;
+  }
+  .tile.img .cap .price .won { font-size: 9px; font-weight: 600; color: var(--c-ink); margin-left: 1px; }
+  .tile.img .cap .orig { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); text-decoration: line-through; margin-right: 4px; }
+
+  .tile .badge {
+    position: absolute;
+    top: 6px; left: 6px;
+    background: var(--c-ink);
+    color: var(--c-paper);
+    font-family: var(--f-mon);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    padding: 2px 5px 1px;
+    z-index: 2;
+  }
+  .tile .badge.r { background: var(--c-accent); }
+  .tile .badge.m { background: var(--c-mustard); color: var(--c-ink); }
+
+  /* HERO — overlay style (no border, image full bleed, price overlay) */
+  .tile.hero {
+    grid-area: H;
+    background: var(--c-cream);
+    display: grid;
+  }
+  .tile.hero .ph {
+    background-image: repeating-linear-gradient(135deg, #E0D5B5 0, #E0D5B5 10px, #E8DEC0 10px, #E8DEC0 20px);
+    grid-area: 1 / 1;
+    display: grid; place-items: center;
+    font-family: var(--f-mon);
+    font-size: 10px;
+    color: #8B7E66;
+    letter-spacing: 0.08em;
+  }
+  .tile.hero .overlay {
+    grid-area: 1 / 1;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: var(--c-ink);
+  }
+  .tile.hero .overlay .top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .tile.hero .overlay .num {
+    font-family: var(--f-mon);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .tile.hero .overlay .stamp {
+    background: var(--c-ink);
+    color: var(--c-paper);
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    padding: 4px 8px 3px;
+  }
+  .tile.hero .overlay .bot {
+    background: var(--c-paper);
+    padding: 12px 14px;
+    margin: 0 -14px -12px;
+  }
+  .tile.hero .overlay .bot .cat {
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--c-mute);
+  }
+  .tile.hero .overlay .bot .name {
+    margin: 4px 0 6px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+  .tile.hero .overlay .bot .price-row {
+    display: flex; align-items: baseline; gap: 8px;
+    border-top: 1px solid var(--c-rule);
+    padding-top: 6px;
+  }
+  .tile.hero .overlay .bot .orig {
+    font-family: var(--f-mon); font-size: 11px;
+    color: var(--c-mute); text-decoration: line-through;
+  }
+  .tile.hero .overlay .bot .price {
+    font-family: var(--f-dis);
+    font-weight: 900;
+    font-size: 36px;
+    letter-spacing: -0.045em;
+    color: var(--c-accent);
+    line-height: 0.9;
+  }
+  .tile.hero .overlay .bot .price .won {
+    font-size: 13px; font-weight: 700; color: var(--c-ink); margin-left: 2px;
+  }
+  .tile.hero .overlay .bot .unit {
+    font-family: var(--f-mon); font-size: 9px;
+    color: var(--c-mute); margin-left: auto; letter-spacing: 0.06em;
+  }
+
+  /* TYPE BANNER T — big type, accent BG, no image */
+  .tile.type-banner {
+    grid-area: T;
+    background: var(--c-mustard);
+    color: var(--c-ink);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .tile.type-banner .eb {
+    font-family: var(--f-mon);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--c-ink);
+    opacity: 0.7;
+  }
+  .tile.type-banner h2 {
+    margin: 8px 0 0;
+    font-size: 44px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 0.92;
+  }
+  .tile.type-banner h2 em {
+    font-family: var(--f-ser);
+    font-style: italic;
+    font-weight: 700;
+  }
+  .tile.type-banner .footer-line {
+    border-top: 1px solid rgba(26,26,26,0.18);
+    padding-top: 8px;
+    display: flex; justify-content: space-between;
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  /* SMALL TILES s1 s2 s3 — square mini-products */
+  .tile.s1 { grid-area: s1; }
+  .tile.s2 { grid-area: s2; }
+  .tile.s3 { grid-area: s3; }
+  .tile.small {
+    background: var(--c-paper);
+    border: 1px solid var(--c-rule);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tile.small .ph {
+    flex: 1;
+    background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 4px, #F4F2EE 4px, #F4F2EE 8px);
+    display: grid; place-items: center;
+    font-family: var(--f-mon);
+    font-size: 7px;
+    color: #948F86;
+    text-align: center;
+    padding: 2px;
+  }
+  .tile.small .name {
+    margin: 0;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile.small .price {
+    font-family: var(--f-dis);
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: -0.03em;
+    color: var(--c-accent);
+    line-height: 0.9;
+  }
+  .tile.small .price .won { font-size: 8px; font-weight: 600; color: var(--c-ink); margin-left: 1px; }
+
+  /* MED TILES B C D, E (wide), F, G (quote vertical), I J K */
+  .tile.b { grid-area: B; }
+  .tile.c { grid-area: C; }
+  .tile.d { grid-area: D; }
+  .tile.e { grid-area: E; }
+  .tile.f { grid-area: F; }
+  .tile.g { grid-area: G; }
+  .tile.i { grid-area: I; }
+  .tile.j { grid-area: J; }
+  .tile.k { grid-area: K; }
+
+  /* G — vertical type/quote tile, dark BG */
+  .tile.type-vert {
+    background: var(--c-dark);
+    color: var(--c-paper);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .tile.type-vert .l {
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: rgba(250,250,250,0.55);
+  }
+  .tile.type-vert .quote {
+    font-family: var(--f-ser);
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+    margin: 8px 0;
+    letter-spacing: -0.01em;
+  }
+  .tile.type-vert .quote em {
+    font-style: italic;
+    color: var(--c-mustard);
+  }
+  .tile.type-vert .sig {
+    font-family: var(--f-mon);
+    font-size: 8px;
+    color: rgba(250,250,250,0.55);
+    letter-spacing: 0.14em;
+  }
+
+  /* E — wide hero-2 with horizontal layout */
+  .tile.wide-img {
+    background: var(--c-paper);
+    border: 1px solid var(--c-rule);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .tile.wide-img .ph {
+    background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 8px, #F4F2EE 8px, #F4F2EE 16px);
+    display: grid; place-items: center;
+    font-family: var(--f-mon);
+    font-size: 9px;
+    color: #948F86;
+    letter-spacing: 0.05em;
+    text-align: center;
+    padding: 4px;
+  }
+  .tile.wide-img .info {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .tile.wide-img .info .cat {
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--c-mute);
+  }
+  .tile.wide-img .info .name {
+    margin: 4px 0 0;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  .tile.wide-img .info .unit {
+    font-family: var(--f-mon);
+    font-size: 8px;
+    color: var(--c-mute);
+    margin-top: 2px;
+  }
+  .tile.wide-img .info .price-row {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-top: auto;
+    border-top: 1px solid var(--c-rule);
+    padding-top: 6px;
+  }
+  .tile.wide-img .info .orig { font-family: var(--f-mon); font-size: 9px; color: var(--c-mute); text-decoration: line-through; }
+  .tile.wide-img .info .price {
+    font-family: var(--f-dis);
+    font-weight: 900;
+    font-size: 24px;
+    letter-spacing: -0.04em;
+    color: var(--c-accent);
+    line-height: 0.9;
+  }
+  .tile.wide-img .info .price .won { font-size: 11px; font-weight: 600; color: var(--c-ink); margin-left: 1px; }
+
+  /* ═══ FOOTER ═══ */
+  .foot {
+    border-top: 1px solid var(--c-ink);
+    padding-top: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 16px;
+    align-items: end;
+  }
+  .foot .col {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 10px;
+    font-size: 10px;
+    line-height: 1.45;
+  }
+  .foot .col .l {
+    font-family: var(--f-mon);
+    font-size: 8px;
+    color: var(--c-mute);
+    letter-spacing: 0.12em;
+  }
+  .foot .notice {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+    font-size: 8px;
+    color: var(--c-mute);
+    line-height: 1.5;
+  }
+  .foot .qr {
+    width: 60px; height: 60px;
+    border: 1px solid var(--c-ink);
+    background: repeating-conic-gradient(var(--c-ink) 0% 25%, transparent 0% 50%) 0 0/10px 10px, var(--c-paper);
+    position: relative;
+  }
+  .foot .qr::after { content: "QR"; position: absolute; inset: 20px; background: var(--c-paper); display: grid; place-items: center; font-family: var(--f-mon); font-size: 7px; color: var(--c-ink); letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+<article class="pc" data-template="print_bento" data-paper="B4">
+
+  <!-- HEADER -->
+  <header class="head">
+    <div class="mark" data-slot="store.logo">P</div>
+    <h1 data-slot="store.name">파인마트<span class="br" data-slot="store.branch">/ 합정점</span></h1>
+    <span class="pill">WEEKLY BENTO</span>
+    <div class="vol"><span>ISSUE 026</span><strong data-slot="store.period">26.05.14 — 05.20</strong></div>
+  </header>
+
+  <!-- BENTO MOSAIC -->
+  <section class="bento">
+
+    <!-- H · HERO (3×3) with image bleed + bottom card -->
+    <article class="tile hero" data-slot-group="product[0]">
+      <div class="ph" data-slot="product[0].image">[ HERO · 1등급 한우 등심 ]</div>
+      <div class="overlay">
+        <div class="top">
+          <span class="num">№ 01 / WEEK'S BEST</span>
+          <span class="stamp" data-slot="product[0].badge">BEST</span>
+        </div>
+        <div class="bot">
+          <span class="cat" data-slot="product[0].category">MEAT · 정육</span>
+          <h3 class="name" data-slot="product[0].name">1등급 한우 등심</h3>
+          <div class="price-row">
+            <span class="orig" data-slot="product[0].original">29,800</span>
+            <span class="price"><span data-slot="product[0].price">17,900</span><span class="won">원</span></span>
+            <span class="unit" data-slot="product[0].unit">/ 100g</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- T · TYPE BANNER (3×2) — mustard BG, no image -->
+    <article class="tile type-banner">
+      <span class="eb">● HEADLINE · WEEK 20</span>
+      <h2 data-slot="copy.headline">
+        식탁에<br/>다가온 <em>봄</em>.
+      </h2>
+      <div class="footer-line">
+        <span>30 ITEMS</span><span>05.14 — 05.20</span>
+      </div>
+    </article>
+
+    <!-- s1, s2, s3 — small product tiles -->
+    <article class="tile s1 small" data-slot-group="product[1]">
+      <div class="ph" data-slot="product[1].image">[ 양상추 ]</div>
+      <h5 class="name" data-slot="product[1].name">친환경 양상추</h5>
+      <span class="price"><span data-slot="product[1].price">990</span><span class="won">원</span></span>
+    </article>
+    <article class="tile s2 small" data-slot-group="product[2]">
+      <div class="ph" data-slot="product[2].image">[ 새송이 ]</div>
+      <h5 class="name" data-slot="product[2].name">새송이버섯</h5>
+      <span class="price"><span data-slot="product[2].price">1,980</span><span class="won">원</span></span>
+    </article>
+    <article class="tile s3 small" data-slot-group="product[3]">
+      <div class="ph" data-slot="product[3].image">[ 깐 양파 ]</div>
+      <h5 class="name" data-slot="product[3].name">깐 양파 2kg</h5>
+      <span class="price"><span data-slot="product[3].price">3,990</span><span class="won">원</span></span>
+    </article>
+
+    <!-- B (2×2) · medium image tile -->
+    <article class="tile b img" data-slot-group="product[4]">
+      <span class="badge" data-slot="product[4].badge">FRESH</span>
+      <div class="ph" data-slot="product[4].image">[ 노르웨이 연어회 ]</div>
+      <div class="cap">
+        <h4 class="name" data-slot="product[4].name">노르웨이 연어회</h4>
+        <span class="unit" data-slot="product[4].unit">300g · 냉장</span>
+        <span class="price"><span class="orig" data-slot="product[4].original">18,900</span><span data-slot="product[4].price">12,900</span><span class="won">원</span></span>
+      </div>
+    </article>
+
+    <!-- C (2×2) · medium image tile -->
+    <article class="tile c img" data-slot-group="product[5]">
+      <span class="badge m">SEASON</span>
+      <div class="ph" data-slot="product[5].image">[ 설향 딸기 ]</div>
+      <div class="cap">
+        <h4 class="name" data-slot="product[5].name">설향 딸기 1kg</h4>
+        <span class="unit" data-slot="product[5].unit">충남 논산</span>
+        <span class="price"><span class="orig">8,900</span><span data-slot="product[5].price">5,900</span><span class="won">원</span></span>
+      </div>
+    </article>
+
+    <!-- D (2×2) · medium image tile -->
+    <article class="tile d img" data-slot-group="product[6]">
+      <span class="badge r" data-slot="product[6].badge">30%</span>
+      <div class="ph" data-slot="product[6].image">[ 흑돼지 삼겹 ]</div>
+      <div class="cap">
+        <h4 class="name" data-slot="product[6].name">제주 흑돼지 삼겹</h4>
+        <span class="unit" data-slot="product[6].unit">100g</span>
+        <span class="price"><span class="orig">4,980</span><span data-slot="product[6].price">3,480</span><span class="won">원</span></span>
+      </div>
+    </article>
+
+    <!-- E (3×2) · wide split image+info -->
+    <article class="tile e wide-img" data-slot-group="product[7]">
+      <div class="ph" data-slot="product[7].image">[ 정갈한쌀 10kg · 국내산 햅쌀 ]</div>
+      <div class="info">
+        <div>
+          <span class="cat" data-slot="product[7].category">GROCERY · 양곡</span>
+          <h4 class="name" data-slot="product[7].name">정갈한쌀 10kg</h4>
+          <span class="unit" data-slot="product[7].unit">국내산 23년 햅쌀 · 1포</span>
+        </div>
+        <div class="price-row">
+          <span class="orig" data-slot="product[7].original">26,900</span>
+          <span class="price"><span data-slot="product[7].price">21,900</span><span class="won">원</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- F (2×2) · medium image tile -->
+    <article class="tile f img" data-slot-group="product[8]">
+      <div class="ph" data-slot="product[8].image">[ 남해 생굴 ]</div>
+      <div class="cap">
+        <h4 class="name" data-slot="product[8].name">남해 생굴 400g</h4>
+        <span class="unit" data-slot="product[8].unit">통영 한산도</span>
+        <span class="price"><span data-slot="product[8].price">9,030</span><span class="won">원</span></span>
+      </div>
+    </article>
+
+    <!-- G (1×2) · vertical quote/type tile, dark -->
+    <article class="tile g type-vert">
+      <span class="l">FROM THE MD</span>
+      <p class="quote">
+        봄에 가장 맛있는 건, 결국 가장 <em>가까운</em> 곳에서 온 것.
+      </p>
+      <span class="sig">— EDITOR'S NOTE</span>
+    </article>
+
+    <!-- I (2×2) · medium image tile -->
+    <article class="tile i img" data-slot-group="product[9]">
+      <span class="badge r" data-slot="product[9].badge">1+1</span>
+      <div class="ph" data-slot="product[9].image">[ 그릭 요거트 ]</div>
+      <div class="cap">
+        <h4 class="name" data-slot="product[9].name">그릭 요거트 플레인</h4>
+        <span class="unit" data-slot="product[9].unit">450g</span>
+        <span class="price"><span data-slot="product[9].price">4,980</span><span class="won">원</span></span>
+      </div>
+    </article>
+
+    <!-- J (2×2) · medium image tile -->
+    <article class="tile j img" data-slot-group="product[10]">
+      <div class="ph" data-slot="product[10].image">[ 손질 오징어 ]</div>
+      <div class="cap">
+        <h4 class="name" data-slot="product[10].name">손질 오징어 2미</h4>
+        <span class="unit" data-slot="product[10].unit">동해</span>
+        <span class="price"><span data-slot="product[10].price">6,980</span><span class="won">원</span></span>
+      </div>
+    </article>
+
+    <!-- K (2×2) · medium image tile -->
+    <article class="tile k img" data-slot-group="product[11]">
+      <span class="badge" data-slot="product[11].badge">PB</span>
+      <div class="ph" data-slot="product[11].image">[ 매일 우유 ]</div>
+      <div class="cap">
+        <h4 class="name" data-slot="product[11].name">매일 우유 2.3L</h4>
+        <span class="unit" data-slot="product[11].unit">900ml × 2</span>
+        <span class="price"><span data-slot="product[11].price">6,490</span><span class="won">원</span></span>
+      </div>
+    </article>
+
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="foot">
+    <div class="col">
+      <span class="l">ADDR</span><span data-slot="store.address">서울 마포구 양화로 45, 1F</span>
+      <span class="l">TEL</span><span data-slot="store.phone">02-336-2580</span>
+    </div>
+    <div class="col">
+      <span class="l">HOURS</span><span>매일 09:00 – 23:00</span>
+      <span class="l">MEMBER</span><span data-slot="footer.member">파인패스 추가 5%</span>
+      <span class="notice" data-slot="footer.notice">* 한정 수량 · 1인 2팩까지. 표기 가격은 회원가 기준, 산지 시세에 따라 변동될 수 있습니다.</span>
+    </div>
+    <div class="qr" data-slot="store.qrcode" aria-label="store QR"></div>
+  </footer>
+
+</article>
+</body>
+</html>

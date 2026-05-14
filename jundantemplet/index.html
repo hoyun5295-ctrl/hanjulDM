@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>인쇄전단 템플릿 5종 × 양면 · 리디자인</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  body { font-family: 'Pretendard Variable', sans-serif; }
+  .tpl-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #E8E5DF;
+    display: block;
+  }
+  .open-link {
+    position: absolute;
+    top: 10px; right: 10px;
+    z-index: 10;
+    background: #1A1A1A;
+    color: #F4F1EA;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 6px 10px;
+    text-decoration: none;
+    border-radius: 2px;
+    opacity: 0.85;
+  }
+  .open-link:hover { opacity: 1; }
+
+  /* Intro card styling */
+  .intro {
+    box-sizing: border-box;
+    padding: 60px 56px;
+    background: #FAF8F4;
+    color: #1A1A1A;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 24px;
+    font-family: 'Pretendard Variable', sans-serif;
+    height: 100%;
+  }
+  .intro .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: #6B7280;
+  }
+  .intro h1 {
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.98;
+    margin: 4px 0 0;
+  }
+  .intro h1 em {
+    font-family: 'Noto Serif KR', serif;
+    font-style: normal;
+    font-weight: 900;
+    color: #E63946;
+  }
+  .intro .lede {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #1A1A1A;
+    max-width: 540px;
+    margin-top: 4px;
+  }
+  .intro .lede strong { font-weight: 700; }
+  .intro .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .intro .card {
+    border-top: 2px solid #1A1A1A;
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .intro .card .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #E63946;
+    letter-spacing: 0.1em;
+  }
+  .intro .card h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .intro .card .paper {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: #6B7280;
+  }
+  .intro .card p {
+    font-size: 12px;
+    color: #1A1A1A;
+    line-height: 1.55;
+    margin: 6px 0 0;
+  }
+  .intro .system {
+    border-top: 1px solid #D9D7D2;
+    padding-top: 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 14px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .intro .system .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: #6B7280;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .intro .swatches {
+    display: flex;
+    gap: 4px;
+    margin-top: 2px;
+  }
+  .intro .swatches span {
+    width: 18px; height: 18px;
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+</style>
+</head>
+<body>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+
+  <script type="text/babel">
+    const { DesignCanvas, DCSection, DCArtboard } = window;
+
+    function App() {
+      return (
+        <DesignCanvas title="인쇄전단 템플릿 5종 × 양면 — 모던 리디자인" subtitle="5 templates × (Front + Back) = 10 artboards / 양면 인쇄 100% 호환">
+
+          <DCSection id="intro" title="System">
+            <DCArtboard id="brief" label="System Declaration" width={1200} height={900}>
+              <div className="intro">
+                <div>
+                  <span className="eyebrow">PRINT FLYER REDESIGN · 026</span>
+                  <h1>정보 폭격이 아닌,<br/><em>편집</em>된 전단.</h1>
+                  <p className="lede">기존 동네마트·대형마트 전단지의 정보 폭격형 빈티지 무드를 버리고, <strong>대형마트 주간</strong> · <strong>POP 폭격</strong> · <strong>매거진 타블로이드</strong> · <strong>신문형 가제트</strong> · <strong>벤토 모자이크</strong> 다섯 가지 인쇄 무드 × <strong>앞면 + 뒷면</strong> 양면 정합 = 총 10면. 모든 데이터 필드는 <code style={{fontFamily:'JetBrains Mono, monospace', fontSize:'12px'}}>data-slot</code>으로 노출되어 엑셀/POS 자동 매핑 그대로, 사양은 인쇄소 발주 가능 상태입니다.</p>
+                </div>
+
+                <div className="grid">
+                  <div className="card">
+                    <span className="num">01 · CLASSIC</span>
+                    <h3>주간 대형전단</h3>
+                    <span className="paper">B4 · 264 × 378mm</span>
+                    <p>동네·중형마트 주간 전단. 영웅 2 + 3 카테고리(정육·신선·가공) × 4–8 아이템 = <strong>총 22개 상품</strong>. 정보 밀도는 높이되 그리드·디바이더로 정돈.</p>
+                  </div>
+                  <div className="card">
+                    <span className="num">02 · DEAL FOCUS</span>
+                    <h3>한 가지, 폭탄</h3>
+                    <span className="paper">B4 · POP</span>
+                    <p>정육/수산/계절과일 단일 카테고리 폭격용. 가격 96px·할인율 스탬프·서브 상품 3개로 시각 우선순위 = 가격&gt;상품&gt;매장.</p>
+                  </div>
+                  <div className="card">
+                    <span className="num">03 · MAGAZINE GRID</span>
+                    <h3>주말 대형 타블로이드</h3>
+                    <span className="paper">B3 · 378 × 528mm</span>
+                    <p>대형마트 주말용. 풀폭 다크 헤로(시즌 카피 + 영웅 3) + 5 카테고리 × 6 아이템 = <strong>총 33개 상품</strong>. 매거진 무드로 정돈된 정보 폭격.</p>
+                  </div>
+                  <div className="card">
+                    <span className="num">04 · GAZETTE</span>
+                    <h3>시장 신문</h3>
+                    <span className="paper">B3 · 378 × 528mm</span>
+                    <p>신문 마스트헤드 + 본명조 헤드라인 + 4컬럼 그리드. 아티아텍테 목술 계열·보헌 분위기. <strong>14개 상품 + 2 에디터스 노트</strong> 에디토리얼 구성.</p>
+                  </div>
+                  <div className="card">
+                    <span className="num">05 · BENTO</span>
+                    <h3>벤토 모자이크</h3>
+                    <span className="paper">B4 · 264 × 378mm</span>
+                    <p>비대칭 그리드 6×9 케이스. 헤로 오버레이 + 머스타드 타입 배너 + 다크 타입 타일. <strong>12개 상품 + 2 타입 타일</strong>. 시각 리듬이 국보.</p>
+                  </div>
+                </div>
+
+                <div className="system">
+                  <div>
+                    <span className="label">FONTS</span>
+                    Pretendard Variable<br/>
+                    <span style={{fontFamily:'Noto Serif KR, serif', fontStyle:'normal'}}>Noto Serif KR</span> (강조)
+                  </div>
+                  <div>
+                    <span className="label">PALETTE</span>
+                    Charcoal · Off-white · Red · Deep Green
+                    <div className="swatches">
+                      <span style={{background:'#1A1A1A'}} />
+                      <span style={{background:'#FAF8F4'}} />
+                      <span style={{background:'#E63946'}} />
+                      <span style={{background:'#1B4332'}} />
+                      <span style={{background:'#6B7280'}} />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="label">PRINT SPEC</span>
+                    300dpi · CMYK<br/>
+                    K100 텍스트 · TAC 240–280%<br/>
+                    PDF/X-1a:2001
+                  </div>
+                  <div>
+                    <span className="label">SLOT API</span>
+                    store.* · copy.* · product[N].* · footer.*<br/>
+                    엑셀/POS 자동 매핑 호환
+                  </div>
+                </div>
+              </div>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="tpl-classic" title="01 · PRINT_CLASSIC (B4 양면)">
+            <DCArtboard id="classic-front" label="FRONT — 주간 전단 (22 아이템)" width={700} height={1000}>
+              <a className="open-link" href="print-classic.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-classic.html" title="print-classic" />
+            </DCArtboard>
+            <DCArtboard id="classic-back" label="BACK — 추가 카테고리 15 + 절취선 쿠폰 4" width={700} height={1000}>
+              <a className="open-link" href="print-classic-back.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-classic-back.html" title="print-classic-back" />
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="tpl-deal-focus" title="02 · PRINT_DEAL_FOCUS (B4 POP 양면)">
+            <DCArtboard id="deal-focus-front" label="FRONT — 영웅 폭격 (가격 96px)" width={700} height={1000}>
+              <a className="open-link" href="print-deal-focus.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-deal-focus.html" title="print-deal-focus" />
+            </DCArtboard>
+            <DCArtboard id="deal-focus-back" label="BACK — 레시피 4단계 + 페어링 10 + 지도" width={700} height={1000}>
+              <a className="open-link" href="print-deal-focus-back.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-deal-focus-back.html" title="print-deal-focus-back" />
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="tpl-magazine-grid" title="03 · PRINT_MAGAZINE_GRID (B3 양면)">
+            <DCArtboard id="magazine-grid-front" label="FRONT — 다크 헤로 + 33 아이템" width={1000} height={1400}>
+              <a className="open-link" href="print-magazine-grid.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-magazine-grid.html" title="print-magazine-grid" />
+            </DCArtboard>
+            <DCArtboard id="magazine-grid-back" label="BACK — 4 카테고리 24 + 멤버십 + 4주 캘린더" width={1000} height={1400}>
+              <a className="open-link" href="print-magazine-grid-back.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-magazine-grid-back.html" title="print-magazine-grid-back" />
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="tpl-gazette" title="04 · PRINT_GAZETTE (B3 신문형 양면)">
+            <DCArtboard id="gazette-front" label="FRONT — 마스트헤드 + 2 섹션" width={1000} height={1400}>
+              <a className="open-link" href="print-gazette.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-gazette.html" title="print-gazette" />
+            </DCArtboard>
+            <DCArtboard id="gazette-back" label="BACK — SEC.03·04 + MD 인터뷰 + 다음 호" width={1000} height={1400}>
+              <a className="open-link" href="print-gazette-back.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-gazette-back.html" title="print-gazette-back" />
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="tpl-bento" title="05 · PRINT_BENTO (B4 모자이크 양면)">
+            <DCArtboard id="bento-front" label="FRONT — 영웅 좌편 + 12 상품" width={700} height={1000}>
+              <a className="open-link" href="print-bento.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-bento.html" title="print-bento" />
+            </DCArtboard>
+            <DCArtboard id="bento-back" label="BACK — 영웅 우편 + 8 상품 + 지도·운영·멤버" width={700} height={1000}>
+              <a className="open-link" href="print-bento-back.html" target="_blank">OPEN ↗</a>
+              <iframe className="tpl-frame" src="print-bento-back.html" title="print-bento-back" />
+            </DCArtboard>
+          </DCSection>
+
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root') || (() => {
+      const r = document.createElement('div');
+      r.id = 'root';
+      document.body.appendChild(r);
+      return r;
+    })()).render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,786 @@
+/* ============================================================
+ * PRINT_BENTO — Bento Mosaic / Asymmetric Grid
+ *
+ * 비대칭 모자이크 B4. CSS Grid 6×9 + grid-template-areas.
+ * 머스타드 T 배너 + 다크 G 인용 + 크림 이미지 underlay.
+ * D159 끌로드 디자인 변환.
+ * ============================================================ */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --c-ink:     #1A1A1A;
+  --c-paper:   #FAFAFA;
+  --c-mute:    #6B7280;
+  --c-rule:    #E5E2DD;
+  --c-accent:  #E63946;
+  --c-mustard: #D4A93B;
+  --c-cream:   #F2EBD8;
+  --c-dark:    #1A1A1A;
+
+  --f-dis: 'Pretendard Variable', sans-serif;
+  --f-ser: 'Noto Serif KR', serif;
+  --f-mon: 'JetBrains Mono', ui-monospace, monospace;
+
+  --canvas-w: 260mm;
+  --canvas-h: 374mm;
+  --safe: 9mm;
+}
+
+@page {
+  size: 260mm 374mm;
+  margin: 0;
+  marks: crop cross;
+  bleed: 2mm;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--c-paper);
+  color: var(--c-ink);
+  font-family: var(--f-dis);
+  -webkit-font-smoothing: antialiased;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.pc {
+  width: var(--canvas-w);
+  height: var(--canvas-h);
+  background: var(--c-paper);
+  box-sizing: border-box;
+  padding: var(--safe);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 5mm;
+  overflow: hidden;
+}
+
+/* ════════════════════════════════════════════════════════════
+ * HEADER
+ * ════════════════════════════════════════════════════════════ */
+
+.head {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 5mm;
+  padding-bottom: 4mm;
+  border-bottom: 0.3mm solid var(--c-ink);
+}
+.head .mark {
+  width: 13mm;
+  height: 13mm;
+  background: var(--c-ink);
+  color: var(--c-paper);
+  display: grid;
+  place-items: center;
+  font-family: var(--f-ser);
+  font-weight: 900;
+  font-size: 7mm;
+  letter-spacing: -0.04em;
+  background-size: cover;
+  background-position: center;
+}
+.head h1 {
+  margin: 0;
+  font-size: 7mm;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.head h1 .br {
+  font-weight: 500;
+  color: var(--c-mute);
+  font-size: 4mm;
+  margin-left: 2.4mm;
+}
+.head .vol {
+  font-family: var(--f-mon);
+  font-size: 2.7mm;
+  letter-spacing: 0.14em;
+  color: var(--c-mute);
+  text-align: right;
+  line-height: 1.4;
+}
+.head .vol strong {
+  display: block;
+  color: var(--c-ink);
+  font-weight: 500;
+  font-size: 3mm;
+}
+.head .pill {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.14em;
+  color: var(--c-paper);
+  background: var(--c-accent);
+  padding: 1mm 2.4mm 0.5mm;
+}
+
+/* ════════════════════════════════════════════════════════════
+ * BENTO MOSAIC
+ * ════════════════════════════════════════════════════════════ */
+
+.bento {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  gap: 3mm;
+  min-height: 0;
+}
+
+.bento-front {
+  grid-template-areas:
+    "H H H T T T"
+    "H H H T T T"
+    "H H H s1 s2 s3"
+    "B B C C D D"
+    "B B C C D D"
+    "E E E F F G"
+    "E E E F F G"
+    "I I J J K K"
+    "I I J J K K";
+}
+
+.bento-back {
+  grid-template-areas:
+    "T  T  H  H  H  H"
+    "T  T  H  H  H  H"
+    "s1 s2 H  H  H  H"
+    "B  B  C  C  D  D"
+    "B  B  C  C  D  D"
+    "G  G  G  M  M  M"
+    "G  G  G  M  M  M"
+    "F  F  E  E  R  R"
+    "F  F  E  E  R  R";
+}
+
+.tile {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.tile .badge {
+  position: absolute;
+  top: 1.6mm;
+  left: 1.6mm;
+  background: var(--c-ink);
+  color: var(--c-paper);
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.1em;
+  padding: 0.5mm 1.4mm;
+  z-index: 2;
+}
+.tile .badge:empty { display: none; }
+.tile .badge.r, .tile .badge.red { background: var(--c-accent); }
+.tile .badge.m, .tile .badge.hot { background: var(--c-accent); }
+.tile .badge.best { background: var(--c-ink); }
+.tile .badge.pick { background: var(--c-mustard); color: var(--c-ink); }
+.tile .badge.new { background: var(--c-mute); }
+
+/* image tile baseline */
+.tile.img {
+  background: var(--c-cream);
+}
+.tile.img .ph {
+  flex: 1;
+  background-image: repeating-linear-gradient(135deg, #E4DCC0 0, #E4DCC0 2.4mm, #ECE4CC 2.4mm, #ECE4CC 4.8mm);
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  place-items: center;
+}
+.tile.img .cap {
+  padding: 2.4mm 3mm 2.7mm;
+  background: var(--c-paper);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4mm;
+}
+.tile.img .cap .name {
+  margin: 0;
+  font-size: 3.5mm;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile.img .cap .unit {
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  color: var(--c-mute);
+  letter-spacing: 0.05em;
+}
+.tile.img .cap .price {
+  font-family: var(--f-dis);
+  font-weight: 900;
+  font-size: 5mm;
+  letter-spacing: -0.04em;
+  color: var(--c-accent);
+  margin-top: 0.5mm;
+  line-height: 0.9;
+}
+.tile.img .cap .price .won {
+  font-size: 2.4mm;
+  font-weight: 600;
+  color: var(--c-ink);
+  margin-left: 0.4mm;
+}
+.tile.img .cap .price .orig {
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  color: var(--c-mute);
+  text-decoration: line-through;
+  margin-right: 1mm;
+  font-weight: 400;
+}
+.tile.img .cap .price .orig:empty { display: none; }
+
+/* H · HERO 영웅 (3×3) */
+.tile.hero {
+  grid-area: H;
+  background: var(--c-cream);
+  display: grid;
+}
+.tile.hero .ph {
+  background-image: repeating-linear-gradient(135deg, #E0D5B5 0, #E0D5B5 3mm, #E8DEC0 3mm, #E8DEC0 6mm);
+  background-size: cover;
+  background-position: center;
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+}
+.tile.hero .overlay {
+  grid-area: 1 / 1;
+  padding: 3.2mm 4mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--c-ink);
+}
+.tile.hero .overlay .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.tile.hero .overlay .num {
+  font-family: var(--f-mon);
+  font-size: 2.7mm;
+  letter-spacing: 0.14em;
+}
+.tile.hero .overlay .stamp {
+  background: var(--c-ink);
+  color: var(--c-paper);
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.12em;
+  padding: 1mm 2.4mm 0.5mm;
+}
+.tile.hero .overlay .stamp:empty { display: none; }
+.tile.hero .overlay .bot {
+  background: var(--c-paper);
+  padding: 3.2mm 4mm;
+  margin: 0 -4mm -3.2mm;
+}
+.tile.hero .overlay .bot .cat {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.12em;
+  color: var(--c-mute);
+}
+.tile.hero .overlay .bot .cat:empty { display: none; }
+.tile.hero .overlay .bot .name {
+  margin: 1mm 0 1.6mm;
+  font-size: 6mm;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.tile.hero .overlay .bot .price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2mm;
+  border-top: 0.3mm solid var(--c-rule);
+  padding-top: 1.6mm;
+}
+.tile.hero .overlay .bot .orig {
+  font-family: var(--f-mon);
+  font-size: 3mm;
+  color: var(--c-mute);
+  text-decoration: line-through;
+}
+.tile.hero .overlay .bot .orig:empty { display: none; }
+.tile.hero .overlay .bot .price {
+  font-family: var(--f-dis);
+  font-weight: 900;
+  font-size: 14mm;
+  letter-spacing: -0.045em;
+  color: var(--c-accent);
+  line-height: 0.9;
+}
+.tile.hero .overlay .bot .price .won {
+  font-size: 3.5mm;
+  font-weight: 700;
+  color: var(--c-ink);
+  margin-left: 0.5mm;
+}
+.tile.hero .overlay .bot .unit {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  color: var(--c-mute);
+  margin-left: auto;
+  letter-spacing: 0.06em;
+}
+
+/* T · TYPE BANNER (앞면 3×2 머스타드) */
+.tile.type-banner {
+  grid-area: T;
+  background: var(--c-mustard);
+  color: var(--c-ink);
+  padding: 4mm 5mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.tile.type-banner .eb {
+  font-family: var(--f-mon);
+  font-size: 2.7mm;
+  letter-spacing: 0.14em;
+  color: var(--c-ink);
+  opacity: 0.7;
+}
+.tile.type-banner h2 {
+  margin: 2mm 0 0;
+  font-size: 18mm;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 0.92;
+}
+.tile.type-banner h2 em {
+  font-family: var(--f-ser);
+  font-style: italic;
+  font-weight: 700;
+}
+.tile.type-banner .footer-line {
+  border-top: 0.3mm solid rgba(26, 26, 26, 0.18);
+  padding-top: 2mm;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.1em;
+}
+
+/* T · NEXT WEEK BANNER (뒷면 머스타드) */
+.tile.banner {
+  grid-area: T;
+  background: var(--c-mustard);
+  color: var(--c-ink);
+  padding: 4mm 5mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.tile.banner .eb {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.14em;
+  color: var(--c-ink);
+  opacity: 0.7;
+}
+.tile.banner h2 {
+  margin: 1.6mm 0 0;
+  font-size: 11mm;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+.tile.banner h2 em {
+  font-family: var(--f-ser);
+  font-style: italic;
+  font-weight: 700;
+}
+.tile.banner .footer-line {
+  border-top: 0.3mm solid rgba(26, 26, 26, 0.18);
+  padding-top: 1.6mm;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  letter-spacing: 0.1em;
+}
+
+/* SMALL TILES s1, s2, s3 */
+.tile.s1 { grid-area: s1; }
+.tile.s2 { grid-area: s2; }
+.tile.s3 { grid-area: s3; }
+.tile.small {
+  background: var(--c-paper);
+  border: 0.3mm solid var(--c-rule);
+  padding: 1.6mm;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+}
+.tile.small .ph {
+  flex: 1;
+  background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 1mm, #F4F2EE 1mm, #F4F2EE 2mm);
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  place-items: center;
+}
+.tile.small .name {
+  margin: 0;
+  font-size: 2.7mm;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile.small .price {
+  font-family: var(--f-dis);
+  font-weight: 900;
+  font-size: 3.5mm;
+  letter-spacing: -0.03em;
+  color: var(--c-accent);
+  line-height: 0.9;
+}
+.tile.small .price .won {
+  font-size: 2mm;
+  font-weight: 600;
+  color: var(--c-ink);
+  margin-left: 0.4mm;
+}
+
+/* MEDIUM TILES B C D F I J K */
+.tile.b { grid-area: B; }
+.tile.c { grid-area: C; }
+.tile.d { grid-area: D; }
+.tile.f { grid-area: F; }
+.tile.i { grid-area: I; }
+.tile.j { grid-area: J; }
+.tile.k { grid-area: K; }
+
+/* WIDE TILE E */
+.tile.e { grid-area: E; }
+.tile.wide-img {
+  background: var(--c-paper);
+  border: 0.3mm solid var(--c-rule);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.tile.wide-img .ph {
+  background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 2mm, #F4F2EE 2mm, #F4F2EE 4mm);
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  place-items: center;
+}
+.tile.wide-img .info {
+  padding: 2.7mm 3.2mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.tile.wide-img .info .cat {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.12em;
+  color: var(--c-mute);
+}
+.tile.wide-img .info .cat:empty { display: none; }
+.tile.wide-img .info .name {
+  margin: 1mm 0 0;
+  font-size: 4mm;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.tile.wide-img .info .unit {
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  color: var(--c-mute);
+  margin-top: 0.5mm;
+}
+.tile.wide-img .info .price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.6mm;
+  margin-top: auto;
+  border-top: 0.3mm solid var(--c-rule);
+  padding-top: 1.6mm;
+}
+.tile.wide-img .info .orig {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  color: var(--c-mute);
+  text-decoration: line-through;
+}
+.tile.wide-img .info .orig:empty { display: none; }
+.tile.wide-img .info .price {
+  font-family: var(--f-dis);
+  font-weight: 900;
+  font-size: 9mm;
+  letter-spacing: -0.04em;
+  color: var(--c-accent);
+  line-height: 0.9;
+}
+.tile.wide-img .info .price .won {
+  font-size: 3mm;
+  font-weight: 600;
+  color: var(--c-ink);
+  margin-left: 0.4mm;
+}
+
+/* G · DARK QUOTE/INFO TILE */
+.tile.g { grid-area: G; }
+.tile.type-vert {
+  background: var(--c-dark);
+  color: var(--c-paper);
+  padding: 3.2mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.tile.type-vert .l {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.14em;
+  color: rgba(250, 250, 250, 0.55);
+}
+.tile.type-vert .quote {
+  font-family: var(--f-ser);
+  font-size: 4mm;
+  line-height: 1.4;
+  font-weight: 500;
+  margin: 2mm 0;
+  letter-spacing: -0.01em;
+}
+.tile.type-vert .quote em {
+  font-style: italic;
+  color: var(--c-mustard);
+}
+.tile.type-vert .sig {
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  color: rgba(250, 250, 250, 0.55);
+  letter-spacing: 0.14em;
+}
+
+/* G · DARK STORE INFO (뒷면) */
+.tile.g:not(.type-vert) {
+  background: var(--c-dark);
+  color: var(--c-paper);
+  padding: 4mm 5mm;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4mm;
+}
+.tile.g .l {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.16em;
+  color: rgba(250, 250, 250, 0.55);
+}
+.tile.g h3 {
+  margin: 0;
+  font-size: 5.5mm;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: var(--c-paper);
+}
+.tile.g .rows {
+  display: grid;
+  row-gap: 1mm;
+  font-size: 3mm;
+  line-height: 1.4;
+}
+.tile.g .rows .k {
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  letter-spacing: 0.14em;
+  color: rgba(250, 250, 250, 0.55);
+  margin-right: 2mm;
+}
+.tile.g .rows .v {
+  color: var(--c-paper);
+}
+.tile.g .rows .v strong { font-weight: 700; }
+
+/* M · MAP TILE (뒷면 3×2) */
+.tile.m {
+  grid-area: M;
+  background: #FFFFFF;
+  border: 0.3mm solid var(--c-rule);
+  padding: 2.4mm;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6mm;
+}
+.tile.m .head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.tile.m .head h3 {
+  margin: 0;
+  font-size: 4mm;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.tile.m .head .l {
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  color: var(--c-mute);
+  letter-spacing: 0.1em;
+}
+.tile.m .map-canvas {
+  flex: 1;
+  background:
+    linear-gradient(0deg, transparent 49%, var(--c-rule) 49%, var(--c-rule) 51%, transparent 51%),
+    linear-gradient(90deg, transparent 49%, var(--c-rule) 49%, var(--c-rule) 51%, transparent 51%),
+    linear-gradient(0deg, transparent 24%, rgba(229, 226, 221, 0.6) 24%, rgba(229, 226, 221, 0.6) 26%, transparent 26%),
+    linear-gradient(90deg, transparent 24%, rgba(229, 226, 221, 0.6) 24%, rgba(229, 226, 221, 0.6) 26%, transparent 26%),
+    #F8F6F2;
+  position: relative;
+  border: 0.3mm solid var(--c-rule);
+}
+.tile.m .map-canvas .pin {
+  position: absolute;
+  top: 38%;
+  left: 52%;
+  width: 4mm;
+  height: 4mm;
+  background: var(--c-accent);
+  border-radius: 50% 50% 50% 0;
+  transform: translate(-50%, -100%) rotate(-45deg);
+  box-shadow: 0 0 0 1mm rgba(230, 57, 70, 0.18);
+}
+.tile.m .map-canvas .lbl {
+  position: absolute;
+  top: 38%;
+  left: 52%;
+  transform: translate(-50%, 4mm);
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  letter-spacing: 0.1em;
+  background: var(--c-paper);
+  padding: 0.5mm 1.4mm;
+  border: 0.3mm solid var(--c-ink);
+}
+.tile.m .addr {
+  font-size: 2.7mm;
+  line-height: 1.4;
+  color: var(--c-ink);
+}
+.tile.m .addr .l {
+  font-family: var(--f-mon);
+  font-size: 2mm;
+  color: var(--c-mute);
+  letter-spacing: 0.1em;
+}
+
+/* R · MEMBER MUSTARD (뒷면 2×2) */
+.tile.r {
+  grid-area: R;
+  background: var(--c-mustard);
+  color: var(--c-ink);
+  padding: 3mm 3.5mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.tile.r .l {
+  font-family: var(--f-mon);
+  font-size: 2.4mm;
+  letter-spacing: 0.14em;
+  opacity: 0.7;
+}
+.tile.r h3 {
+  margin: 0;
+  font-family: var(--f-ser);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 6mm;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+.tile.r h3 em { font-style: italic; }
+.tile.r .body {
+  font-size: 2.7mm;
+  line-height: 1.45;
+  margin: 0;
+}
+.tile.r .body strong { font-weight: 700; }
+.tile.r .body .pct {
+  font-family: var(--f-dis);
+  font-weight: 900;
+  font-size: 4mm;
+  letter-spacing: -0.03em;
+  color: var(--c-ink);
+}
+
+/* ════════════════════════════════════════════════════════════
+ * FOOTER
+ * ════════════════════════════════════════════════════════════ */
+
+.foot {
+  border-top: 0.3mm solid var(--c-ink);
+  padding-top: 2.4mm;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 4mm;
+  align-items: end;
+}
+.foot .col {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1mm 2.4mm;
+  font-size: 2.7mm;
+  line-height: 1.4;
+}
+.foot .col .l {
+  font-family: var(--f-mon);
+  font-size: 2.2mm;
+  color: var(--c-mute);
+  letter-spacing: 0.12em;
+}
+.foot .notice {
+  grid-column: 1 / -1;
+  margin-top: 1mm;
+  font-size: 2mm;
+  color: var(--c-mute);
+  line-height: 1.5;
+}
+.foot .qr {
+  width: 18mm;
+  height: 18mm;
+  border: 0.3mm solid var(--c-ink);
+  background-color: var(--c-paper);
+  background-size: cover;
+  background-position: center;
+}
+
+/* ════════════════════════════════════════════════════════════
+ * PRINT 안전 + 페이지 분할
+ * ════════════════════════════════════════════════════════════ */
+
+* {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.page-front { page-break-after: always; }
+.page-back { page-break-before: always; }

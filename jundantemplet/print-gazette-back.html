@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>PRINT_GAZETTE · BACK (B3)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root {
+    --c-ink: #1A1812;
+    --c-paper: #F1ECDF;
+    --c-mute: #6B6353;
+    --c-rule: #8B7E66;
+    --c-accent: #B83B2E;
+    --c-tag: #E0D8C4;
+    --f-ser: 'Noto Serif KR', serif;
+    --f-dis: 'Pretendard Variable', sans-serif;
+    --f-mon: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  html, body { margin: 0; background: #DCD6C5; color: var(--c-ink); font-family: var(--f-ser); -webkit-font-smoothing: antialiased; display: flex; justify-content: center; padding: 40px 20px; }
+  .pc { width: 945px; height: 1320px; background: var(--c-paper); box-sizing: border-box; padding: 24px 32px; box-shadow: 0 16px 50px rgba(0,0,0,0.18); display: grid; grid-template-rows: auto auto auto auto auto auto auto; gap: 8px; overflow: hidden; position: relative; }
+  .pc::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(120,100,70,0.05) 1px, transparent 1px); background-size: 3px 3px; pointer-events: none; opacity: 0.6; mix-blend-mode: multiply; }
+  .pc > * { position: relative; z-index: 1; }
+
+  /* ─── MINI MASTHEAD ─── */
+  .mast-mini {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    border-bottom: 3px double var(--c-ink);
+    padding-bottom: 10px;
+    gap: 18px;
+  }
+  .mast-mini .left {
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--c-mute);
+    text-transform: uppercase;
+  }
+  .mast-mini h1 {
+    margin: 0;
+    font-family: var(--f-ser);
+    font-weight: 900;
+    font-size: 28px;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    text-align: center;
+  }
+  .mast-mini h1 .am { font-style: italic; font-weight: 500; color: var(--c-accent); margin: 0 2px; }
+  .mast-mini h1 .sub { display: block; font-family: var(--f-mon); font-size: 9px; color: var(--c-mute); letter-spacing: 0.2em; font-weight: 500; margin-top: 4px; text-transform: uppercase; }
+  .mast-mini .right {
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--c-mute);
+    text-align: right;
+    text-transform: uppercase;
+  }
+  .mast-mini .right strong { color: var(--c-ink); font-weight: 500; }
+
+  /* ─── SECTION BAR ─── */
+  .sec-bar { display: flex; align-items: center; gap: 14px; padding: 6px 0; border-top: 1px solid var(--c-ink); border-bottom: 1px solid var(--c-ink); }
+  .sec-bar .num { font-family: var(--f-mon); font-size: 9px; letter-spacing: 0.14em; color: var(--c-accent); }
+  .sec-bar h4 { margin: 0; font-family: var(--f-ser); font-weight: 700; font-size: 14px; letter-spacing: -0.02em; }
+  .sec-bar .en { font-family: var(--f-mon); font-size: 9px; color: var(--c-mute); letter-spacing: 0.12em; text-transform: uppercase; }
+  .sec-bar .meta { margin-left: auto; font-family: var(--f-mon); font-size: 9px; color: var(--c-mute); letter-spacing: 0.1em; }
+
+  /* ─── COLUMN GRID ─── */
+  .col-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    column-gap: 14px;
+    row-gap: 10px;
+    padding-top: 6px;
+    position: relative;
+  }
+  .col-grid .mid-rule { position: absolute; left: calc(50% - 0.5px); top: 0; bottom: 0; width: 1px; background: var(--c-rule); }
+  .col-grid::before { content: ""; position: absolute; left: calc(25% - 8px); top: 0; bottom: 0; width: 1px; background: var(--c-rule); }
+  .col-grid::after { content: ""; position: absolute; left: calc(75% - 8px); top: 0; bottom: 0; width: 1px; background: var(--c-rule); }
+  .article { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; }
+  .article .ph { aspect-ratio: 1.3 / 1; background-image: repeating-linear-gradient(135deg, #E0D6C0 0, #E0D6C0 6px, #E8DFC9 6px, #E8DFC9 12px); display: grid; place-items: center; font-family: var(--f-mon); font-size: 8px; color: #8B7E66; letter-spacing: 0.04em; text-align: center; padding: 4px; }
+  .article .meta { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; }
+  .article .name { margin: 0; font-family: var(--f-ser); font-weight: 600; font-size: 13px; line-height: 1.2; letter-spacing: -0.015em; }
+  .article .unit { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); letter-spacing: 0.04em; }
+  .article .price-row { display: flex; align-items: baseline; gap: 5px; margin-top: 3px; padding-top: 4px; border-top: 1px solid var(--c-rule); }
+  .article .orig { font-family: var(--f-ser); font-size: 9px; color: var(--c-mute); text-decoration: line-through; }
+  .article .price { font-family: var(--f-ser); font-weight: 900; font-size: 18px; color: var(--c-accent); letter-spacing: -0.03em; line-height: 0.9; }
+  .article .price .won { font-size: 9px; color: var(--c-ink); margin-left: 1px; font-weight: 700; }
+  .article .badge { display: inline-block; font-family: var(--f-mon); font-size: 8px; background: var(--c-ink); color: var(--c-paper); padding: 2px 5px 1px; letter-spacing: 0.08em; margin-right: 4px; }
+  .article .badge.r { background: var(--c-accent); }
+
+  .article.editorial { background: var(--c-tag); padding: 12px; display: flex; flex-direction: column; justify-content: center; }
+  .article.editorial .label { font-family: var(--f-mon); font-size: 8px; letter-spacing: 0.18em; color: var(--c-accent); text-transform: uppercase; margin-bottom: 6px; }
+  .article.editorial .quote { font-family: var(--f-ser); font-style: italic; font-size: 13px; line-height: 1.4; color: var(--c-ink); letter-spacing: -0.01em; font-weight: 400; }
+  .article.editorial .quote::first-letter { font-size: 34px; font-weight: 900; color: var(--c-accent); float: left; line-height: 0.85; margin: 2px 4px 0 0; font-style: normal; }
+  .article.editorial .sig { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); letter-spacing: 0.12em; margin-top: 8px; text-transform: uppercase; }
+
+  /* ─── MD INTERVIEW ─── */
+  .interview {
+    display: grid;
+    grid-template-columns: 0.55fr 1fr;
+    gap: 18px;
+    padding: 12px 0;
+    border-top: 1px solid var(--c-ink);
+    border-bottom: 1px solid var(--c-ink);
+    position: relative;
+  }
+  .interview::before { content: ""; position: absolute; left: calc(35.5%); top: 12px; bottom: 12px; width: 1px; background: var(--c-rule); }
+  .iv-photo {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .iv-photo .ph {
+    aspect-ratio: 1 / 1.05;
+    background-image: repeating-linear-gradient(135deg, #DDD3BC 0, #DDD3BC 10px, #E5DCC6 10px, #E5DCC6 20px);
+    display: grid; place-items: center;
+    font-family: var(--f-mon); font-size: 9px;
+    color: #8B7E66; letter-spacing: 0.06em;
+  }
+  .iv-photo .caption {
+    font-family: var(--f-mon); font-size: 8px;
+    letter-spacing: 0.14em; color: var(--c-mute);
+    text-transform: uppercase;
+  }
+  .iv-body {
+    display: flex; flex-direction: column;
+    padding-left: 14px;
+  }
+  .iv-body .eyebrow {
+    font-family: var(--f-mon); font-size: 9px;
+    letter-spacing: 0.18em; color: var(--c-accent);
+    text-transform: uppercase; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .iv-body .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--c-accent); }
+  .iv-body h2 {
+    margin: 0; font-family: var(--f-ser);
+    font-weight: 900; font-size: 28px;
+    letter-spacing: -0.035em; line-height: 1;
+  }
+  .iv-body h2 em { font-style: italic; font-weight: 500; color: var(--c-accent); }
+  .iv-body .quote {
+    margin: 10px 0 0;
+    font-family: var(--f-ser);
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--c-ink);
+    font-weight: 400;
+  }
+  .iv-body .quote::first-letter {
+    font-size: 34px; font-weight: 900;
+    color: var(--c-accent); float: left;
+    line-height: 0.85; margin: 2px 6px 0 0;
+  }
+  .iv-body .quote em { font-style: italic; font-weight: 500; }
+  .iv-body .quote strong { font-weight: 700; }
+  .iv-body .byline {
+    margin-top: 10px;
+    font-family: var(--f-mon); font-size: 8px;
+    letter-spacing: 0.16em; color: var(--c-mute);
+    text-transform: uppercase;
+  }
+
+  /* ─── NEXT ISSUE STRIP ─── */
+  .next-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    padding-top: 4px;
+  }
+  .next-card { display: flex; flex-direction: column; gap: 6px; }
+  .next-card .l { font-family: var(--f-mon); font-size: 9px; color: var(--c-mute); letter-spacing: 0.18em; text-transform: uppercase; }
+  .next-card h3 { margin: 0; font-family: var(--f-ser); font-weight: 700; font-size: 16px; letter-spacing: -0.02em; line-height: 1.15; }
+  .next-card h3 em { font-style: italic; font-weight: 500; color: var(--c-accent); }
+  .next-card .body { font-size: 11px; line-height: 1.5; color: var(--c-ink); font-family: var(--f-ser); }
+  .next-card .body strong { font-weight: 700; }
+  .next-card .date { font-family: var(--f-mon); font-size: 9px; color: var(--c-accent); letter-spacing: 0.1em; }
+
+  /* ─── COLOPHON FOOTER ─── */
+  .pc-foot {
+    margin-top: auto;
+    border-top: 3px double var(--c-ink);
+    padding-top: 10px;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr auto;
+    gap: 20px;
+    align-items: end;
+    font-family: var(--f-ser);
+  }
+  .pc-foot .colophon { font-size: 10px; line-height: 1.5; }
+  .pc-foot .colophon .l { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); letter-spacing: 0.14em; display: block; margin-bottom: 3px; text-transform: uppercase; }
+  .pc-foot .colophon strong { font-weight: 700; font-size: 12px; }
+  .pc-foot .biz { font-size: 9px; color: var(--c-mute); line-height: 1.55; font-family: var(--f-ser); }
+  .pc-foot .biz .l { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); letter-spacing: 0.14em; display: block; margin-bottom: 3px; text-transform: uppercase; }
+  .pc-foot .qr { width: 60px; height: 60px; border: 1px solid var(--c-ink); background: repeating-conic-gradient(var(--c-ink) 0% 25%, transparent 0% 50%) 0 0/11px 11px, var(--c-paper); position: relative; }
+  .pc-foot .qr::after { content: "QR"; position: absolute; inset: 21px; background: var(--c-paper); display: grid; place-items: center; font-family: var(--f-mon); font-size: 7px; color: var(--c-ink); letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+<article class="pc" data-template="print_gazette_back" data-paper="B3" data-page="2">
+
+  <!-- MINI MASTHEAD -->
+  <header class="mast-mini">
+    <span class="left">PAGE 2 / 2 · VOL.026</span>
+    <h1 data-slot="store.name">파인마트 <span class="am">&amp;</span> GAZETTE<span class="sub">SECTION B · MARKET LIFE</span></h1>
+    <span class="right">26.05.14 — 05.20 · <strong>WEEKLY EDITION</strong></span>
+  </header>
+
+  <!-- SECTION 03 · BEVERAGE -->
+  <div class="sec-bar">
+    <span class="num">SEC.03</span>
+    <h4>주말의 잔 · ONE GLASS, THIS WEEKEND</h4>
+    <span class="en">BEVERAGE</span>
+    <span class="meta">3 ARTICLES</span>
+  </div>
+  <section class="col-grid">
+    <span class="mid-rule"></span>
+    <article class="article" data-slot-group="product[15]">
+      <div class="ph" data-slot="product[15].image">[ 까시예로 와인 ]</div>
+      <span class="meta">WINE · 칠레</span>
+      <h5 class="name" data-slot="product[15].name">까시예로 델 디아블로</h5>
+      <span class="unit" data-slot="product[15].unit">750ml · 칠레</span>
+      <div class="price-row"><span class="orig">15,900</span><span class="price"><span data-slot="product[15].price">11,900</span><span class="won">원</span></span></div>
+    </article>
+    <article class="article" data-slot-group="product[16]">
+      <div class="ph" data-slot="product[16].image">[ 호가든 ]</div>
+      <span class="meta">BEER · 벨기에</span>
+      <h5 class="name" data-slot="product[16].name">호가든 화이트</h5>
+      <span class="unit" data-slot="product[16].unit">330ml × 6</span>
+      <div class="price-row"><span class="price"><span data-slot="product[16].price">12,900</span><span class="won">원</span></span></div>
+    </article>
+    <article class="article" data-slot-group="product[17]">
+      <div class="ph" data-slot="product[17].image">[ 화요 ]</div>
+      <span class="meta">SPIRIT · 한국</span>
+      <h5 class="name" data-slot="product[17].name">화요 17도</h5>
+      <span class="unit" data-slot="product[17].unit">375ml</span>
+      <div class="price-row"><span class="price"><span data-slot="product[17].price">14,900</span><span class="won">원</span></span></div>
+    </article>
+    <article class="article editorial">
+      <span class="label">SOMM'S NOTE</span>
+      <p class="quote">와인은 어렵게 마실 게 아니다. 봄에는 차게, 한 잔. 그게 가장 좋다. 안주는 등심 한 점이면 충분.</p>
+      <span class="sig">— 매장 소믈리에 · 박서연</span>
+    </article>
+  </section>
+
+  <!-- SECTION 04 · LIVING -->
+  <div class="sec-bar">
+    <span class="num">SEC.04</span>
+    <h4>일상의 정리 · DAILY ESSENTIALS</h4>
+    <span class="en">LIVING</span>
+    <span class="meta">3 ARTICLES</span>
+  </div>
+  <section class="col-grid">
+    <span class="mid-rule"></span>
+    <article class="article" data-slot-group="product[18]">
+      <div class="ph" data-slot="product[18].image">[ 다우니 ]</div>
+      <span class="meta"><span class="badge">PB</span>LAUNDRY</span>
+      <h5 class="name" data-slot="product[18].name">다우니 섬유유연제</h5>
+      <span class="unit" data-slot="product[18].unit">3L · 베이비 향</span>
+      <div class="price-row"><span class="price"><span data-slot="product[18].price">14,900</span><span class="won">원</span></span></div>
+    </article>
+    <article class="article" data-slot-group="product[19]">
+      <div class="ph" data-slot="product[19].image">[ 크리넥스 ]</div>
+      <span class="meta">TISSUE</span>
+      <h5 class="name" data-slot="product[19].name">크리넥스 3겹 화장지</h5>
+      <span class="unit" data-slot="product[19].unit">30롤</span>
+      <div class="price-row"><span class="price"><span data-slot="product[19].price">17,900</span><span class="won">원</span></span></div>
+    </article>
+    <article class="article" data-slot-group="product[20]">
+      <div class="ph" data-slot="product[20].image">[ 자연주의 세제 ]</div>
+      <span class="meta"><span class="badge r">친환경</span>KITCHEN</span>
+      <h5 class="name" data-slot="product[20].name">자연주의 주방세제</h5>
+      <span class="unit" data-slot="product[20].unit">2L × 2</span>
+      <div class="price-row"><span class="price"><span data-slot="product[20].price">7,900</span><span class="won">원</span></span></div>
+    </article>
+    <article class="article editorial">
+      <span class="label">HOUSEKEEPING</span>
+      <p class="quote">매주 같은 자리에 같은 세제, 같은 휴지. 일상의 안정은 의외로 이런 작은 반복에서 시작된다.</p>
+      <span class="sig">— 매장 매니저 · 김연수</span>
+    </article>
+  </section>
+
+  <!-- MD INTERVIEW -->
+  <section class="interview">
+    <div class="iv-photo">
+      <div class="ph" data-slot="editor.interview.photo">[ MD 포트레이트 ]</div>
+      <span class="caption" data-slot="editor.interview.caption">MD 김연수 · 17년차</span>
+    </div>
+    <div class="iv-body">
+      <span class="eyebrow">EDITOR'S INTERVIEW · WEEK 20</span>
+      <h2 data-slot="editor.interview.title">
+        "<em>한 가지</em>만 잘 골라도<br/>일주일이 달라진다."
+      </h2>
+      <p class="quote" data-slot="editor.interview.body">
+        매주 화요일 새벽, 가락동 시장을 직접 갑니다. 좋은 산지를 만나면 그 자리에서 도장을 찍어요.
+        이번 주는 <strong>충남 논산의 설향 딸기</strong>, 그리고 <strong>통영 한산도 생굴</strong>이 정말 좋았어요.
+        딸기는 향이 깊고, 굴은 살집이 단단해서 그대로 한 입.
+        식탁은 한 가지만 잘 골라도 그 주의 분위기가 바뀝니다. 이번 주는 그 한 가지로 <em>봄</em>을 권합니다.
+      </p>
+      <span class="byline">EDITED BY 파인마트 MD팀 · 26.05.14</span>
+    </div>
+  </section>
+
+  <!-- NEXT ISSUE PREVIEW -->
+  <section class="next-strip">
+    <article class="next-card">
+      <span class="l">NEXT ISSUE · 다음 호 예고</span>
+      <span class="date" data-slot="next_issue.date">VOL.027 · 26.05.21 발행</span>
+      <h3 data-slot="next_issue.title">봄 정육 <em>특집호</em></h3>
+      <p class="body" data-slot="next_issue.preview"><strong>한돈 삼겹 · LA꽃갈비 · 양념 불고기</strong> 최대 35%. 한우 등심 시즌 마무리 — 다음 주가 마지막 기회입니다.</p>
+    </article>
+    <article class="next-card">
+      <span class="l">SUBSCRIBE · 정기구독</span>
+      <span class="date">FREE / 매주 목요일</span>
+      <h3>파인패스 회원이면<br/>본 신문 <em>자동 발송</em>.</h3>
+      <p class="body">앱 가입 시 우편함 등록 — 매주 목요일 아침, 새 호가 도착합니다.</p>
+    </article>
+  </section>
+
+  <!-- COLOPHON FOOTER -->
+  <footer class="pc-foot">
+    <div class="colophon">
+      <span class="l">COLOPHON</span>
+      <strong data-slot="store.name">파인마트 합정점</strong><br/>
+      <span data-slot="store.address">서울 마포구 양화로 45, 파인빌딩 1F</span><br/>
+      <span data-slot="store.phone">02-336-2580</span> · 매일 09:00 – 23:00 · 연중무휴<br/>
+      <span style="font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); letter-spacing: 0.1em;">발행 파인마트 MD팀 · 편집장 김연수 · 사진 박지호</span>
+    </div>
+    <div class="biz">
+      <span class="l">LEGAL</span>
+      <span data-slot="store.bizNumber">사업자 123-45-67890<br/>통신판매 마포-2024-0123<br/>식품판매업 마포-제2024-0456</span>
+    </div>
+    <div class="qr" data-slot="store.qrcode" aria-label="store QR"></div>
+  </footer>
+
+</article>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>PRINT_MAGAZINE_GRID · B3 대형타블로이드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root {
+    --c-accent: #E63946;
+    --c-green: #1B4332;
+    --c-paper: #FAF8F4;
+    --c-ink: #1A1A1A;
+    --c-mute: #6B7280;
+    --c-rule: #D9D7D2;
+    --f-dis: 'Pretendard Variable', sans-serif;
+    --f-ser: 'Noto Serif KR', serif;
+    --f-mon: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  html, body { margin: 0; background: #E8E5DF; font-family: var(--f-dis); color: var(--c-ink); -webkit-font-smoothing: antialiased; display: flex; justify-content: center; padding: 40px 20px; }
+  .pc { width: 945px; height: 1320px; background: var(--c-paper); box-sizing: border-box; padding: 24px 28px; box-shadow: 0 16px 50px rgba(0,0,0,0.14); display: grid; grid-template-rows: auto auto auto auto auto auto; gap: 10px; overflow: hidden; }
+
+  /* HEADER */
+  .pc-head { display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 16px; padding-bottom: 10px; border-bottom: 2px solid var(--c-ink); }
+  .pc-logo { width: 38px; height: 38px; border: 1.5px solid var(--c-ink); display: grid; place-items: center; font-family: var(--f-ser); font-weight: 900; font-size: 20px; letter-spacing: -0.04em; }
+  .pc-name { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.025em; }
+  .pc-name .br { font-weight: 500; color: var(--c-mute); font-size: 12px; margin-left: 6px; }
+  .pc-meta { font-family: var(--f-mon); font-size: 10px; color: var(--c-mute); letter-spacing: 0.1em; text-align: right; line-height: 1.4; border-left: 1px solid var(--c-rule); padding-left: 14px; }
+  .pc-meta strong { display: block; color: var(--c-ink); font-weight: 500; font-size: 12px; }
+  .pc-meta.notb { border: 0; padding: 0; text-align: right; }
+
+  /* HERO BAND - 시즌 헤로 + 영웅 3 */
+  .hero {
+    background: var(--c-ink);
+    color: var(--c-paper);
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 0;
+    overflow: hidden;
+  }
+  .hero-title { padding: 22px 22px 22px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+  .hero-title .eb { font-family: var(--f-mon); font-size: 10px; letter-spacing: 0.14em; color: rgba(244,241,234,0.6); }
+  .hero-title .eb .dot { display: inline-block; width: 6px; height: 6px; background: var(--c-accent); border-radius: 50%; margin-right: 6px; transform: translateY(-1px); }
+  .hero-title h2 { margin: 12px 0 8px; font-size: 56px; font-weight: 900; letter-spacing: -0.05em; line-height: 0.92; }
+  .hero-title h2 em { font-family: var(--f-ser); font-style: normal; font-weight: 900; color: #C8E6D2; }
+  .hero-title .sub { font-size: 12px; color: rgba(244,241,234,0.7); line-height: 1.55; max-width: 280px; }
+  .hero-title .ct { font-family: var(--f-mon); font-size: 9px; color: rgba(244,241,234,0.5); letter-spacing: 0.12em; margin-top: 10px; }
+
+  .h-card { padding: 18px 14px; border-left: 1px solid rgba(244,241,234,0.18); display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .h-card .badge { position: absolute; top: 10px; right: 10px; background: var(--c-accent); color: var(--c-paper); font-family: var(--f-mon); font-size: 9px; letter-spacing: 0.1em; padding: 3px 6px 2px; z-index: 2; }
+  .h-card .ph { aspect-ratio: 1.15 / 1; background-image: repeating-linear-gradient(135deg, #2A2A2A 0, #2A2A2A 8px, #232323 8px, #232323 16px); display: grid; place-items: center; font-family: var(--f-mon); font-size: 9px; color: rgba(244,241,234,0.45); letter-spacing: 0.06em; }
+  .h-card .cat { font-family: var(--f-mon); font-size: 9px; color: rgba(244,241,234,0.55); letter-spacing: 0.1em; margin-top: 4px; }
+  .h-card .name { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; color: var(--c-paper); }
+  .h-card .unit { font-family: var(--f-mon); font-size: 9px; color: rgba(244,241,234,0.55); }
+  .h-card .price-row { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+  .h-card .orig { font-family: var(--f-mon); font-size: 9px; color: rgba(244,241,234,0.5); text-decoration: line-through; }
+  .h-card .price { font-family: var(--f-dis); font-weight: 900; font-size: 30px; letter-spacing: -0.04em; color: var(--c-accent); line-height: 0.88; }
+  .h-card .price .won { font-size: 12px; font-weight: 600; color: var(--c-paper); margin-left: 1px; }
+
+  /* CATEGORY SECTION */
+  .cs { display: flex; flex-direction: column; gap: 6px; }
+  .cs-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--c-ink); }
+  .cs-head .num { font-family: var(--f-mon); font-size: 11px; color: var(--c-accent); letter-spacing: 0.12em; font-weight: 500; }
+  .cs-head h3 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.025em; }
+  .cs-head .en { font-family: var(--f-mon); font-size: 10px; color: var(--c-mute); letter-spacing: 0.1em; }
+  .cs-head .meta { margin-left: auto; font-family: var(--f-mon); font-size: 9px; color: var(--c-mute); letter-spacing: 0.08em; }
+  .cs-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+
+  .it { position: relative; display: flex; flex-direction: column; gap: 3px; }
+  .it .ph { aspect-ratio: 1.15 / 1; background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 6px, #F4F2EE 6px, #F4F2EE 12px); display: grid; place-items: center; font-family: var(--f-mon); font-size: 8px; color: #948F86; letter-spacing: 0.04em; text-align: center; padding: 4px; }
+  .it .name { margin: 3px 0 0; font-size: 11px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .it .unit { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); letter-spacing: 0.04em; line-height: 1; }
+  .it .pr { display: flex; align-items: baseline; gap: 4px; margin-top: 1px; }
+  .it .orig { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); text-decoration: line-through; }
+  .it .price { font-family: var(--f-dis); font-weight: 900; font-size: 17px; letter-spacing: -0.04em; color: var(--c-accent); line-height: 0.9; }
+  .it .price .won { font-size: 9px; font-weight: 600; color: var(--c-ink); margin-left: 1px; }
+  .it .bg { position: absolute; top: 4px; left: 4px; background: var(--c-ink); color: var(--c-paper); font-family: var(--f-mon); font-size: 8px; letter-spacing: 0.08em; padding: 2px 4px 1px; z-index: 2; }
+  .it .bg.g { background: var(--c-green); }
+  .it .bg.r { background: var(--c-accent); }
+
+  /* FOOTER */
+  .pc-foot { margin-top: auto; border-top: 2px solid var(--c-ink); padding-top: 12px; display: grid; grid-template-columns: 1fr auto auto; gap: 18px; align-items: end; }
+  .pc-foot .info { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 3px; font-size: 11px; line-height: 1.45; }
+  .pc-foot .info .l { font-family: var(--f-mon); font-size: 9px; color: var(--c-mute); letter-spacing: 0.1em; }
+  .pc-foot .note { font-size: 9px; color: var(--c-mute); line-height: 1.5; max-width: 300px; }
+  .pc-foot .qr { width: 64px; height: 64px; border: 1px solid var(--c-ink); background: repeating-conic-gradient(var(--c-ink) 0% 25%, transparent 0% 50%) 0 0/12px 12px, var(--c-paper); position: relative; }
+  .pc-foot .qr::after { content: "QR"; position: absolute; inset: 22px; background: var(--c-paper); display: grid; place-items: center; font-family: var(--f-mon); font-size: 8px; color: var(--c-ink); letter-spacing: 0.06em; }
+  .pc-foot .member { border: 1px solid var(--c-ink); padding: 8px 12px; font-size: 10px; line-height: 1.5; max-width: 220px; }
+  .pc-foot .member .l { font-family: var(--f-mon); font-size: 8px; color: var(--c-mute); letter-spacing: 0.14em; display: block; margin-bottom: 3px; }
+  .pc-foot .member strong { font-weight: 700; }
+</style>
+</head>
+<body>
+<article class="pc" data-template="print_magazine_grid" data-paper="B3">
+
+<!-- HEADER -->
+<header class="pc-head">
+  <div class="pc-logo" data-slot="store.logo">P</div>
+  <h1 class="pc-name" data-slot="store.name">파인마트<span class="br" data-slot="store.branch">/ 합정점 · HAPJEONG</span></h1>
+  <div class="pc-meta"><span>ISSUE 026 / WEEKEND BIG SALE</span><strong data-slot="store.period">26.05.14 — 05.20</strong></div>
+  <div class="pc-meta notb"><span>TEL</span><strong data-slot="store.phone">02-336-2580</strong></div>
+  <div class="pc-meta notb"><span>HOURS</span><strong>09:00 – 23:00</strong></div>
+</header>
+
+<!-- HERO BAND : 시즌 카피 + 영웅 3 -->
+<section class="hero">
+  <div class="hero-title">
+    <div>
+      <span class="eb"><span class="dot"></span>WEEK'S BIGGEST DEAL</span>
+      <h2 data-slot="copy.headline">식탁에 다가온<br/><em>봄</em>, 오롯이.</h2>
+      <p class="sub" data-slot="copy.subline">제철 식재료부터 주말 장보기 필수템까지 — 30종을 한 페이지에.</p>
+    </div>
+    <span class="ct">30 ITEMS · 5 CATEGORIES · MEMBER PRICE</span>
+  </div>
+
+  <article class="h-card" data-slot-group="product[0]">
+    <span class="badge" data-slot="product[0].badge">BEST</span>
+    <div class="ph" data-slot="product[0].image">[ 1등급 한우 등심 ]</div>
+    <span class="cat" data-slot="product[0].category">MEAT · 정육</span>
+    <h3 class="name" data-slot="product[0].name">1등급 한우 등심</h3>
+    <span class="unit" data-slot="product[0].unit">100g · 냉장</span>
+    <div class="price-row">
+      <span class="orig" data-slot="product[0].original">29,800</span>
+      <span class="price"><span data-slot="product[0].price">17,900</span><span class="won">원</span></span>
+    </div>
+  </article>
+
+  <article class="h-card" data-slot-group="product[1]">
+    <span class="badge" data-slot="product[1].badge">FRESH</span>
+    <div class="ph" data-slot="product[1].image">[ 노르웨이 연어회 ]</div>
+    <span class="cat">SEAFOOD · 수산</span>
+    <h3 class="name" data-slot="product[1].name">노르웨이 연어회</h3>
+    <span class="unit" data-slot="product[1].unit">300g · 냉장</span>
+    <div class="price-row">
+      <span class="orig" data-slot="product[1].original">18,900</span>
+      <span class="price"><span data-slot="product[1].price">12,900</span><span class="won">원</span></span>
+    </div>
+  </article>
+
+  <article class="h-card" data-slot-group="product[2]">
+    <span class="badge" data-slot="product[2].badge">SEASON</span>
+    <div class="ph" data-slot="product[2].image">[ 설향 딸기 ]</div>
+    <span class="cat">PRODUCE · 농산</span>
+    <h3 class="name" data-slot="product[2].name">설향 딸기</h3>
+    <span class="unit" data-slot="product[2].unit">1kg · 2팩 구매시</span>
+    <div class="price-row">
+      <span class="orig" data-slot="product[2].original">8,900</span>
+      <span class="price"><span data-slot="product[2].price">5,900</span><span class="won">원</span></span>
+    </div>
+  </article>
+</section>
+
+<!-- SECTION 01 · 정육 -->
+<section class="cs">
+  <div class="cs-head"><span class="num">01</span><h3>정육 특가</h3><span class="en">MEAT</span><span class="meta">6 ITEMS</span></div>
+  <div class="cs-grid">
+    <article class="it" data-slot-group="product[3]"><span class="bg r">30%</span><div class="ph" data-slot="product[3].image">[ 흑돼지 삼겹 ]</div><h4 class="name" data-slot="product[3].name">제주 흑돼지 삼겹</h4><span class="unit" data-slot="product[3].unit">100g</span><div class="pr"><span class="orig">4,980</span><span class="price"><span data-slot="product[3].price">3,480</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[4]"><div class="ph" data-slot="product[4].image">[ 하림 닭다리살 ]</div><h4 class="name" data-slot="product[4].name">하림 닭다리살</h4><span class="unit" data-slot="product[4].unit">500g</span><div class="pr"><span class="price"><span data-slot="product[4].price">6,930</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[5]"><div class="ph" data-slot="product[5].image">[ 호주산 LA갈비 ]</div><h4 class="name" data-slot="product[5].name">호주산 LA꽃갈비</h4><span class="unit" data-slot="product[5].unit">500g</span><div class="pr"><span class="price"><span data-slot="product[5].price">19,800</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[6]"><div class="ph" data-slot="product[6].image">[ 양념 불고기 ]</div><h4 class="name" data-slot="product[6].name">양념 소불고기</h4><span class="unit" data-slot="product[6].unit">300g</span><div class="pr"><span class="price"><span data-slot="product[6].price">9,900</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[7]"><div class="ph" data-slot="product[7].image">[ 한돈 등심 ]</div><h4 class="name" data-slot="product[7].name">한돈 돈가스용 등심</h4><span class="unit" data-slot="product[7].unit">500g</span><div class="pr"><span class="price"><span data-slot="product[7].price">8,490</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[8]"><span class="bg">PB</span><div class="ph" data-slot="product[8].image">[ 양념 등갈비 ]</div><h4 class="name" data-slot="product[8].name">매콤 양념 등갈비</h4><span class="unit" data-slot="product[8].unit">800g</span><div class="pr"><span class="price"><span data-slot="product[8].price">14,900</span><span class="won">원</span></span></div></article>
+  </div>
+</section>
+
+<!-- SECTION 02 · 수산 -->
+<section class="cs">
+  <div class="cs-head"><span class="num">02</span><h3>수산 · 활어</h3><span class="en">SEAFOOD</span><span class="meta">6 ITEMS</span></div>
+  <div class="cs-grid">
+    <article class="it" data-slot-group="product[9]"><div class="ph" data-slot="product[9].image">[ 남해 생굴 ]</div><h4 class="name" data-slot="product[9].name">남해 생굴</h4><span class="unit" data-slot="product[9].unit">400g</span><div class="pr"><span class="price"><span data-slot="product[9].price">9,030</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[10]"><span class="bg r">1+1</span><div class="ph" data-slot="product[10].image">[ 손질 오징어 ]</div><h4 class="name" data-slot="product[10].name">손질 오징어</h4><span class="unit" data-slot="product[10].unit">2미</span><div class="pr"><span class="price"><span data-slot="product[10].price">6,980</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[11]"><div class="ph" data-slot="product[11].image">[ 코다리 특대 ]</div><h4 class="name" data-slot="product[11].name">코다리 특대</h4><span class="unit" data-slot="product[11].unit">4미</span><div class="pr"><span class="price"><span data-slot="product[11].price">12,000</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[12]"><div class="ph" data-slot="product[12].image">[ 완도 활전복 ]</div><h4 class="name" data-slot="product[12].name">완도 활전복</h4><span class="unit" data-slot="product[12].unit">대 · 1팩</span><div class="pr"><span class="orig">2,590</span><span class="price"><span data-slot="product[12].price">1,943</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[13]"><div class="ph" data-slot="product[13].image">[ 갈치 토막 ]</div><h4 class="name" data-slot="product[13].name">제주 은갈치</h4><span class="unit" data-slot="product[13].unit">3토막</span><div class="pr"><span class="price"><span data-slot="product[13].price">15,000</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[14]"><div class="ph" data-slot="product[14].image">[ 멸치 다시 ]</div><h4 class="name" data-slot="product[14].name">국산 멸치 다시팩</h4><span class="unit" data-slot="product[14].unit">200g</span><div class="pr"><span class="price"><span data-slot="product[14].price">7,980</span><span class="won">원</span></span></div></article>
+  </div>
+</section>
+
+<!-- SECTION 03 · 농산 -->
+<section class="cs">
+  <div class="cs-head"><span class="num">03</span><h3>농산 · 청과</h3><span class="en">PRODUCE</span><span class="meta">6 ITEMS</span></div>
+  <div class="cs-grid">
+    <article class="it" data-slot-group="product[15]"><div class="ph" data-slot="product[15].image">[ 완숙 토마토 ]</div><h4 class="name" data-slot="product[15].name">완숙 토마토</h4><span class="unit" data-slot="product[15].unit">1.5kg</span><div class="pr"><span class="price"><span data-slot="product[15].price">5,900</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[16]"><div class="ph" data-slot="product[16].image">[ 제주 봉지귤 ]</div><h4 class="name" data-slot="product[16].name">제주 봉지귤</h4><span class="unit" data-slot="product[16].unit">2kg</span><div class="pr"><span class="price"><span data-slot="product[16].price">9,900</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[17]"><div class="ph" data-slot="product[17].image">[ 골드키위 ]</div><h4 class="name" data-slot="product[17].name">제스프리 골드키위</h4><span class="unit" data-slot="product[17].unit">10입</span><div class="pr"><span class="price"><span data-slot="product[17].price">8,980</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[18]"><span class="bg g">유기농</span><div class="ph" data-slot="product[18].image">[ 새송이버섯 ]</div><h4 class="name" data-slot="product[18].name">새송이버섯</h4><span class="unit" data-slot="product[18].unit">300g</span><div class="pr"><span class="price"><span data-slot="product[18].price">1,980</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[19]"><div class="ph" data-slot="product[19].image">[ 깐 양파 ]</div><h4 class="name" data-slot="product[19].name">깐 양파</h4><span class="unit" data-slot="product[19].unit">2kg</span><div class="pr"><span class="price"><span data-slot="product[19].price">3,990</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[20]"><div class="ph" data-slot="product[20].image">[ 친환경 양상추 ]</div><h4 class="name" data-slot="product[20].name">친환경 양상추</h4><span class="unit" data-slot="product[20].unit">1통</span><div class="pr"><span class="price"><span data-slot="product[20].price">990</span><span class="won">원</span></span></div></article>
+  </div>
+</section>
+
+<!-- SECTION 04 · 가공 -->
+<section class="cs">
+  <div class="cs-head"><span class="num">04</span><h3>가공 · 델리</h3><span class="en">GROCERY</span><span class="meta">6 ITEMS</span></div>
+  <div class="cs-grid">
+    <article class="it" data-slot-group="product[21]"><span class="bg r">1+1</span><div class="ph" data-slot="product[21].image">[ 그릭요거트 ]</div><h4 class="name" data-slot="product[21].name">그릭 요거트 플레인</h4><span class="unit" data-slot="product[21].unit">450g</span><div class="pr"><span class="price"><span data-slot="product[21].price">4,980</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[22]"><div class="ph" data-slot="product[22].image">[ 햇반 컵반 ]</div><h4 class="name" data-slot="product[22].name">햇반 컵반 모듬</h4><span class="unit" data-slot="product[22].unit">12입</span><div class="pr"><span class="price"><span data-slot="product[22].price">11,994</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[23]"><div class="ph" data-slot="product[23].image">[ 무항생제 계란 ]</div><h4 class="name" data-slot="product[23].name">무항생제 계란</h4><span class="unit" data-slot="product[23].unit">15구</span><div class="pr"><span class="price"><span data-slot="product[23].price">5,490</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[24]"><span class="bg">PB</span><div class="ph" data-slot="product[24].image">[ 매일 우유 ]</div><h4 class="name" data-slot="product[24].name">매일 우유 2.3L</h4><span class="unit" data-slot="product[24].unit">900ml × 2</span><div class="pr"><span class="price"><span data-slot="product[24].price">6,490</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[25]"><div class="ph" data-slot="product[25].image">[ 김밥김 ]</div><h4 class="name" data-slot="product[25].name">광천 김밥김</h4><span class="unit" data-slot="product[25].unit">20매 × 5</span><div class="pr"><span class="price"><span data-slot="product[25].price">5,980</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[26]"><div class="ph" data-slot="product[26].image">[ 정갈한쌀 10kg ]</div><h4 class="name" data-slot="product[26].name">정갈한쌀</h4><span class="unit" data-slot="product[26].unit">10kg</span><div class="pr"><span class="orig">26,900</span><span class="price"><span data-slot="product[26].price">21,900</span><span class="won">원</span></span></div></article>
+  </div>
+</section>
+
+<!-- SECTION 05 · 주류·생활 -->
+<section class="cs">
+  <div class="cs-head"><span class="num">05</span><h3>주류 · 생활</h3><span class="en">BEVERAGE · LIVING</span><span class="meta">6 ITEMS</span></div>
+  <div class="cs-grid">
+    <article class="it" data-slot-group="product[27]"><div class="ph" data-slot="product[27].image">[ 칠레 와인 ]</div><h4 class="name" data-slot="product[27].name">칠레 까시예로 와인</h4><span class="unit" data-slot="product[27].unit">750ml</span><div class="pr"><span class="orig">15,900</span><span class="price"><span data-slot="product[27].price">11,900</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[28]"><div class="ph" data-slot="product[28].image">[ 호가든 ]</div><h4 class="name" data-slot="product[28].name">호가든 화이트</h4><span class="unit" data-slot="product[28].unit">330ml × 6</span><div class="pr"><span class="price"><span data-slot="product[28].price">12,900</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[29]"><span class="bg r">30%</span><div class="ph" data-slot="product[29].image">[ 페리에 미니 ]</div><h4 class="name" data-slot="product[29].name">페리에 미니</h4><span class="unit" data-slot="product[29].unit">200ml × 10</span><div class="pr"><span class="orig">14,900</span><span class="price"><span data-slot="product[29].price">10,430</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[30]"><div class="ph" data-slot="product[30].image">[ 다우니 ]</div><h4 class="name" data-slot="product[30].name">다우니 섬유유연제</h4><span class="unit" data-slot="product[30].unit">3L</span><div class="pr"><span class="price"><span data-slot="product[30].price">14,900</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[31]"><div class="ph" data-slot="product[31].image">[ 크리넥스 ]</div><h4 class="name" data-slot="product[31].name">크리넥스 3겹 화장지</h4><span class="unit" data-slot="product[31].unit">30롤</span><div class="pr"><span class="price"><span data-slot="product[31].price">17,900</span><span class="won">원</span></span></div></article>
+    <article class="it" data-slot-group="product[32]"><span class="bg g">친환경</span><div class="ph" data-slot="product[32].image">[ 자연주의 세제 ]</div><h4 class="name" data-slot="product[32].name">자연주의 주방세제</h4><span class="unit" data-slot="product[32].unit">2L × 2</span><div class="pr"><span class="price"><span data-slot="product[32].price">7,900</span><span class="won">원</span></span></div></article>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="pc-foot">
+  <div class="info">
+    <span class="l">ADDR</span>
+    <span data-slot="store.address">서울시 마포구 양화로 45, 파인빌딩 1F</span>
+    <span class="l">PERIOD</span>
+    <span><strong>26.05.14 (목) — 05.20 (수)</strong> · 주말 09:00 – 23:30 연장 운영</span>
+    <span class="l">NOTICE</span>
+    <span class="note" data-slot="footer.notice">한정 수량 · 1인 2팩까지. 표기 가격은 파인패스 회원가 기준, 일부 산지·시세에 따라 변동될 수 있습니다.</span>
+  </div>
+  <div class="member" data-slot="footer.member">
+    <span class="l">MEMBERSHIP</span>
+    파인패스 회원 전 품목<br/>
+    <strong>최대 5% 추가 할인</strong>
+  </div>
+  <div class="qr" data-slot="store.qrcode" aria-label="store QR"></div>
+</footer>
+
+</article>
+</body>
+</html>

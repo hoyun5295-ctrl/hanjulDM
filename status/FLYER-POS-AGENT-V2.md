@@ -5,7 +5,7 @@
 > **기준 자료:**
 > - V1: `targetup/status/FLYER-POS-AGENT.md` + `FLYER-POS-AGENT-DEV.md` (D112/D114 작성)
 > - master plan: `hanjulDM/status/hanjul-flyer-revamp/04_master_plan.md` §3 PHASE 1 무기 1번
-> - Harold 직접 통찰 (D159 세션): OKPOS 매장 구조 + POS UI 마스킹 = lock-in 의도 + "크롤의 변형" 컨셉
+> - Harold 직접 통찰 (D159 세션): 투게더스 매장 구조 + POS UI 마스킹 = lock-in 의도 + "크롤의 변형" 컨셉
 > - 본체 점검: `hanjulDM/packages/pos-agent/src/` 9 파일 + `hanjulDM/packages/backend/src/routes/flyer/pos.ts` + `utils/flyer/pos/` 3 CT-F
 > **목적:** master plan §3 PHASE 1 무기 1번 "POS Agent 직접연결(협조 X) + Retail Brain" 본격 구현
 
@@ -16,7 +16,7 @@
 V1은 **데이터 흐름 설계**였다. V2는 **영업 진입장벽 0 + Lock-in 본질**까지 박는다.
 
 **Harold 통찰 핵심 (D159):**
-1. OKPOS 매장 = 사무실 PC 1대에 MySQL 서버 박힘. 계산대 POS 단말은 사무실 MySQL을 바라봄. → **매장 1곳당 Agent 1개**
+1. 투게더스 매장 = 사무실 PC 1대에 **MS-SQL Server** 박힘 (Harold 명시 D159 정정). 계산대 POS 단말은 사무실 MS-SQL을 바라봄. → **매장 1곳당 Agent 1개**. Windows Authentication (Integrated Security) 박혀있을 가능성 높음 = 자격증명 추출 불필요, 사장님 PC 로그인 토큰으로 자동 접속.
 2. POS UI에서 "전체 다운로드" 시 `010-**95-8517` 마스킹. 회원 1명 클릭 시 원본 `010-5295-8517` 표시. → **DB엔 원본 100% 저장 확정**, UI 레이어만 마스킹
 3. POS 업체가 강제 마스킹 = "원본 보고 싶으면 우리 POS 발송기능 써라" lock-in 의도. **DB 직접 SELECT로 진입하면 마스킹 우회 끝**
 4. 궁극 = POS 업체 협조 0%로 강제 데이터 추출. **"크롤의 변형" = 해킹 X, 사장님 PC에 박혀 있는 자격증명을 사장님 동의로 합법 발견**
@@ -50,7 +50,7 @@ V1은 **데이터 흐름 설계**였다. V2는 **영업 진입장벽 0 + Lock-in
 
 ### 축 1. POS Adapter + AI 매핑 하이브리드 (확실성 × 범용성)
 
-- **알려진 POS 8종** (포스뱅크/OKPOS/유니포스/투게더스/토마토/스마트로/캐시노트/하이브리드POS) → 각각 adapter 클래스 (테이블·컬럼·자격증명 추출 경로 사전 박음, confidence 100%)
+- **알려진 POS 8종** (포스뱅크/투게더스/유니포스/투게더스/토마토/스마트로/캐시노트/하이브리드POS) → 각각 adapter 클래스 (테이블·컬럼·자격증명 추출 경로 사전 박음, confidence 100%)
 - **모르는 POS** → AI 스키마 매핑 + AI 자격증명 추론 fallback
 - **Adapter 학습 루프** — AI 매핑이 confidence 95%+로 성공한 POS는 자동 adapter 후보로 승격 → 슈퍼관리자 1회 검수 후 정식 adapter 박음
 
@@ -99,7 +99,7 @@ V1은 **데이터 흐름 설계**였다. V2는 **영업 진입장벽 0 + Lock-in
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│           매장 사무실 PC (서버형 OKPOS/포스뱅크/...)        │
+│           매장 사무실 PC (서버형 투게더스/포스뱅크/...)        │
 │                                                        │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │  한줄전단 POS Agent v2                            │  │
@@ -188,7 +188,7 @@ V1은 **데이터 흐름 설계**였다. V2는 **영업 진입장벽 0 + Lock-in
 | 파일 | 상태 | 우선순위 |
 |------|------|----------|
 | **★ `base.ts`** | **신설** | PosAdapter interface + 공통 헬퍼 |
-| **★ `okpos.ts`** | **신설 (매장 검증 후)** | OKPOS — 1순위 (Harold 직접 명시) |
+| **★ `togethers.ts`** | **신설 (매장 검증 후)** | 투게더스 — 1순위 (Harold 직접 명시) |
 | **★ `posbank.ts`** | **신설 (매장 검증 후)** | 포스뱅크 — 2순위 |
 | **★ `togethers.ts`** | **신설 (매장 검증 후)** | 투게더스 — 3순위 |
 | `unipos.ts` | 보류 | 유니포스 |
@@ -273,7 +273,7 @@ V1은 **데이터 흐름 설계**였다. V2는 **영업 진입장벽 0 + Lock-in
 | 9 | 매장 사장님 frontend POS 설치 가이드 + 모니터링 | X | D159+ |
 | 10 | 슈퍼관리자 양방향 명령 UI 강화 | X | D159+ |
 | 11 | 약관 문서 4줄 (합법성 안전망) | X | D159+ |
-| 12 | OKPOS adapter 3종 (credential/schema/ui-automation) | **★ 매장 검증 5건 필수** | OKPOS 매장 캡처 후 |
+| 12 | 투게더스 adapter 3종 (credential/schema/ui-automation) | **★ 매장 검증 5건 필수** | 투게더스 매장 캡처 후 |
 | 13 | ROI 폐회로 + BI 리포트 (CT-F18 + CT-F19) | X (PHASE 1 P0-04와 정합) | D161+ |
 | 14 | Outside DB 매칭 + 자동 매장 광고 (PHASE 1 무기 5번) | POS 데이터 누적 후 | D183+ |
 
@@ -302,20 +302,29 @@ V1은 **데이터 흐름 설계**였다. V2는 **영업 진입장벽 0 + Lock-in
 
 ---
 
-## 7. OKPOS 매장 검증 캡처 체크리스트
+## 7. 투게더스(Together's) 매장 검증 캡처 체크리스트
 
-12번 작업(OKPOS 전용 adapter) 진입 직전 Harold가 OKPOS 매장 1곳에 팀뷰어 원격 접속하여 캡처:
+**투게더스 POS = MS-SQL Server 매장 관리 PC 박힘 확정 (Harold 명시, D159 정정).** master plan §3 PHASE 1 무기 1번 1순위. Windows Authentication 박혀있을 가능성 높음 — 자격증명 추출 영역 불필요.
 
-1. `C:\OKPOS\` 또는 `C:\Program Files\OKPOS\` 폴더 존재 + 하위 모든 `.ini/.xml/.config/.json` 파일 캡처
-2. `C:\ProgramData\MySQL\` 하위 `my.ini` 캡처 (`datadir` 경로 확인)
-3. Windows 제어판 → ODBC 데이터 원본 → 시스템 DSN 캡처
-4. 작업관리자 → `mysqld.exe` / `OKPOS exe` 실행 확인 + 포트 3306 LISTENING (`netstat -ano | findstr 3306`)
-5. 사장님이 OKPOS 처음 설치할 때 받은 매뉴얼/계정 문서 캡처
+12번 작업(투게더스 전용 adapter) 진입 직전 Harold가 투게더스 매장 **1곳**에 팀뷰어 원격 접속하여 다음 5건 캡처:
+
+1. **투게더스 설치 폴더** = `C:\Together\` 또는 `C:\TogetherPOS\` 또는 `C:\Program Files\Together*\` 폴더 존재 + 하위 모든 `.ini/.xml/.config/.json` 파일 캡처 (DB 접속 정보 박혀있을 가능성)
+2. **MS-SQL Server 가동 확인** = (a) 작업관리자에서 `sqlservr.exe` 프로세스 실행 확인 (b) `services.msc` → "SQL Server (MSSQLSERVER 또는 SQLEXPRESS)" 서비스 상태 (c) SQL Server Configuration Manager → 인스턴스명 + 인증 모드(Windows Auth / Mixed) + TCP 포트 (기본 1433)
+3. **Windows ODBC 데이터 원본** = 제어판 → 관리 도구 → ODBC 데이터 원본 → 시스템 DSN 탭 캡처 (투게더스가 ODBC DSN 박았는지 확인)
+4. **프로세스 + 포트** = `netstat -ano | findstr 1433` 결과 + 작업관리자 → `sqlservr.exe` + `Together*.exe` 실행 확인
+5. **투게더스 매뉴얼/계정 문서** = 사장님이 처음 투게더스 설치할 때 받은 종이/PDF 매뉴얼 또는 SQL Server 계정(`sa` 비번) 문서
+
+**MS-SQL 자격증명 우선순위:**
+- 1순위 = Windows Authentication (Integrated Security) — Agent가 administrator 권한 박혀있으면 자동 접속, 자격증명 입력 0건
+- 2순위 = SQL Server 인증 (sa + 비번) — 투게더스 설정 파일에 박혀있으면 자동 발견
+- 3순위 = ODBC DSN에 박힌 계정 — `HKLM\SOFTWARE\ODBC\ODBC.INI` 레지스트리에서 발견
 
 캡처 5건 받으면 비토가:
-- `okpos.ts` adapter 본격 코드 (Credential Discovery 경로 + 테이블/컬럼 매핑)
-- `okpos-ui-automation.ts` (DB 접근 실패 시 fallback)
-- adapter-registry 등록
+- `togethers.ts` adapter (정확한 테이블/컬럼 매핑 — 추정 TB_MEMBER / TB_SALES / TB_STOCK)
+- `togethers-credential.ts` (정확한 설정파일 경로 + 암호화 알고리즘)
+- `togethers-ui-automation.ts` (DB 접근 실패 시 UI 자동화 fallback)
+- adapter-registry에 1순위로 박음
+- 빌드 검증 + Setup-1.0.1.exe 박음
 
 ---
 
@@ -335,7 +344,7 @@ master plan §3 7대 무기와의 정확한 매핑:
 
 **비토 권장 출시 단계:**
 - **1차 출시 (D159~D167, 9일)** — V2 1~11번 (영업 가능 상태 도달)
-- **2차 출시 (D168~D170, 3일)** — V2 12번 (OKPOS adapter, 매장 검증 후)
+- **2차 출시 (D168~D170, 3일)** — V2 12번 (투게더스 adapter, 매장 검증 후)
 - **3차 출시 (D171~D180, 10일)** — V2 13번 (ROI 폐회로 + BI 리포트, lock-in 완성)
 - **4차 출시 (D183+)** — V2 14번 (Outside DB, PHASE 1 5번 무기)
 
@@ -374,7 +383,7 @@ master plan §3 7대 무기와의 정확한 매핑:
 
 ## 11. D159 빌드 검증 결과 (2026-05-14)
 
-**14단계 중 12단계 완료 + 빌드 통과 (OKPOS 전용 어댑터 1건만 매장 검증 캡처 대기):**
+**14단계 중 12단계 완료 + 빌드 통과 (투게더스 전용 어댑터 1건만 매장 검증 캡처 대기):**
 
 | # | 작업 | 상태 |
 |---|------|------|
@@ -391,7 +400,7 @@ master plan §3 7대 무기와의 정확한 매핑:
 | 10 | 매장 사장님 frontend PosAgentPage + backend my-agent 라우트 | ✓ |
 | 11 | 슈퍼관리자 PosAgentListPage 확장 (원격 명령 UI + 이력 모달) | ✓ |
 | 12 | 약관 문서 LICENSE-DATA-POLICY.txt 10조 | ✓ |
-| 13 | OKPOS adapter 3개 (credential/schema/ui-automation) | 매장 캡처 대기 |
+| 13 | 투게더스 adapter 3개 (credential/schema/ui-automation) | 매장 캡처 대기 |
 
 **빌드 검증 (D159 00:20:43):**
 
@@ -423,7 +432,7 @@ master plan §3 7대 무기와의 정확한 매핑:
 1. **주인님 psql 실행:** SCHEMA-MIGRATION-POS-V2.sql + flyer_settings INSERT
 2. **주인님 hdm-push 또는 직접 배포:** 운영 서버 dist 적용 (atomic safe-build는 이미 로컬 dist swap 완료)
 3. **assets/icon.ico 디자인 작업 (별건):** 4 상태 아이콘 (green/yellow/red/gray) + header.bmp + welcome.bmp
-4. **OKPOS 매장 1곳 팀뷰어 검증 캡처 5건:** §7 체크리스트 참조 → 캡처 받으면 OKPOS adapter 3 파일 박음
+4. **투게더스 매장 1곳 팀뷰어 검증 캡처 5건:** §7 체크리스트 참조 → 캡처 받으면 투게더스 adapter 3 파일 박음
 5. **PHASE 1 무기 4 (D161~):** CT-F18 flyer-attribution (4단 ROI 폐회로) + CT-F19 flyer-retail-brain (BI 자동 리포트)
 
 ---

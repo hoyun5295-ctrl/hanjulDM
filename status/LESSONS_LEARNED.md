@@ -182,7 +182,94 @@ D145 atomic safe-build (옛 dist 유지) 안전망 정상 작동 — 빌드 실�
 
 상세는 한줄AI LESSONS_LEARNED 참조 (단, hanjulDM 코드 수정 시 hanjulDM 자체 LESSONS_LEARNED만 의무 로드).
 
-## 10. 향후 누적될 영역
+## 11. ★ D159 POS Agent V2 박힘 패턴 (2026-05-14)
+
+POS Agent V2 (Credential Discovery + Mask Bypass + 양방향 통신 + NSIS 인스톨러) 박힘. 빌드 검증 + 운영 배포 과정 중 박힌 5 fix + 메타 사고 1건.
+
+### 11-1. pkg pushData 반환 타입 정합 (ok=false case 박음)
+
+- **사고**: pos-agent `server-client.ts pushData`가 항상 `ok=true` 반환 → scheduler.ts cache-pusher의 `if (result.ok && result.data)` 분기에서 `markFailed` case 도달 0건 + tsc 에러 6건 (`result.error` 미존재).
+- **정답**: pushData 반환 타입에 `ok: boolean, data: ..., error?: string` 명시. 전 배치 실패 시 `allFailed = totalAccepted === 0 && totalRejected > 0`로 ok=false 박음.
+- **How to apply**: Agent ↔ 서버 통신 함수에서 batch 전체 실패 case = ok=false + error 명시. scheduler에서 markFailed 분기 활성화 보장.
+
+### 11-2. NSIS Unicode + UTF-8 BOM 필수 (한글 인코딩)
+
+- **사고**: installer.nsi 빌드 시 `Bad text encoding: line 2/4` 에러. 한글 주석/스트링 박힌 .nsi 파일 처리 실패.
+- **정답**: (a) `.nsi` 첫 줄에 `Unicode true` 박음 + (b) 파일 자체를 UTF-8 BOM으로 박음 (`[System.Text.UTF8Encoding $true]`).
+- **How to apply**: NSIS 3.x Unicode 빌드 시 두 가지 모두 박혀야 한글 인식. Write 도구는 BOM 없이 박으므로 PowerShell로 변환 박음:
+  ```powershell
+  $utf8Bom = New-Object System.Text.UTF8Encoding $true
+  [System.IO.File]::WriteAllText($path, $content, $utf8Bom)
+  ```
+
+### 11-3. ★ nginx sed/awk 박힘 시 server block 매칭 주의 (D159 핵심 메타 사고)
+
+- **사고**: nginx config에 `location /downloads/` 박을 때 sed `0,/location \/ {$/`가 **HTTP 80 server block의 redirect-only `location /` 매칭** → HTTPS 443 server block에 박히지 않음 → 매장 사장님 HTTPS 요청 시 SPA fallback (`index.html` 3,737 bytes 반환). 7회 시행착오.
+- **정답 1개**: nginx location 박힘 = (a) `^~` 접두사 사용 (정규식 우선순위 우회) + (b) HTTPS 443 server block의 `location /api/` 직전에 박음 (server block 정확 매칭 보장). awk 패턴:
+  ```bash
+  sudo awk '/^    location \/api\/ \{$/ && !done {
+      print "    location ^~ /downloads/ {"
+      print "        alias /var/www/...;"
+      print "        autoindex off;"
+      print "    }"; print ""; done=1
+  } {print}' /etc/nginx/sites-enabled/<config> > /tmp/new
+  sudo mv /tmp/new /etc/nginx/sites-enabled/<config>
+  ```
+- **How to apply**: nginx config 자동화 박을 때 (1) HTTP server block + HTTPS server block 둘 다 동일 location 박혀있는 경우 첫번째 매칭이 의도와 다를 수 있음 (2) 정규식 location이 위쪽에 박혀있으면 일반 prefix보다 우선 매칭 → `^~` 접두사 필수 (3) 박힘 후 `nginx -T | grep -B20 "추가된 location"`로 어느 server_name 아래 박혔는지 확인 의무.
+- **Why**: HTTP 80 server block은 보통 `return 301 https://...` redirect 영역 = 매장 사장님 실 요청 안 닿음. HTTPS 443에 박혀야 정상 동작.
+
+### 11-4. SPA fallback 정확 진단 (Content-Length 3,737 bytes = frontend index.html)
+
+- **사고**: `curl -I /downloads/Setup-1.0.0.exe` 응답이 `Content-Type: text/html, Content-Length: 3737` = SPA index.html. 처음엔 권한 문제로 의심 → 진단 결과 권한 OK + nginx 200 + 그러나 매칭 X.
+- **정답 진단**: Content-Length 정확히 3,737 = frontend `index.html` 박힘 (atomic safe-build 출력에 `[flyer] swap 완료 (3737 bytes)` 박힘). 이게 박히면 SPA `location / { try_files $uri $uri/ /index.html }` 처리 = 의도한 location 매칭 실패 신호.
+- **How to apply**: nginx에서 `Content-Type: text/html + Content-Length 3,737` 응답이면 SPA fallback 박힘 = location 매칭 실패. `nginx -T | grep -B25 "박은 location"`로 어느 server block에 박혔는지 즉시 확인.
+
+### 11-5. systray2 native binary 위치 변경 (v2.1.4+)
+
+- **사고**: `copy-native.js`가 `tray_windows.exe` 파일 찾기 실패 ("⚠ systray2 native (Windows) 파일 없음"). systray2 v2.1.4부터 native binary 파일명을 `tray_windows_release.exe`로 변경.
+- **정답**: copy-native.js에서 두 파일명 모두 시도 (Windows = `tray_windows_release.exe`가 정합).
+- **How to apply**: npm 라이브러리 native binary 의존 시 라이브러리 버전 별 파일명 변경 가능성 항상 확인. `node_modules/<lib>/traybin/` 직접 정독.
+
+D157(슈퍼관리자 대행) + D158(매장 발송) 작업에서 박힌 사고 + 운영 fix 5건. 향후 admin-frontend/frontend 컴포넌트 박을 때 동일 패턴 차단.
+
+### 10-1. admin-frontend localStorage 토큰 키 = `admin_token` 정합
+
+- **사고**: 신규 알림톡 컴포넌트가 `localStorage.getItem('flyerSuperToken')` 사용 → 토큰 미발견 → "No token provided" 토스트 + 모든 API 401 → 회사 dropdown 0건.
+- **정답**: App.tsx L11 `getToken(): return localStorage.getItem('admin_token')` 정합. 모든 admin-frontend 컴포넌트가 동일 키 사용 의무.
+- **How to apply**: admin-frontend 신규 컴포넌트 박을 때 `apiFetch` (App.tsx L14) 사용 권장 — 자동 토큰 + 401 자동 로그아웃 통합. 직접 `fetch + Authorization` 박을 때 토큰 키 = `admin_token` 확정.
+
+### 10-2. Backend 응답 키 정합 (items vs companies vs rows)
+
+- **사고**: AlimtalkManagementPage `loadCompanies` 응답 파싱 시 `data.companies || data.rows || data` fallback만 박힘 → 실제 응답 `{ items, total, page, pageSize }` 키 누락 → 회사 0건.
+- **정답**: GET `/api/admin/flyer/companies` 응답 구조 확정 = `{ items, total, page, pageSize }`. fallback에 `items` 첫 순위 박기.
+- **How to apply**: 새 admin-frontend 컴포넌트가 admin 라우트 호출 시 응답 키 직접 확인(routes/admin/flyer-admin.ts 정독) — fallback 체인 박는 것보다 정확 키 1순위 사용이 안전.
+
+### 10-3. TypeScript Interface 중복 정의 TS2719
+
+- **사고**: AlimtalkManagementPage Template interface와 AlimtalkTemplateModal Template interface가 동일 이름 + 다른 필드 → "Two different types with this name exist, but they are unrelated".
+- **정답**: 누락 8 필드(buttons/variables/emphasize_title/emphasize_subtitle/extra_content/template_header/category/preview_message) 추가하여 구조 매칭.
+- **How to apply**: 공용 type은 별도 export 파일에서 정의 (예: alimtalk-types.ts) + 양쪽 컴포넌트가 import. 컴포넌트 내부 interface 중복 정의 피하기.
+
+### 10-4. axios `res.headers` 유니온 타입 좁히기
+
+- **사고**: hanjulDM tsconfig + axios 1.7.2 조합에서 `res.headers['content-type']` 타입 = `string | number | true | string[] | AxiosHeaders` → string 직접 할당 차단(TS2322).
+- **정답**: `typeof ct === 'string' && ct ? ct : 'application/octet-stream'` 타입 좁히기.
+- **How to apply**: axios response headers 접근 시 항상 typeof 체크 + fallback. 본진 한줄AI는 통과하나 hanjulDM strict 모드에서 차단되는 패턴.
+
+### 10-5. frontend safe-build.sh devDependencies 자동 복구
+
+- **사고**: D158 빌드 시 frontend(2/3) 단계에서 "This is not the tsc command you are looking for" — typescript 부분 설치 또는 빈 디렉토리.
+- **원인**: D152 분리 시 frontend/scripts/safe-build.sh에 D151-6 자동 복구(typescript 누락 감지 → npm install --include=dev) 박지 X. backend + admin-frontend는 박힘.
+- **정답**: frontend safe-build.sh L12-17에 자동 복구 박음(typescript + vite 둘 다 체크) — 영구 차단.
+- **How to apply**: hanjulDM 신규 패키지 추가 시 scripts/safe-build.sh에 D151-6 자동 복구 패턴 의무 포함. devDependencies 누락 = NODE_ENV=production로 npm install이 skip하는 사고 영구 차단.
+
+### 10-6. git pull 누락 HEAD SHA 비교 검증
+
+- **사고**: 로컬 git push 완료(`up to date with origin/main`) + 서버 빌드 통과인데도 알림톡 스케줄러 startup 로그 미박힘 → 검증 결과 서버 HEAD `e5911fb`(D156) ≠ 로컬 HEAD `ed5cb76`(D157) = 서버 git pull 누락.
+- **정답**: 빌드 후 `git log --oneline -1` 또는 `git rev-parse HEAD` 비교. 로컬 = 서버 SHA 정합 의무.
+- **How to apply**: 배포 후 pm2 restart 전 서버 git log 확인 절차. 빌드 통과 ≠ 코드 적용 (옛 코드도 컴파일 통과 가능). startup 로그(예: `startFlyerAlimtalkScheduler`) 검증으로 신규 코드 실 적용 확정.
+
+## 11. 향후 누적될 영역
 
 - PHASE 0 트랙 A·B 진행 중 사고
 - POS Agent 직접연결 고도화 사고

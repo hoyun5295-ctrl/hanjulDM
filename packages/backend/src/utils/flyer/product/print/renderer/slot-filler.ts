@@ -118,16 +118,24 @@ function toCardViewModel(p: RawProduct, index = 0) {
   const rate = discountRate(p);
   const isTop = index === 0;
   const badge = badgeByRate(rate, index);
+  const salePriceFormatted = formatNumber(p.salePrice);
+  const originalPriceFormatted = hasOriginal ? formatNumber(p.originalPrice) + '원' : '';
   return {
     productName: p.productName || '',
     unit: p.unit || '',
     imageUrl: p.imageUrl || '',
-    salePriceNumber: formatNumber(p.salePrice),
-    originalPrice: hasOriginal ? formatNumber(p.originalPrice) + '원' : '',
+    category: p.category || '',
+    // 가격 — 옛 종(salePriceNumber/originalPrice) + 신규 종(salePriceFormatted/originalPriceFormatted) alias
+    salePriceNumber: salePriceFormatted,
+    salePriceFormatted: salePriceFormatted,
+    originalPrice: originalPriceFormatted,
+    originalPriceFormatted: originalPriceFormatted,
     discountRate: rate > 0 ? rate : '',
     ribbonText: ribbonTextByRate(rate, isTop),
+    // 배지 — 옛 종(badgeText/badgeKind) + 신규 종(badge) alias
     badgeKind: badge.kind,
     badgeText: badge.text,
+    badge: badge.text,
     aiCopy: p.aiCopy || '',
     origin: p.origin || '',
   };
@@ -139,13 +147,16 @@ function toCardViewModel(p: RawProduct, index = 0) {
 
 function resolveTextSlot(slot: SlotDefinition, input: RawFlyerInput): any {
   const ov = input.slotOverrides?.[slot.id];
+  if (ov && typeof ov === 'object' && typeof ov.value === 'string') return { value: ov.value };
   if (typeof ov === 'string' && ov.length > 0) return { value: ov };
 
   // id 매핑 예약어
   if (slot.id === 'hero_title' && input.heroTitle) return { value: input.heroTitle };
   if (slot.id === 'hero_subcopy' && input.heroSubcopy) return { value: input.heroSubcopy };
 
-  return { value: slot.fallback || '' };
+  // 입력 없음 = SLOT_DATA에 박지 않음 → FILL_RUNTIME continue → 자식 fallback HTML 보존
+  // (typography/rich_text fallback에 박힌 <em>/<br>/<strong> 마크업 유지)
+  return undefined;
 }
 
 function resolveSectionBanner(slot: SlotDefinition, input: RawFlyerInput): any {
@@ -275,6 +286,33 @@ function resolveFooterNotice(slot: SlotDefinition, input: RawFlyerInput): any {
   return { text };
 }
 
+function resolveProductCard(slot: SlotDefinition, input: RawFlyerInput): any {
+  const selection = (slot as any).selection || { mode: 'highest_discount' };
+  const filterPromo = selection.filter?.promoType;
+  const filterCategory = selection.filter?.category;
+  // selection.index: bento 모자이크처럼 같은 정렬 풀에서 N번째 카드 박을 때 사용
+  const index = typeof selection.index === 'number' ? selection.index : 0;
+  let pool = input.products.slice();
+  if (filterPromo) pool = pool.filter(p => p.promoType === filterPromo);
+  if (filterCategory && Array.isArray(filterCategory)) {
+    pool = pool.filter(p => matchCategory(p, filterCategory));
+  }
+  switch (selection.mode) {
+    case 'highest_discount':
+      pool.sort((a, b) => discountRate(b) - discountRate(a));
+      break;
+    case 'featured':
+      pool = pool.filter(p => p.featured);
+      break;
+    case 'random':
+      pool.sort(() => Math.random() - 0.5);
+      break;
+  }
+  if (pool.length === 0) return {};
+  const safeIndex = Math.min(index, pool.length - 1);
+  return toCardViewModel(pool[safeIndex], safeIndex);
+}
+
 // ============================================================
 // Public API: 서버측 resolve
 // ============================================================
@@ -287,9 +325,11 @@ export function resolveSlotData(manifest: TemplateManifest, input: RawFlyerInput
     switch (slot.type) {
       case 'text':
       case 'rich_text':
-      case 'typography':
-        out[slot.id] = resolveTextSlot(slot, input);
+      case 'typography': {
+        const v = resolveTextSlot(slot, input);
+        if (v !== undefined) out[slot.id] = v;
         break;
+      }
       case 'section_banner':
         out[slot.id] = resolveSectionBanner(slot, input);
         break;
@@ -302,13 +342,18 @@ export function resolveSlotData(manifest: TemplateManifest, input: RawFlyerInput
       case 'category_grid':
         out[slot.id] = resolveCategoryGrid(slot, input, usedCategories);
         break;
+      case 'product_card':
+        out[slot.id] = resolveProductCard(slot, input);
+        break;
       case 'footer_notice':
         out[slot.id] = resolveFooterNotice(slot, input);
         break;
-      case 'image':
       case 'qr':
+        // qr 타입 슬롯 = SLOT_DATA에 input.qr 박음 → fillBindings의 data-bind-bg="qr.imageUrl" 매칭
+        out[slot.id] = { qr: input.qr || {}, store: input.store || {} };
+        break;
+      case 'image':
       case 'map':
-      case 'product_card':
       case 'decoration':
       default:
         out[slot.id] = {};
@@ -419,8 +464,9 @@ export const FILL_RUNTIME = String.raw`
     // <template data-role="card"> 추출
     var tmpl = slotEl.querySelector('template[data-role="card"]');
     if (!tmpl) return;
-    // 기존 자식(템플릿 외) 제거
-    var clones = slotEl.querySelectorAll(':scope > :not(template)');
+    // 기존 자식(템플릿 + data-keep 박힌 것 제외) 제거
+    // data-keep = 정적 셀 (예: editorial article, mid-rule divider) 보존
+    var clones = slotEl.querySelectorAll(':scope > :not(template):not([data-keep])');
     for (var c = 0; c < clones.length; c++) clones[c].remove();
     // 각 아이템별 복제 삽입
     for (var i = 0; i < value.items.length; i++) {
@@ -460,7 +506,8 @@ export const FILL_RUNTIME = String.raw`
     }
   }
 
-  // 각 슬롯 ID별로 채우기 (v2 — Line B 클래스명 인식)
+  // 각 슬롯 ID별로 채우기 (v3 — D159 자동 감지. 클래스명 hard-coding 폐기.
+  // 옛 종(mart_*) 회귀 0 + 신규 종(print_*) 끌로드 원본 클래스명 그대로 박음 가능)
   var slotEls = document.querySelectorAll('[data-slot]');
   for (var i = 0; i < slotEls.length; i++) {
     var el = slotEls[i];
@@ -468,39 +515,28 @@ export const FILL_RUNTIME = String.raw`
     var value = data[id];
     if (value === undefined) continue;
 
-    // ── 그리드 계열 (product_grid / category_grid) ──
-    if (el.classList.contains('main-grid') ||
-        el.classList.contains('recommend-grid') ||
-        el.classList.contains('fresh-grid')) {
+    // 1) 그리드 — items 배열 + template[data-role="card"] 자식 존재
+    if (value && typeof value === 'object' && Array.isArray(value.items)
+        && el.querySelector('template[data-role="card"]')) {
       fillGrid(el, value);
     }
-    // ── 푸터 유의사항 ──
-    else if (el.classList.contains('footer-notice')) {
+    // 2) 푸터 유의사항 — {text: "..."}
+    else if (value && typeof value === 'object' && 'text' in value
+             && !('items' in value) && !('store' in value)) {
       fillFooterNotice(el, value);
     }
-    // ── 마스트헤드 (매장 헤더) ──
-    else if (el.classList.contains('masthead')) {
-      fillStoreHeader(el, value);
-    }
-    // ── 히어로 타이틀 / 히어로 기간 / 히어로 서브카피 / 푸터 브랜드 (단일 텍스트) ──
-    else if (el.classList.contains('hero-title') ||
-             el.classList.contains('hero-period') ||
-             el.classList.contains('hero-subcopy') ||
-             el.classList.contains('footer-brand')) {
+    // 3) 단순 텍스트 — string 또는 {value: "..."}
+    else if (typeof value === 'string') {
       fillTextSlot(el, value);
     }
-    // ── 섹션 헤더 (v2: 번호+타이틀+서브라벨 구조) ──
-    else if (el.classList.contains('section-main-header') ||
-             el.classList.contains('section-recommend-header') ||
-             el.classList.contains('section-fresh-header') ||
-             el.classList.contains('section-banner-main') ||
-             el.classList.contains('section-banner-recommend') ||
-             el.classList.contains('section-banner-fresh')) {
-      fillSectionBanner(el, value);
-    }
-    // ── fallback: data-bind 기반 텍스트 바인딩 ──
-    else {
+    else if (value && typeof value === 'object' && 'value' in value
+             && !('items' in value) && !('store' in value) && !('label' in value)) {
       fillTextSlot(el, value);
+    }
+    // 4) 복합 객체 — store_header / section_banner / 그 외
+    //    자식의 data-bind* 모든 처리. root 자체 data-bind는 fallback HTML 보존.
+    else if (value && typeof value === 'object') {
+      fillBindings(el, value);
     }
   }
 

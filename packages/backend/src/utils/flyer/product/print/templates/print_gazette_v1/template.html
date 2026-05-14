@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>{{flyer.title}}</title>
+  <style>{{INLINE_CSS}}</style>
+</head>
+<body>
+  <article class="pc page-front" data-template="print_gazette" data-paper="B3" data-page="1">
+
+    <!-- ═══ MASTHEAD (신문 제호) ═══ -->
+    <header class="mast" data-slot="masthead">
+      <div class="pre">VOL.026 · WEEKLY EDITION · 시장 신문</div>
+      <h1>
+        <span data-bind="store.name">파인마트</span>
+        <span class="ampersand">&amp;</span>
+        GAZETTE
+      </h1>
+      <div class="post">
+        <span>EST. 1998 · SEOUL</span>
+        <span data-bind="store.period">26.05.14 (THU) — 05.20 (WED)</span>
+        <span>PRICE FREE / PRINTED IN KOREA</span>
+      </div>
+    </header>
+
+    <!-- ═══ HERO SPREAD ═══ -->
+    <section class="hero-spread">
+      <div class="hs-lead">
+        <div class="kicker">EDITOR'S LETTER · WEEK 20</div>
+        <h2 data-slot="hero_title">
+          식탁에 <em>봄</em>이<br/>
+          다시 들어왔다.
+        </h2>
+        <p class="deck" data-slot="hero_subline">
+          제철 식재료는 거짓말을 하지 않는다. 이번 주, 가장 좋은 산지에서 가장 좋은 가격으로 골라 모았다.
+          딸기는 충남 논산에서, 굴은 통영 한산도에서. 식탁의 풍경이 바뀌는 한 주.
+        </p>
+        <div class="byline">EDITED BY 매장 MD팀 · 26.05.14</div>
+      </div>
+
+      <div class="hs-feature" data-slot="hero_product">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="caption" data-bind="category">FEATURE · 정육</div>
+        <h3 data-bind="productName">1등급 한우 등심, 마블링 9</h3>
+        <span class="unit" data-bind="unit">100g · 냉장</span>
+        <div class="price-row">
+          <span class="orig" data-bind="originalPriceFormatted"></span>
+          <span class="price"><span data-bind="salePriceFormatted">17,900</span><span class="won">원</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 01 · 신선 ═══ -->
+    <div class="sec-bar sec-fresh" data-slot="cat_fresh">
+      <span class="num" data-bind="number">SEC.01</span>
+      <h4 data-bind="label">오늘의 식탁 · TABLE OF THE DAY</h4>
+      <span class="en" data-bind="sublabel">FRESH · PRODUCE · SEAFOOD</span>
+      <span class="meta">3 ARTICLES + 1 EDITORIAL</span>
+    </div>
+    <section class="col-grid fresh-grid" data-slot="fresh_grid">
+      <span class="mid-rule" data-keep></span>
+      <template data-role="card">
+        <article class="article">
+          <div class="ph" data-bind-bg="imageUrl"></div>
+          <span class="meta" data-bind="category">PRODUCE · 농산</span>
+          <h5 class="name" data-bind="productName">상품명</h5>
+          <span class="unit" data-bind="unit">단위</span>
+          <div class="price-row">
+            <span class="orig" data-bind="originalPriceFormatted"></span>
+            <span class="price"><span data-bind="salePriceFormatted">5,900</span><span class="won">원</span></span>
+          </div>
+        </article>
+      </template>
+      <article class="article editorial fresh-editorial" data-keep>
+        <span class="label">FROM THE KITCHEN</span>
+        <p class="quote" data-slot="fresh_editorial">
+          봄에 가장 맛있는 건, 결국 가장 가까운 곳에서 온 것이다. 굳이 멀리 갈 필요가 없다 — 그래서 더 자주, 더 가볍게 사면 된다.
+        </p>
+        <span class="sig">— EDITOR'S NOTE</span>
+      </article>
+    </section>
+
+    <!-- ═══ SECTION 02 · 정육 ═══ -->
+    <div class="sec-bar sec-meat" data-slot="cat_meat">
+      <span class="num" data-bind="number">SEC.02</span>
+      <h4 data-bind="label">고기, 그리고 다음 끼니 · TONIGHT'S MEAT</h4>
+      <span class="en" data-bind="sublabel">MEAT · 정육</span>
+      <span class="meta">3 ARTICLES + 1 EDITORIAL</span>
+    </div>
+    <section class="col-grid meat-grid" data-slot="meat_grid">
+      <span class="mid-rule" data-keep></span>
+      <template data-role="card">
+        <article class="article">
+          <div class="ph" data-bind-bg="imageUrl"></div>
+          <span class="meta" data-bind="category">MEAT · 정육</span>
+          <h5 class="name" data-bind="productName">상품명</h5>
+          <span class="unit" data-bind="unit">단위</span>
+          <div class="price-row">
+            <span class="orig" data-bind="originalPriceFormatted"></span>
+            <span class="price"><span data-bind="salePriceFormatted">3,480</span><span class="won">원</span></span>
+          </div>
+        </article>
+      </template>
+      <article class="article editorial meat-editorial" data-keep>
+        <span class="label">PANTRY NOTE</span>
+        <p class="quote" data-slot="meat_editorial">
+          쌀 한 포대와 우유 한 통, 계란 한 판. 이 셋이 갖춰져 있다면 한 주가 무탈하다. 봄에는 거기에 딸기 한 팩이 더 붙는다.
+        </p>
+        <span class="sig">— STORE MANAGER</span>
+      </article>
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="pc-foot">
+      <div class="colophon" data-slot="footer_info">
+        <span class="l">COLOPHON</span>
+        <strong data-bind="store.name">파인마트 합정점</strong><br/>
+        <span data-bind="store.address">서울 마포구 양화로 45, 1F</span><br/>
+        <span class="l" style="margin-top:1.6mm">CONTACT</span>
+        <span data-bind="store.phone">02-336-2580</span> · 09:00–23:00
+      </div>
+      <p class="notice" data-slot="footer_notice">
+        * 본 신문에 게재된 모든 가격은 회원가 기준이며, 산지 시세에 따라 변동될 수 있습니다. 한정 수량으로 조기 품절될 수 있습니다.
+      </p>
+      <div class="member" data-slot="footer_member">
+        <span class="l">SUBSCRIBE</span>
+        매장 회원 구독시 매주 목요일<br/>
+        <strong>본 신문 자동 발송</strong>
+      </div>
+      <div class="qr" data-slot="footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
+    </footer>
+
+  </article>
+
+  <article class="pc page-back" data-template="print_gazette" data-paper="B3" data-page="2">
+
+    <!-- ═══ MINI MASTHEAD ═══ -->
+    <header class="mast-mini" data-slot="pb_mast_mini">
+      <span class="left">PAGE 2 / 2 · VOL.026</span>
+      <h1>
+        <span data-bind="store.name">파인마트</span>
+        <span class="am">&amp;</span>
+        GAZETTE<span class="sub">SECTION B · MARKET LIFE</span>
+      </h1>
+      <span class="right"><span data-bind="store.period">26.05.14 — 05.20</span> · <strong>WEEKLY EDITION</strong></span>
+    </header>
+
+    <!-- ═══ SECTION 03 · BEVERAGE ═══ -->
+    <div class="sec-bar sec-beverage" data-slot="cat_beverage">
+      <span class="num" data-bind="number">SEC.03</span>
+      <h4 data-bind="label">주말의 잔 · ONE GLASS, THIS WEEKEND</h4>
+      <span class="en" data-bind="sublabel">BEVERAGE</span>
+      <span class="meta">3 ARTICLES + 1 EDITORIAL</span>
+    </div>
+    <section class="col-grid beverage-grid" data-slot="beverage_grid">
+      <span class="mid-rule" data-keep></span>
+      <template data-role="card">
+        <article class="article">
+          <div class="ph" data-bind-bg="imageUrl"></div>
+          <span class="meta" data-bind="category">BEVERAGE</span>
+          <h5 class="name" data-bind="productName">상품명</h5>
+          <span class="unit" data-bind="unit">단위</span>
+          <div class="price-row">
+            <span class="orig" data-bind="originalPriceFormatted"></span>
+            <span class="price"><span data-bind="salePriceFormatted">11,900</span><span class="won">원</span></span>
+          </div>
+        </article>
+      </template>
+      <article class="article editorial beverage-editorial" data-keep>
+        <span class="label">SOMM'S NOTE</span>
+        <p class="quote" data-slot="beverage_editorial">
+          와인은 어렵게 마실 게 아니다. 봄에는 차게, 한 잔. 그게 가장 좋다. 안주는 등심 한 점이면 충분.
+        </p>
+        <span class="sig">— 매장 소믈리에</span>
+      </article>
+    </section>
+
+    <!-- ═══ SECTION 04 · LIVING ═══ -->
+    <div class="sec-bar sec-living" data-slot="cat_living">
+      <span class="num" data-bind="number">SEC.04</span>
+      <h4 data-bind="label">일상의 정리 · DAILY ESSENTIALS</h4>
+      <span class="en" data-bind="sublabel">LIVING</span>
+      <span class="meta">3 ARTICLES + 1 EDITORIAL</span>
+    </div>
+    <section class="col-grid living-grid" data-slot="living_grid">
+      <span class="mid-rule" data-keep></span>
+      <template data-role="card">
+        <article class="article">
+          <div class="ph" data-bind-bg="imageUrl"></div>
+          <span class="meta" data-bind="category">LIVING</span>
+          <h5 class="name" data-bind="productName">상품명</h5>
+          <span class="unit" data-bind="unit">단위</span>
+          <div class="price-row">
+            <span class="orig" data-bind="originalPriceFormatted"></span>
+            <span class="price"><span data-bind="salePriceFormatted">14,900</span><span class="won">원</span></span>
+          </div>
+        </article>
+      </template>
+      <article class="article editorial living-editorial" data-keep>
+        <span class="label">HOUSEKEEPING</span>
+        <p class="quote" data-slot="living_editorial">
+          매주 같은 자리에 같은 세제, 같은 휴지. 일상의 안정은 의외로 이런 작은 반복에서 시작된다.
+        </p>
+        <span class="sig">— 매장 매니저</span>
+      </article>
+    </section>
+
+    <!-- ═══ MD INTERVIEW ═══ -->
+    <section class="interview">
+      <div class="iv-photo">
+        <div class="ph">[ MD 포트레이트 ]</div>
+        <span class="caption">매장 MD · 매주 화요일 새벽 산지 직접 방문</span>
+      </div>
+      <div class="iv-body">
+        <span class="eyebrow">EDITOR'S INTERVIEW · WEEK 20</span>
+        <h2>
+          "<em>한 가지</em>만 잘 골라도<br/>일주일이 달라진다."
+        </h2>
+        <p class="quote" data-slot="md_interview">
+          매주 화요일 새벽, 가락동 시장을 직접 갑니다. 좋은 산지를 만나면 그 자리에서 도장을 찍어요.
+          이번 주는 <strong>충남 논산의 설향 딸기</strong>, 그리고 <strong>통영 한산도 생굴</strong>이 정말 좋았어요.
+          식탁은 한 가지만 잘 골라도 그 주의 분위기가 바뀝니다. 이번 주는 그 한 가지로 <em>봄</em>을 권합니다.
+        </p>
+        <span class="byline">EDITED BY 매장 MD팀 · 26.05.14</span>
+      </div>
+    </section>
+
+    <!-- ═══ NEXT ISSUE PREVIEW ═══ -->
+    <section class="next-strip">
+      <article class="next-card">
+        <span class="l">NEXT ISSUE · 다음 호 예고</span>
+        <span class="date">VOL.027 · 다음 주 발행</span>
+        <h3>다음 주 <em>특집호</em></h3>
+        <p class="body" data-slot="next_issue">
+          <strong>다음 주 행사 예고.</strong> 사장님이 박는 다음 주 시그니처 카피.
+        </p>
+      </article>
+      <article class="next-card">
+        <span class="l">SUBSCRIBE · 정기구독</span>
+        <span class="date">FREE / 매주 목요일</span>
+        <h3>매장 회원이면<br/>본 신문 <em>자동 발송</em>.</h3>
+        <p class="body">앱 가입 시 우편함 등록 — 매주 목요일 아침, 새 호가 도착합니다.</p>
+      </article>
+    </section>
+
+    <!-- ═══ COLOPHON FOOTER ═══ -->
+    <footer class="pc-foot pc-foot-back">
+      <div class="colophon" data-slot="back_footer_info">
+        <span class="l">COLOPHON</span>
+        <strong data-bind="store.name">매장명</strong><br/>
+        <span data-bind="store.address">매장 주소</span><br/>
+        <span data-bind="store.phone">매장 전화</span> · <span data-bind="store.hours">영업시간</span>
+      </div>
+      <div class="biz">
+        <span class="l">LEGAL</span>
+        <span>발행 매장 MD팀 · 사업자등록 정보는 매장 게시판 참조</span>
+      </div>
+      <div class="qr" data-slot="back_footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
+    </footer>
+
+  </article>
+</body>
+</html>

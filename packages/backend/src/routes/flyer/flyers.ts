@@ -561,6 +561,12 @@ router.get('/print-templates', (_req: Request, res: Response) => {
         mart_hot_v1:      { label: 'HOT특가 (레드핫)',       mood: '파격',      palette: ['#E8331F', '#FF8F2B', '#FFD33D'], recommended: '특가 · 파격 세일' },
         mart_premium_v1:  { label: '프리미엄 (다크+골드)',   mood: '엘레강스',   palette: ['#0B1428', '#C9A961', '#F7F3E9'], recommended: '한우 · 수입산 · 고급' },
         mart_weekend_v1:  { label: '주말대박 (일렉트릭)',    mood: '임팩트',     palette: ['#7C3AED', '#FDE047', '#EC4899'], recommended: '주말 · 금토일 한정' },
+        // ★ D159 신규 5종 — 끌로드 디자인 변환
+        print_classic_v1:        { label: 'CLASSIC · 클래식 양면',     mood: 'Editorial / Refined', palette: ['#E63946', '#1B4332', '#FAF8F4'], recommended: '동네·중형 마트 · 22 상품 + 절취 쿠폰' },
+        print_deal_focus_v1:     { label: 'DEAL FOCUS · 단일 폭격',    mood: 'Poster POP',          palette: ['#E63946', '#F4F1EA', '#1A1A1A'], recommended: '정육·수산 단일 카테고리 · 영웅 1' },
+        print_magazine_grid_v1:  { label: 'MAGAZINE · 대형 33상품',    mood: 'Tabloid Magazine',    palette: ['#E63946', '#1B4332', '#1A1A1A'], recommended: '대형 마트 주말 · 33 + 24 상품' },
+        print_gazette_v1:        { label: 'GAZETTE · 시장 신문',        mood: 'Newsprint Broadsheet', palette: ['#B83B2E', '#F1ECDF', '#1A1812'], recommended: '주간 시장 신문 · MD 인터뷰 + 4 카테고리' },
+        print_bento_v1:          { label: 'BENTO · 비대칭 모자이크',    mood: 'Bento Mosaic',        palette: ['#D4A93B', '#E63946', '#1A1A1A'], recommended: '베스트 시각 강조 · 12 + 11 cards' },
       };
       return { ...base, ...(meta[id] || {}) };
     };
@@ -1084,7 +1090,11 @@ router.post('/print-flyer', async (req: Request, res: Response) => {
 
     // ★ D129: V2 렌더러 (Paged.js + Puppeteer)
     // templateCode(프론트 전달) → templateId 매핑. 유효성 검증 후 없으면 mart_spring_v1 폴백.
-    const VALID_TEMPLATES = new Set(['mart_spring_v1', 'mart_hot_v1', 'mart_premium_v1', 'mart_weekend_v1']);
+    const VALID_TEMPLATES = new Set([
+      'mart_spring_v1', 'mart_hot_v1', 'mart_premium_v1', 'mart_weekend_v1',
+      // ★ D159 신규 5종 — 끌로드 디자인 변환
+      'print_classic_v1', 'print_deal_focus_v1', 'print_magazine_grid_v1', 'print_gazette_v1', 'print_bento_v1',
+    ]);
     const incomingTpl = typeof templateCode === 'string' && templateCode ? templateCode : 'mart_spring_v1';
     const resolvedTemplateId = VALID_TEMPLATES.has(incomingTpl) ? incomingTpl : 'mart_spring_v1';
 

@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>PRINT_DEAL_FOCUS · BACK (B4)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root {
+    --color-accent: #E63946;
+    --color-paper: #F4F1EA;
+    --color-ink: #1A1A1A;
+    --color-mute: #6B7280;
+    --color-rule: #D9D7D2;
+    --f-dis: 'Pretendard Variable', sans-serif;
+    --f-ser: 'Noto Serif KR', serif;
+    --f-mon: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  html, body { margin: 0; background: #E8E5DF; font-family: var(--f-dis); color: var(--color-ink); -webkit-font-smoothing: antialiased; display: flex; justify-content: center; padding: 40px 20px; }
+  .print-canvas { width: 660px; height: 945px; background: var(--color-paper); box-sizing: border-box; padding: 22px 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.12); display: grid; grid-template-rows: auto auto auto auto auto; gap: 14px; overflow: hidden; }
+
+  /* ─── HEADER (얇은 스트립, 앞면과 톤 정합) ─── */
+  .ph-mini { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--color-ink); }
+  .ph-mini .name { font-family: var(--f-mon); font-size: 10px; letter-spacing: 0.14em; color: var(--color-ink); }
+  .ph-mini .name strong { font-weight: 700; }
+  .ph-mini .breadcrumb { font-family: var(--f-mon); font-size: 9px; letter-spacing: 0.1em; color: var(--color-mute); text-align: center; }
+  .ph-mini .page { font-family: var(--f-mon); font-size: 9px; letter-spacing: 0.14em; color: var(--color-paper); background: var(--color-ink); padding: 3px 7px 2px; }
+
+  /* ─── RECIPE SECTION ─── */
+  .recipe {
+    padding: 4px 0 12px;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .recipe .head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .recipe .head .left { display: flex; align-items: baseline; gap: 10px; }
+  .recipe .head .eyebrow {
+    font-family: var(--f-mon); font-size: 9px;
+    letter-spacing: 0.18em; color: var(--color-accent);
+    text-transform: uppercase;
+  }
+  .recipe .head .eyebrow::before {
+    content: ""; display: inline-block;
+    width: 18px; height: 1px;
+    background: var(--color-accent);
+    transform: translateY(-3px);
+    margin-right: 6px;
+  }
+  .recipe .head h2 {
+    margin: 0; font-size: 24px; font-weight: 800;
+    letter-spacing: -0.025em; line-height: 1;
+  }
+  .recipe .head h2 em {
+    font-family: var(--f-ser); font-style: italic; font-weight: 900;
+    color: var(--color-accent);
+  }
+  .recipe .head .meta {
+    font-family: var(--f-mon); font-size: 9px;
+    letter-spacing: 0.1em; color: var(--color-mute);
+  }
+  .recipe-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .step { display: flex; flex-direction: column; gap: 4px; position: relative; }
+  .step .num {
+    position: absolute; top: 6px; left: 6px;
+    width: 22px; height: 22px;
+    background: var(--color-ink); color: var(--color-paper);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--f-mon); font-size: 10px;
+    font-weight: 700;
+    z-index: 2;
+  }
+  .step .ph {
+    aspect-ratio: 1.2 / 1;
+    background-image: repeating-linear-gradient(135deg, #E4DFD7 0, #E4DFD7 6px, #EEEAE2 6px, #EEEAE2 12px);
+    display: grid; place-items: center;
+    font-family: var(--f-mon); font-size: 8px;
+    color: #948F86; letter-spacing: 0.04em;
+    text-align: center; padding: 4px;
+  }
+  .step .body {
+    margin: 4px 0 0;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+    color: var(--color-ink);
+  }
+  .step .body strong { font-weight: 700; }
+  .step .time {
+    font-family: var(--f-mon); font-size: 8px;
+    color: var(--color-mute); letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+
+  /* ─── PAIRING ─── */
+  .pairing { padding: 0 0 12px; border-bottom: 1px solid var(--color-rule); }
+  .pairing .head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .pairing .head h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -0.025em; }
+  .pairing .head .en { font-family: var(--f-mon); font-size: 9px; color: var(--color-mute); letter-spacing: 0.1em; }
+  .pairing .head .meta { margin-left: auto; font-family: var(--f-mon); font-size: 9px; color: var(--color-mute); letter-spacing: 0.1em; }
+  .pair-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .pair {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 6px;
+    align-items: center;
+  }
+  .pair .ph {
+    width: 32px; height: 32px;
+    background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 4px, #F4F2EE 4px, #F4F2EE 8px);
+    display: grid; place-items: center;
+    font-family: var(--f-mon); font-size: 6px;
+    color: #948F86;
+  }
+  .pair .name { margin: 0; font-size: 9px; font-weight: 600; letter-spacing: -0.005em; line-height: 1.15; }
+  .pair .price { font-family: var(--f-dis); font-weight: 900; font-size: 12px; color: var(--color-accent); letter-spacing: -0.03em; line-height: 1; }
+  .pair .price .won { font-size: 7px; font-weight: 600; color: var(--color-ink); margin-left: 1px; }
+
+  /* ─── BOTTOM ROW : MAP + INFO ─── */
+  .bottom {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 14px;
+    padding: 0 0 8px;
+  }
+  .map-card {
+    background: #FFFFFF;
+    border: 1px solid var(--color-rule);
+    padding: 10px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .map-card .head { display: flex; align-items: baseline; justify-content: space-between; }
+  .map-card .head h3 { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: -0.02em; }
+  .map-card .head .l { font-family: var(--f-mon); font-size: 8px; color: var(--color-mute); letter-spacing: 0.1em; }
+  .map-canvas {
+    height: 110px;
+    background:
+      linear-gradient(0deg, transparent 49%, var(--color-rule) 49%, var(--color-rule) 51%, transparent 51%),
+      linear-gradient(90deg, transparent 49%, var(--color-rule) 49%, var(--color-rule) 51%, transparent 51%),
+      linear-gradient(0deg, transparent 24%, rgba(217,215,210,0.5) 24%, rgba(217,215,210,0.5) 26%, transparent 26%),
+      linear-gradient(90deg, transparent 24%, rgba(217,215,210,0.5) 24%, rgba(217,215,210,0.5) 26%, transparent 26%),
+      #F8F6F2;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+    position: relative;
+    border: 1px solid var(--color-rule);
+  }
+  .map-canvas .pin {
+    position: absolute;
+    top: 38%; left: 52%;
+    transform: translate(-50%, -50%);
+    width: 16px; height: 16px;
+    background: var(--color-accent);
+    border-radius: 50% 50% 50% 0;
+    transform: translate(-50%, -100%) rotate(-45deg);
+    box-shadow: 0 0 0 3px rgba(230,57,70,0.18);
+  }
+  .map-canvas .label {
+    position: absolute;
+    top: 38%; left: 52%;
+    transform: translate(-50%, 14px);
+    font-family: var(--f-mon); font-size: 8px;
+    letter-spacing: 0.1em;
+    background: var(--color-paper);
+    padding: 2px 5px 1px;
+    border: 1px solid var(--color-ink);
+  }
+  .map-card .addr { font-size: 10px; line-height: 1.4; }
+  .map-card .addr .l { font-family: var(--f-mon); font-size: 7px; color: var(--color-mute); letter-spacing: 0.1em; }
+
+  .info-stack {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 10px;
+  }
+  .member-card {
+    background: var(--color-ink);
+    color: var(--color-paper);
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .member-card .l { font-family: var(--f-mon); font-size: 8px; letter-spacing: 0.16em; color: rgba(244,241,234,0.55); }
+  .member-card h4 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.1; }
+  .member-card .body { font-size: 10px; line-height: 1.45; color: rgba(244,241,234,0.85); }
+  .member-card .body strong { color: var(--color-paper); font-weight: 700; }
+
+  .next-week {
+    background: #FFFFFF;
+    border: 1px solid var(--color-rule);
+    padding: 8px 10px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .next-week .l { font-family: var(--f-mon); font-size: 8px; color: var(--color-mute); letter-spacing: 0.14em; }
+  .next-week .body { font-size: 10px; line-height: 1.4; }
+  .next-week .body strong { font-weight: 700; }
+  .next-week .date { font-family: var(--f-mon); font-size: 9px; color: var(--color-accent); letter-spacing: 0.1em; }
+
+  /* ─── FOOTER ─── */
+  .ph-footer {
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-ink);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .ph-footer .info { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 2px; font-size: 9px; line-height: 1.4; }
+  .ph-footer .lbl { font-family: var(--f-mon); font-size: 7px; color: var(--color-mute); letter-spacing: 0.1em; }
+  .ph-footer .notice { grid-column: 1 / -1; margin-top: 3px; font-size: 7px; color: var(--color-mute); line-height: 1.5; }
+  .ph-footer .qr { width: 46px; height: 46px; border: 1px solid var(--color-ink); background: repeating-conic-gradient(var(--color-ink) 0% 25%, transparent 0% 50%) 0 0/9px 9px, var(--color-paper); position: relative; }
+  .ph-footer .qr::after { content: "QR"; position: absolute; inset: 15px; background: var(--color-paper); display: grid; place-items: center; font-family: var(--f-mon); font-size: 6px; color: var(--color-ink); letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+<article class="print-canvas" data-template="print_deal_focus_back" data-paper="B4" data-page="2">
+
+  <!-- MINI HEADER -->
+  <header class="ph-mini">
+    <span class="name"><strong data-slot="store.name">파인마트</strong> · FINEMART</span>
+    <span class="breadcrumb">ISSUE 026 · DEAL FOCUS · 한우 등심 17,900원</span>
+    <span class="page">PAGE 2 / 2</span>
+  </header>
+
+  <!-- RECIPE -->
+  <section class="recipe">
+    <div class="head">
+      <div class="left">
+        <span class="eyebrow">HOW TO COOK</span>
+        <h2 data-slot="recipe.title">한우 등심 <em>스테이크</em> · 4 STEPS</h2>
+      </div>
+      <span class="meta">COOK TIME 12 MIN · SERVES 2</span>
+    </div>
+    <div class="recipe-steps">
+      <article class="step" data-slot-group="recipe.steps[0]">
+        <span class="num">01</span>
+        <div class="ph" data-slot="recipe.steps[0].image">[ 실온 손질 ]</div>
+        <p class="body" data-slot="recipe.steps[0].body">고기를 <strong>실온에 30분</strong> 두고, 굵은 소금·후추를 양면에 충분히.</p>
+        <span class="time">30 MIN · 실온</span>
+      </article>
+      <article class="step" data-slot-group="recipe.steps[1]">
+        <span class="num">02</span>
+        <div class="ph" data-slot="recipe.steps[1].image">[ 팬 가열 ]</div>
+        <p class="body" data-slot="recipe.steps[1].body">팬을 <strong>연기 직전까지</strong> 달군 뒤 버터·로즈마리·통마늘 투입.</p>
+        <span class="time">3 MIN · 강불</span>
+      </article>
+      <article class="step" data-slot-group="recipe.steps[2]">
+        <span class="num">03</span>
+        <div class="ph" data-slot="recipe.steps[2].image">[ 시어링 ]</div>
+        <p class="body" data-slot="recipe.steps[2].body">앞뒤 <strong>2분씩 시어링</strong>, 옆면도 30초씩 굴려 마이야르 만들기.</p>
+        <span class="time">5 MIN · 강불</span>
+      </article>
+      <article class="step" data-slot-group="recipe.steps[3]">
+        <span class="num">04</span>
+        <div class="ph" data-slot="recipe.steps[3].image">[ 레스팅 ]</div>
+        <p class="body" data-slot="recipe.steps[3].body">호일에 싸 <strong>5분 레스팅</strong>, 결 반대로 슬라이스 후 굵은 소금.</p>
+        <span class="time">5 MIN · 휴지</span>
+      </article>
+    </div>
+  </section>
+
+  <!-- PAIRING -->
+  <section class="pairing">
+    <div class="head">
+      <h3>함께 사면 좋은</h3>
+      <span class="en">PAIRING</span>
+      <span class="meta">10 ITEMS</span>
+    </div>
+    <div class="pair-grid">
+      <article class="pair" data-slot-group="pairing[0]"><div class="ph" data-slot="pairing[0].image">[ 와인 ]</div><div><h5 class="name" data-slot="pairing[0].name">까시예로 까베르네</h5><span class="price"><span data-slot="pairing[0].price">11,900</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[1]"><div class="ph" data-slot="pairing[1].image">[ 소금 ]</div><div><h5 class="name" data-slot="pairing[1].name">말돈 시솔트</h5><span class="price"><span data-slot="pairing[1].price">7,900</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[2]"><div class="ph" data-slot="pairing[2].image">[ 로즈마리 ]</div><div><h5 class="name" data-slot="pairing[2].name">생 로즈마리</h5><span class="price"><span data-slot="pairing[2].price">2,980</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[3]"><div class="ph" data-slot="pairing[3].image">[ 버터 ]</div><div><h5 class="name" data-slot="pairing[3].name">앵커 버터</h5><span class="price"><span data-slot="pairing[3].price">5,900</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[4]"><div class="ph" data-slot="pairing[4].image">[ 통마늘 ]</div><div><h5 class="name" data-slot="pairing[4].name">국산 통마늘</h5><span class="price"><span data-slot="pairing[4].price">3,490</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[5]"><div class="ph" data-slot="pairing[5].image">[ 양상추 ]</div><div><h5 class="name" data-slot="pairing[5].name">친환경 양상추</h5><span class="price"><span data-slot="pairing[5].price">990</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[6]"><div class="ph" data-slot="pairing[6].image">[ 새송이 ]</div><div><h5 class="name" data-slot="pairing[6].name">새송이버섯</h5><span class="price"><span data-slot="pairing[6].price">1,980</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[7]"><div class="ph" data-slot="pairing[7].image">[ 발사믹 ]</div><div><h5 class="name" data-slot="pairing[7].name">발사믹 식초</h5><span class="price"><span data-slot="pairing[7].price">8,900</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[8]"><div class="ph" data-slot="pairing[8].image">[ 시저 ]</div><div><h5 class="name" data-slot="pairing[8].name">시저 샐러드</h5><span class="price"><span data-slot="pairing[8].price">4,980</span><span class="won">원</span></span></div></article>
+      <article class="pair" data-slot-group="pairing[9]"><div class="ph" data-slot="pairing[9].image">[ 그라나파다노 ]</div><div><h5 class="name" data-slot="pairing[9].name">그라나파다노</h5><span class="price"><span data-slot="pairing[9].price">12,900</span><span class="won">원</span></span></div></article>
+    </div>
+  </section>
+
+  <!-- MAP + INFO -->
+  <section class="bottom">
+    <article class="map-card">
+      <div class="head">
+        <h3>매장 위치</h3>
+        <span class="l">STORE MAP</span>
+      </div>
+      <div class="map-canvas" data-slot="store.map">
+        <div class="pin"></div>
+        <div class="label">파인마트 합정점</div>
+      </div>
+      <div class="addr">
+        <span class="l">ADDR · </span>
+        <span data-slot="store.address">서울 마포구 양화로 45 (합정역 1번 출구 200m)</span>
+      </div>
+    </article>
+
+    <div class="info-stack">
+      <article class="member-card">
+        <span class="l">MEMBERSHIP</span>
+        <h4 data-slot="member.title">파인패스 멤버 혜택</h4>
+        <p class="body" data-slot="member.body">전 품목 추가 <strong>5% 할인</strong> · 한우/수산 신선 주말 <strong>10%</strong> · 가입 즉시 <strong>3,000원 쿠폰</strong> 지급.</p>
+      </article>
+      <article class="next-week">
+        <span class="l">NEXT WEEK · 다음 주 예고</span>
+        <span class="date" data-slot="next_issue.date">05.21 — 05.27</span>
+        <p class="body" data-slot="next_issue.preview"><strong>봄 정육 특집</strong> · 한돈 삼겹 · LA갈비 · 양념 불고기 — 최대 35% 할인.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="ph-footer">
+    <div class="info">
+      <span class="lbl">TEL</span><span data-slot="store.phone">02-336-2580</span>
+      <span class="lbl">HOURS</span><span>매일 09:00 – 23:00 · 명절 휴무</span>
+      <span class="lbl">BIZ</span><span data-slot="store.bizNumber">사업자등록 123-45-67890 · 통신판매 마포-2024-0123</span>
+      <p class="notice" data-slot="footer.notice">* 레시피·페어링은 예시입니다. 표기 가격은 회원가 기준, 한정 수량으로 조기 품절될 수 있습니다.</p>
+    </div>
+    <div class="qr" data-slot="store.qrcode" aria-label="store QR"></div>
+  </footer>
+
+</article>
+</body>
+</html>

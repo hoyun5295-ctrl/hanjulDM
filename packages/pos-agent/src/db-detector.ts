@@ -53,7 +53,15 @@ interface PosSignature {
   registryKeys: string[];
 }
 
+// ★ 우선순위 정정 (D159 정정, Harold 명시): 투게더스(Together's) 1순위 — MS-SQL Server 매장 관리 PC 박힘
+//   Windows Authentication (Integrated Security) 박혀있을 가능성 높음 = 자격증명 추출 불필요
 const POS_SIGNATURES: PosSignature[] = [
+  {
+    name: 'togethers',
+    installPathPatterns: ['C:\\Together', 'C:\\TogetherPOS', 'C:\\Program Files\\Together', 'C:\\Program Files\\TogetherPOS', 'C:\\Program Files (x86)\\Together', 'C:\\Program Files (x86)\\TogetherPOS', 'D:\\Together', 'D:\\TogetherPOS'],
+    processPatterns: [/together/i, /togethers/i],
+    registryKeys: ['SOFTWARE\\Togethers', 'SOFTWARE\\WOW6432Node\\Togethers', 'SOFTWARE\\Together', 'SOFTWARE\\WOW6432Node\\Together'],
+  },
   {
     name: 'okpos',
     installPathPatterns: ['C:\\OKPOS', 'C:\\Program Files\\OKPOS', 'C:\\Program Files (x86)\\OKPOS', 'D:\\OKPOS'],
@@ -65,12 +73,6 @@ const POS_SIGNATURES: PosSignature[] = [
     installPathPatterns: ['C:\\POSBank', 'C:\\Program Files\\POSBank', 'C:\\Program Files (x86)\\POSBank'],
     processPatterns: [/posbank/i, /pos_bank/i],
     registryKeys: ['SOFTWARE\\POSBank', 'SOFTWARE\\WOW6432Node\\POSBank'],
-  },
-  {
-    name: 'togethers',
-    installPathPatterns: ['C:\\Together', 'C:\\TogetherPOS', 'C:\\Program Files\\Togethers', 'D:\\Together'],
-    processPatterns: [/together/i, /togethers/i],
-    registryKeys: ['SOFTWARE\\Togethers', 'SOFTWARE\\WOW6432Node\\Togethers'],
   },
   {
     name: 'unipos',

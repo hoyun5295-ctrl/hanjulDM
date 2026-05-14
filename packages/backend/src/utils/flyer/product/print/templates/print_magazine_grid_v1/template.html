@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>{{flyer.title}}</title>
+  <style>{{INLINE_CSS}}</style>
+</head>
+<body>
+  <article class="pc page-front" data-template="print_magazine_grid" data-paper="B3" data-page="1">
+
+    <!-- ═══ HEADER ═══ -->
+    <header class="pc-head" data-slot="masthead">
+      <div class="pc-logo" data-bind="store.logoUrl">P</div>
+      <h1 class="pc-name">
+        <span data-bind="store.name">파인마트</span>
+        <span class="br" data-bind="store.branch">/ 합정점 · HAPJEONG</span>
+      </h1>
+      <div class="pc-meta">
+        <span>ISSUE 026 / WEEKEND BIG SALE</span>
+        <strong data-bind="store.period">26.05.14 — 05.20</strong>
+      </div>
+      <div class="pc-meta notb">
+        <span>TEL</span>
+        <strong data-bind="store.phone">02-336-2580</strong>
+      </div>
+      <div class="pc-meta notb">
+        <span>HOURS</span>
+        <strong data-bind="store.hours">09:00 – 23:00</strong>
+      </div>
+    </header>
+
+    <!-- ═══ HERO BAND : DARK + 영웅 3 ═══ -->
+    <section class="hero">
+      <div class="hero-title">
+        <div>
+          <span class="eb"><span class="dot"></span>WEEK'S BIGGEST DEAL</span>
+          <h2 data-slot="hero_title">식탁에 다가온<br/><em>봄</em>, 오롯이.</h2>
+          <p class="sub" data-slot="hero_subline">제철 식재료부터 주말 장보기 필수템까지 — 30종을 한 페이지에.</p>
+        </div>
+        <span class="ct">30 ITEMS · 5 CATEGORIES · MEMBER PRICE</span>
+      </div>
+
+      <div class="hero-grid" data-slot="hero_grid">
+        <template data-role="card">
+          <article class="h-card">
+            <span class="badge" data-bind="badge"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <span class="cat" data-bind="category"></span>
+            <h3 class="name" data-bind="productName">상품명</h3>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="price-row">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">17,900</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 01 · 정육 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-meat-head" data-slot="cat_meat">
+        <span class="num" data-bind="number">01</span>
+        <h3 data-bind="label">정육 특가</h3>
+        <span class="en" data-bind="sublabel">MEAT</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid meat-grid" data-slot="meat_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">3,480</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 02 · 수산 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-seafood-head" data-slot="cat_seafood">
+        <span class="num" data-bind="number">02</span>
+        <h3 data-bind="label">수산 · 활어</h3>
+        <span class="en" data-bind="sublabel">SEAFOOD</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid seafood-grid" data-slot="seafood_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">9,030</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 03 · 농산 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-produce-head" data-slot="cat_produce">
+        <span class="num" data-bind="number">03</span>
+        <h3 data-bind="label">농산 · 청과</h3>
+        <span class="en" data-bind="sublabel">PRODUCE</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid produce-grid" data-slot="produce_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">5,900</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 04 · 가공 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-grocery-head" data-slot="cat_grocery">
+        <span class="num" data-bind="number">04</span>
+        <h3 data-bind="label">가공 · 델리</h3>
+        <span class="en" data-bind="sublabel">GROCERY</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid grocery-grid" data-slot="grocery_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">4,980</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 05 · 주류·생활 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-beverage-head" data-slot="cat_beverage">
+        <span class="num" data-bind="number">05</span>
+        <h3 data-bind="label">주류 · 생활</h3>
+        <span class="en" data-bind="sublabel">BEVERAGE · LIVING</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid beverage-grid" data-slot="beverage_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">11,900</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="pc-foot">
+      <div class="info" data-slot="footer_info">
+        <span class="l">ADDR</span>
+        <span data-bind="store.address">서울시 마포구 양화로 45, 파인빌딩 1F</span>
+        <span class="l">PERIOD</span>
+        <span><strong data-bind="store.period">26.05.14 (목) — 05.20 (수)</strong></span>
+        <span class="l">NOTICE</span>
+        <span class="note" data-slot="footer_notice">한정 수량 · 1인 2팩까지. 표기 가격은 회원가 기준, 일부 산지·시세에 따라 변동될 수 있습니다.</span>
+      </div>
+      <div class="member" data-slot="footer_member">
+        <span class="l">MEMBERSHIP</span>
+        매장 회원 전 품목<br/>
+        <strong>최대 5% 추가 할인</strong>
+      </div>
+      <div class="qr" data-slot="footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
+    </footer>
+
+  </article>
+
+  <article class="pc page-back" data-template="print_magazine_grid" data-paper="B3" data-page="2">
+
+    <!-- ═══ MINI DARK BAND HEADER ═══ -->
+    <header class="mini-band" data-slot="pb_dark_header">
+      <div class="logo" data-bind="store.logoUrl">P</div>
+      <h1 class="name">
+        <span data-bind="store.name">파인마트</span>
+        <span class="sub" data-bind="store.branch">/ 합정점 · 회원 혜택 & 시즌 카탈로그</span>
+      </h1>
+      <div class="meta">
+        <span>ISSUE 026 / BACK</span>
+        <strong data-bind="store.period">26.05.14 — 05.20</strong>
+      </div>
+      <span class="page">PAGE 2 / 2</span>
+    </header>
+
+    <!-- ═══ SECTION 06 · 베이커리 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-bakery-head" data-slot="cat_bakery">
+        <span class="num" data-bind="number">06</span>
+        <h3 data-bind="label">베이커리 · 델리</h3>
+        <span class="en" data-bind="sublabel">BAKERY · DELI</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid bakery-grid" data-slot="bakery_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">3,980</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 07 · 냉동 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-frozen-head" data-slot="cat_frozen">
+        <span class="num" data-bind="number">07</span>
+        <h3 data-bind="label">냉동 · 간편식</h3>
+        <span class="en" data-bind="sublabel">FROZEN · READY</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid frozen-grid" data-slot="frozen_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">10,430</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 08 · 가정·생활 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-living-head" data-slot="cat_living">
+        <span class="num" data-bind="number">08</span>
+        <h3 data-bind="label">가정 · 생활</h3>
+        <span class="en" data-bind="sublabel">LIVING</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid living-grid" data-slot="living_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">14,900</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 09 · 헬스·뷰티 ═══ -->
+    <section class="cs">
+      <div class="cs-head sec-beauty-head" data-slot="cat_beauty">
+        <span class="num" data-bind="number">09</span>
+        <h3 data-bind="label">헬스 · 뷰티</h3>
+        <span class="en" data-bind="sublabel">HEALTH · BEAUTY</span>
+        <span class="meta">6 ITEMS</span>
+      </div>
+      <div class="cs-grid beauty-grid" data-slot="beauty_grid">
+        <template data-role="card">
+          <article class="it">
+            <span class="bg" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+            <div class="pr">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">14,900</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ MEMBERSHIP + CALENDAR ═══ -->
+    <section class="info-row">
+      <article class="tier-card">
+        <span class="l">MEMBERSHIP</span>
+        <h3>매장 멤버 혜택</h3>
+        <div class="tier-table" data-slot="member_tier">
+          <span class="t-name">BASIC</span>
+          <span class="t-desc">앱 가입 즉시 자동 적용</span>
+          <span class="t-pct">+3%</span>
+
+          <span class="t-name">PLUS</span>
+          <span class="t-desc">월 1회 이상 방문</span>
+          <span class="t-pct">+5%</span>
+
+          <span class="t-name">VIP</span>
+          <span class="t-desc">월 10만원 이상 구매</span>
+          <span class="t-pct">+8%</span>
+        </div>
+      </article>
+
+      <article class="cal-card">
+        <div class="head">
+          <h3>다음 4주 행사 캘린더</h3>
+          <span class="l">UPCOMING · CALENDAR</span>
+        </div>
+        <div class="cal-list" data-slot="calendar_grid">
+          <div class="cal-row now">
+            <span class="wk">THIS</span>
+            <span class="date">05.14 — 05.20</span>
+            <span class="desc"><strong>봄 신선 페스타</strong> · 한우 등심 17,900원 · 설향 딸기 5,900원</span>
+          </div>
+          <div class="cal-row">
+            <span class="wk">+1</span>
+            <span class="date">05.21 — 05.27</span>
+            <span class="desc"><strong>봄 정육 특집</strong> · 한돈 삼겹 · LA갈비 최대 35% 할인</span>
+          </div>
+          <div class="cal-row">
+            <span class="wk">+2</span>
+            <span class="date">05.28 — 06.03</span>
+            <span class="desc"><strong>가정의 달 마무리</strong> · 와인 30%·홍삼 25%·가정용품 1+1</span>
+          </div>
+          <div class="cal-row">
+            <span class="wk">+3</span>
+            <span class="date">06.04 — 06.10</span>
+            <span class="desc"><strong>초여름 청과 페스타</strong> · 수박·복숭아·자두 첫 출하 특가</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="pc-foot pc-foot-back">
+      <div class="info" data-slot="back_footer_info">
+        <span class="l">ADDR</span><span data-bind="store.address">서울 마포구 양화로 45, 파인빌딩 1F</span>
+        <span class="l">TEL</span><span data-bind="store.phone">02-336-2580</span>
+        <span class="l">HOURS</span><span data-bind="store.hours">매일 09:00 – 23:00 · 연중무휴</span>
+      </div>
+      <div class="qr-pair" data-slot="back_footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
+    </footer>
+
+  </article>
+</body>
+</html>

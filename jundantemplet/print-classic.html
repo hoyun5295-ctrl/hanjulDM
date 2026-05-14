@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>PRINT_CLASSIC · B4 (대형전단)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root {
+    --color-accent:     #E63946;
+    --color-accent-2:   #1B4332;
+    --color-paper:      #FAF8F4;
+    --color-ink:        #1A1A1A;
+    --color-mute:       #6B7280;
+    --color-rule:       #D9D7D2;
+
+    --f-dis: 'Pretendard Variable', sans-serif;
+    --f-ser: 'Noto Serif KR', serif;
+    --f-mon: 'JetBrains Mono', ui-monospace, monospace;
+
+    --canvas-w: 660px;
+    --canvas-h: 945px;
+    --safe: 18px;
+  }
+
+  html, body {
+    margin: 0;
+    background: #E8E5DF;
+    font-family: var(--f-dis);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .print-canvas {
+    width: var(--canvas-w);
+    height: var(--canvas-h);
+    background: var(--color-paper);
+    box-sizing: border-box;
+    padding: var(--safe);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    display: grid;
+    grid-template-rows: auto auto auto auto auto auto;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  /* ═══ HEADER ═══ */
+  .ph-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--color-ink);
+  }
+  .ph-logo {
+    width: 28px; height: 28px;
+    border: 1.5px solid var(--color-ink);
+    display: grid; place-items: center;
+    font-family: var(--f-ser);
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: -0.04em;
+  }
+  .ph-name { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.025em; line-height: 1; }
+  .ph-name .sub { font-weight: 500; color: var(--color-mute); font-size: 10px; margin-left: 6px; }
+  .ph-issue {
+    font-family: var(--f-mon);
+    font-size: 8px;
+    color: var(--color-mute);
+    letter-spacing: 0.1em;
+    text-align: right;
+    line-height: 1.4;
+  }
+  .ph-issue strong { display: block; color: var(--color-ink); font-weight: 500; font-size: 10px; }
+  .ph-tel {
+    font-family: var(--f-mon);
+    font-size: 10px;
+    color: var(--color-ink);
+    border-left: 1px solid var(--color-rule);
+    padding-left: 10px;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+  }
+  .ph-tel small {
+    display: block;
+    font-size: 7px;
+    color: var(--color-mute);
+    letter-spacing: 0.12em;
+    margin-bottom: 1px;
+  }
+
+  /* ═══ HERO BAND ═══ */
+  .hero-band {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 1fr;
+    gap: 10px;
+    padding: 6px 0 10px;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .hero-title {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-right: 4px;
+  }
+  .hero-title .eyebrow {
+    font-family: var(--f-mon);
+    font-size: 8px;
+    color: var(--color-mute);
+    letter-spacing: 0.14em;
+    margin-bottom: 4px;
+  }
+  .hero-title .eyebrow .dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    margin-right: 5px;
+    transform: translateY(-1px);
+  }
+  .hero-title h2 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+  }
+  .hero-title h2 em {
+    font-family: var(--f-ser);
+    font-style: normal;
+    font-weight: 900;
+    color: var(--color-accent);
+  }
+  .hero-title .sub {
+    margin-top: 4px;
+    font-size: 9px;
+    color: var(--color-mute);
+    line-height: 1.45;
+  }
+
+  .hero-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 8px;
+    background: #FFFFFF;
+    border: 1px solid var(--color-rule);
+    padding: 7px;
+  }
+  .hero-card .ph {
+    background-image: repeating-linear-gradient(135deg, #E4DFD7 0, #E4DFD7 8px, #EEEAE2 8px, #EEEAE2 16px);
+    display: grid; place-items: center;
+    font-family: var(--f-mon);
+    font-size: 8px;
+    color: #948F86;
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+  .hero-card .info {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .hero-card .badge {
+    position: absolute;
+    top: 4px; left: 4px;
+    background: var(--color-accent);
+    color: var(--color-paper);
+    font-family: var(--f-mon);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    padding: 2px 5px 1px;
+    z-index: 2;
+  }
+  .hero-card .name { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  .hero-card .unit { font-family: var(--f-mon); font-size: 8px; color: var(--color-mute); margin-top: 1px; display: block; }
+  .hero-card .price-row { display: flex; align-items: baseline; gap: 5px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--color-rule); }
+  .hero-card .original { font-family: var(--f-mon); font-size: 8px; color: var(--color-mute); text-decoration: line-through; }
+  .hero-card .price { font-family: var(--f-dis); font-weight: 900; font-size: 22px; letter-spacing: -0.04em; color: var(--color-accent); line-height: 0.9; }
+  .hero-card .price .won { font-size: 10px; font-weight: 600; color: var(--color-ink); margin-left: 1px; }
+
+  /* ═══ CATEGORY SECTION ═══ */
+  .cat-sec { display: flex; flex-direction: column; gap: 6px; }
+  .cat-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--color-ink);
+  }
+  .cat-head .num {
+    font-family: var(--f-mon);
+    font-size: 9px;
+    color: var(--color-accent);
+    letter-spacing: 0.12em;
+    font-weight: 500;
+  }
+  .cat-head h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -0.025em; }
+  .cat-head .en { font-family: var(--f-mon); font-size: 8px; color: var(--color-mute); letter-spacing: 0.1em; }
+  .cat-head .meta { margin-left: auto; font-family: var(--f-mon); font-size: 8px; color: var(--color-mute); letter-spacing: 0.08em; }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .item .ph {
+    aspect-ratio: 1.3 / 1;
+    background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 5px, #F4F2EE 5px, #F4F2EE 10px);
+    display: grid; place-items: center;
+    font-family: var(--f-mon);
+    font-size: 7px;
+    color: #948F86;
+    letter-spacing: 0.04em;
+    text-align: center;
+    padding: 3px;
+  }
+  .item .name {
+    margin: 2px 0 0;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .item .unit {
+    font-family: var(--f-mon);
+    font-size: 7px;
+    color: var(--color-mute);
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+  .item .price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    margin-top: 1px;
+  }
+  .item .original {
+    font-family: var(--f-mon);
+    font-size: 7px;
+    color: var(--color-mute);
+    text-decoration: line-through;
+  }
+  .item .price {
+    font-family: var(--f-dis);
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: -0.04em;
+    color: var(--color-accent);
+    line-height: 0.9;
+  }
+  .item .price .won {
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin-left: 1px;
+  }
+  .item .badge {
+    position: absolute;
+    top: 3px; left: 3px;
+    background: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--f-mon);
+    font-size: 7px;
+    letter-spacing: 0.08em;
+    padding: 1px 4px 1px;
+    z-index: 2;
+    line-height: 1.2;
+  }
+  .item .badge.green { background: var(--color-accent-2); }
+  .item .badge.red { background: var(--color-accent); }
+
+  /* ═══ FOOTER ═══ */
+  .ph-footer {
+    margin-top: auto;
+    border-top: 2px solid var(--color-ink);
+    padding-top: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .ph-footer .info {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px;
+    row-gap: 2px;
+    font-size: 9px;
+    line-height: 1.4;
+  }
+  .ph-footer .info .lbl {
+    font-family: var(--f-mon);
+    font-size: 7px;
+    color: var(--color-mute);
+    letter-spacing: 0.1em;
+  }
+  .ph-footer .notice {
+    grid-column: 1 / -1;
+    margin-top: 3px;
+    font-size: 7px;
+    color: var(--color-mute);
+    line-height: 1.5;
+  }
+  .ph-footer .qr {
+    width: 50px; height: 50px;
+    border: 1px solid var(--color-ink);
+    background:
+      repeating-conic-gradient(var(--color-ink) 0% 25%, transparent 0% 50%) 0 0/9px 9px,
+      var(--color-paper);
+    position: relative;
+  }
+  .ph-footer .qr::after {
+    content: "QR";
+    position: absolute;
+    inset: 17px;
+    background: var(--color-paper);
+    display: grid; place-items: center;
+    font-family: var(--f-mon);
+    font-size: 6px;
+    color: var(--color-ink);
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+  <article class="print-canvas" data-template="print_classic" data-paper="B4">
+
+    <!-- HEADER -->
+    <header class="ph-header">
+      <div class="ph-logo" data-slot="store.logo">P</div>
+      <h1 class="ph-name" data-slot="store.name">파인마트<span class="sub" data-slot="store.branch">/ 합정점</span></h1>
+      <div class="ph-issue">
+        <span>ISSUE 026 / WEEKLY</span>
+        <strong data-slot="store.period">26.05.14 — 05.20</strong>
+      </div>
+      <div class="ph-tel">
+        <small>TEL</small>
+        <span data-slot="store.phone">02-336-2580</span>
+      </div>
+    </header>
+
+    <!-- HERO BAND : 카피 + 2 영웅상품 (가로형 카드) -->
+    <section class="hero-band">
+      <div class="hero-title">
+        <span class="eyebrow"><span class="dot"></span>WEEK'S BIG DEAL · 22 ITEMS</span>
+        <h2 data-slot="copy.headline">식탁에<br/>다가온 <em>봄</em>.</h2>
+        <span class="sub" data-slot="copy.subline">제철 식재료 22종 · 전 품목 회원가</span>
+      </div>
+
+      <article class="hero-card" data-slot-group="product[0]">
+        <span class="badge" data-slot="product[0].badge">BEST</span>
+        <div class="ph" data-slot="product[0].image">[ 한우 등심 ]</div>
+        <div class="info">
+          <div>
+            <h3 class="name" data-slot="product[0].name">1등급 한우 등심</h3>
+            <span class="unit" data-slot="product[0].unit">100g · 냉장</span>
+          </div>
+          <div class="price-row">
+            <span class="original" data-slot="product[0].original">12,900</span>
+            <span class="price"><span data-slot="product[0].price">7,900</span><span class="won">원</span></span>
+          </div>
+        </div>
+      </article>
+
+      <article class="hero-card" data-slot-group="product[1]">
+        <span class="badge" data-slot="product[1].badge">FRESH</span>
+        <div class="ph" data-slot="product[1].image">[ 연어회 ]</div>
+        <div class="info">
+          <div>
+            <h3 class="name" data-slot="product[1].name">노르웨이 연어회</h3>
+            <span class="unit" data-slot="product[1].unit">200g · 냉장</span>
+          </div>
+          <div class="price-row">
+            <span class="original" data-slot="product[1].original">15,900</span>
+            <span class="price"><span data-slot="product[1].price">9,900</span><span class="won">원</span></span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- SECTION 01 · 정육 (5 items) -->
+    <section class="cat-sec">
+      <div class="cat-head">
+        <span class="num">01</span>
+        <h3>정육 특가</h3>
+        <span class="en">MEAT</span>
+        <span class="meta">5 ITEMS</span>
+      </div>
+      <div class="cat-grid">
+        <article class="item" data-slot-group="product[2]">
+          <div class="ph" data-slot="product[2].image">[ 흑돼지 삼겹 ]</div>
+          <h4 class="name" data-slot="product[2].name">제주 흑돼지 삼겹</h4>
+          <span class="unit" data-slot="product[2].unit">100g</span>
+          <div class="price-row"><span class="price"><span data-slot="product[2].price">3,480</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[3]">
+          <span class="badge red">30%</span>
+          <div class="ph" data-slot="product[3].image">[ 닭다리살 ]</div>
+          <h4 class="name" data-slot="product[3].name">하림 닭다리살</h4>
+          <span class="unit" data-slot="product[3].unit">500g</span>
+          <div class="price-row"><span class="original">9,900</span><span class="price"><span data-slot="product[3].price">6,930</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[4]">
+          <div class="ph" data-slot="product[4].image">[ LA꽃갈비 ]</div>
+          <h4 class="name" data-slot="product[4].name">호주산 LA꽃갈비</h4>
+          <span class="unit" data-slot="product[4].unit">500g · 냉장</span>
+          <div class="price-row"><span class="price"><span data-slot="product[4].price">19,800</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[5]">
+          <div class="ph" data-slot="product[5].image">[ 양념 불고기 ]</div>
+          <h4 class="name" data-slot="product[5].name">양념 소불고기</h4>
+          <span class="unit" data-slot="product[5].unit">300g</span>
+          <div class="price-row"><span class="price"><span data-slot="product[5].price">9,900</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[6]">
+          <span class="badge">PB</span>
+          <div class="ph" data-slot="product[6].image">[ 양념 등갈비 ]</div>
+          <h4 class="name" data-slot="product[6].name">매콤 양념 등갈비</h4>
+          <span class="unit" data-slot="product[6].unit">800g</span>
+          <div class="price-row"><span class="price"><span data-slot="product[6].price">14,900</span><span class="won">원</span></span></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- SECTION 02 · 신선식품 (10 items, 2 rows) -->
+    <section class="cat-sec">
+      <div class="cat-head">
+        <span class="num">02</span>
+        <h3>신선식품</h3>
+        <span class="en">PRODUCE · SEAFOOD</span>
+        <span class="meta">10 ITEMS</span>
+      </div>
+      <div class="cat-grid">
+        <article class="item" data-slot-group="product[7]">
+          <span class="badge green">SEASON</span>
+          <div class="ph" data-slot="product[7].image">[ 설향 딸기 ]</div>
+          <h4 class="name" data-slot="product[7].name">설향 딸기</h4>
+          <span class="unit" data-slot="product[7].unit">500g</span>
+          <div class="price-row"><span class="price"><span data-slot="product[7].price">5,900</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[8]">
+          <div class="ph" data-slot="product[8].image">[ 완숙 토마토 ]</div>
+          <h4 class="name" data-slot="product[8].name">완숙 토마토</h4>
+          <span class="unit" data-slot="product[8].unit">1.5kg</span>
+          <div class="price-row"><span class="price"><span data-slot="product[8].price">5,900</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[9]">
+          <div class="ph" data-slot="product[9].image">[ 봉지귤 ]</div>
+          <h4 class="name" data-slot="product[9].name">제주 봉지귤</h4>
+          <span class="unit" data-slot="product[9].unit">2kg</span>
+          <div class="price-row"><span class="price"><span data-slot="product[9].price">9,900</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[10]">
+          <div class="ph" data-slot="product[10].image">[ 골드키위 ]</div>
+          <h4 class="name" data-slot="product[10].name">골드키위</h4>
+          <span class="unit" data-slot="product[10].unit">10입</span>
+          <div class="price-row"><span class="price"><span data-slot="product[10].price">8,980</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[11]">
+          <div class="ph" data-slot="product[11].image">[ 사과 ]</div>
+          <h4 class="name" data-slot="product[11].name">경북 부사 사과</h4>
+          <span class="unit" data-slot="product[11].unit">2.5kg</span>
+          <div class="price-row"><span class="price"><span data-slot="product[11].price">12,900</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[12]">
+          <div class="ph" data-slot="product[12].image">[ 남해 생굴 ]</div>
+          <h4 class="name" data-slot="product[12].name">남해 생굴</h4>
+          <span class="unit" data-slot="product[12].unit">400g</span>
+          <div class="price-row"><span class="price"><span data-slot="product[12].price">9,030</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[13]">
+          <span class="badge red">1+1</span>
+          <div class="ph" data-slot="product[13].image">[ 오징어 ]</div>
+          <h4 class="name" data-slot="product[13].name">손질 오징어</h4>
+          <span class="unit" data-slot="product[13].unit">2미</span>
+          <div class="price-row"><span class="price"><span data-slot="product[13].price">6,980</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[14]">
+          <div class="ph" data-slot="product[14].image">[ 새송이 ]</div>
+          <h4 class="name" data-slot="product[14].name">새송이버섯</h4>
+          <span class="unit" data-slot="product[14].unit">300g</span>
+          <div class="price-row"><span class="price"><span data-slot="product[14].price">1,980</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[15]">
+          <div class="ph" data-slot="product[15].image">[ 깐 양파 ]</div>
+          <h4 class="name" data-slot="product[15].name">깐 양파</h4>
+          <span class="unit" data-slot="product[15].unit">2kg</span>
+          <div class="price-row"><span class="price"><span data-slot="product[15].price">3,990</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[16]">
+          <span class="badge green">유기농</span>
+          <div class="ph" data-slot="product[16].image">[ 쌈채소 ]</div>
+          <h4 class="name" data-slot="product[16].name">유기농 쌈채소</h4>
+          <span class="unit" data-slot="product[16].unit">200g</span>
+          <div class="price-row"><span class="price"><span data-slot="product[16].price">2,980</span><span class="won">원</span></span></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- SECTION 03 · 가공·델리·생활 (5 items) -->
+    <section class="cat-sec">
+      <div class="cat-head">
+        <span class="num">03</span>
+        <h3>가공 · 델리</h3>
+        <span class="en">GROCERY · LIVING</span>
+        <span class="meta">5 ITEMS</span>
+      </div>
+      <div class="cat-grid">
+        <article class="item" data-slot-group="product[17]">
+          <span class="badge red">1+1</span>
+          <div class="ph" data-slot="product[17].image">[ 그릭요거트 ]</div>
+          <h4 class="name" data-slot="product[17].name">그릭 요거트</h4>
+          <span class="unit" data-slot="product[17].unit">450g</span>
+          <div class="price-row"><span class="price"><span data-slot="product[17].price">4,980</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[18]">
+          <div class="ph" data-slot="product[18].image">[ 햇반 ]</div>
+          <h4 class="name" data-slot="product[18].name">햇반 컵반 모듬</h4>
+          <span class="unit" data-slot="product[18].unit">12입</span>
+          <div class="price-row"><span class="original">14,990</span><span class="price"><span data-slot="product[18].price">11,994</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[19]">
+          <div class="ph" data-slot="product[19].image">[ 계란 ]</div>
+          <h4 class="name" data-slot="product[19].name">무항생제 계란</h4>
+          <span class="unit" data-slot="product[19].unit">15구</span>
+          <div class="price-row"><span class="price"><span data-slot="product[19].price">5,490</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[20]">
+          <div class="ph" data-slot="product[20].image">[ 정갈한쌀 ]</div>
+          <h4 class="name" data-slot="product[20].name">정갈한쌀 10kg</h4>
+          <span class="unit" data-slot="product[20].unit">국내산</span>
+          <div class="price-row"><span class="original">26,900</span><span class="price"><span data-slot="product[20].price">21,900</span><span class="won">원</span></span></div>
+        </article>
+        <article class="item" data-slot-group="product[21]">
+          <span class="badge red">30%</span>
+          <div class="ph" data-slot="product[21].image">[ 페리에 ]</div>
+          <h4 class="name" data-slot="product[21].name">페리에 미니</h4>
+          <span class="unit" data-slot="product[21].unit">200ml × 10</span>
+          <div class="price-row"><span class="original">14,900</span><span class="price"><span data-slot="product[21].price">10,430</span><span class="won">원</span></span></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="ph-footer">
+      <div class="info">
+        <span class="lbl">ADDR</span>
+        <span data-slot="store.address">서울시 마포구 양화로 45, 파인빌딩 1F</span>
+        <span class="lbl">HOURS</span>
+        <span>매일 09:00 – 23:00 / 명절 휴무 · 파인패스 회원 추가 5%</span>
+        <p class="notice" data-slot="footer.notice">
+          * 한정 수량 / 1인 2팩까지 · 표기 가격은 회원가 기준이며 일부 품목은 산지 시세에 따라 변동될 수 있습니다.
+        </p>
+      </div>
+      <div class="qr" data-slot="store.qrcode" aria-label="store QR"></div>
+    </footer>
+  </article>
+</body>
+</html>

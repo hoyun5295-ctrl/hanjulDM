@@ -1,0 +1,311 @@
+{
+  "id": "print_bento_v1",
+  "version": "1.0.0",
+  "name": "PRINT_BENTO — 비대칭 모자이크 B4 양면",
+  "description": "Bento Mosaic / Asymmetric Grid. 시각 리듬으로 베스트셀러를 강조. CSS Grid 6×9 + grid-template-areas 비대칭. 영웅 1 (3×3) + 머스타드 T 배너 + 다크 G 인용 + 12 cards. D159 끌로드 디자인 변환.",
+  "industry": "mart",
+  "season": "general",
+  "paper": { "size": "B4", "orientation": "portrait" },
+  "pages": 2,
+  "assets": {
+    "html": "template.html",
+    "css": "template.css",
+    "preview": "preview.png"
+  },
+  "slots": [
+    {
+      "id": "masthead",
+      "type": "store_header",
+      "required": true,
+      "includes": ["logo", "name", "branch", "period"],
+      "position": { "css": ".head" }
+    },
+
+    {
+      "id": "hero_title",
+      "type": "typography",
+      "required": true,
+      "editable": true,
+      "maxLength": 30,
+      "fallback": "식탁에<br/>다가온 <em>봄</em>.",
+      "position": { "css": ".tile.type-banner h2" }
+    },
+    {
+      "id": "hero_product",
+      "type": "product_card",
+      "required": true,
+      "variant": "hero",
+      "selection": { "mode": "highest_discount", "index": 0 },
+      "position": { "css": ".tile.hero" }
+    },
+
+    {
+      "id": "small_1",
+      "type": "product_card",
+      "required": false,
+      "variant": "small",
+      "selection": { "mode": "highest_discount", "index": 1 },
+      "position": { "css": ".tile.s1" }
+    },
+    {
+      "id": "small_2",
+      "type": "product_card",
+      "required": false,
+      "variant": "small",
+      "selection": { "mode": "highest_discount", "index": 2 },
+      "position": { "css": ".tile.s2" }
+    },
+    {
+      "id": "small_3",
+      "type": "product_card",
+      "required": false,
+      "variant": "small",
+      "selection": { "mode": "highest_discount", "index": 3 },
+      "position": { "css": ".tile.s3" }
+    },
+
+    {
+      "id": "med_1",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 4 },
+      "position": { "css": ".tile.b" }
+    },
+    {
+      "id": "med_2",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 5 },
+      "position": { "css": ".tile.c" }
+    },
+    {
+      "id": "med_3",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 6 },
+      "position": { "css": ".tile.d" }
+    },
+
+    {
+      "id": "wide_product",
+      "type": "product_card",
+      "required": false,
+      "variant": "wide",
+      "selection": { "mode": "highest_discount", "index": 7 },
+      "position": { "css": ".tile.e" }
+    },
+
+    {
+      "id": "med_4",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 8 },
+      "position": { "css": ".tile.f" }
+    },
+    {
+      "id": "dark_quote",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "봄에 가장 맛있는 건, 결국 가장 <em>가까운</em> 곳에서 온 것.",
+      "position": { "css": ".tile.g .quote" }
+    },
+
+    {
+      "id": "tail_1",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 9 },
+      "position": { "css": ".tile.i" }
+    },
+    {
+      "id": "tail_2",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 10 },
+      "position": { "css": ".tile.j" }
+    },
+    {
+      "id": "tail_3",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 11 },
+      "position": { "css": ".tile.k" }
+    },
+
+    {
+      "id": "footer_info",
+      "type": "store_header",
+      "required": false,
+      "includes": ["address", "phone", "hours"],
+      "position": { "css": ".foot" }
+    },
+    {
+      "id": "footer_notice",
+      "type": "footer_notice",
+      "required": false,
+      "editable": true,
+      "fallback": "* 한정 수량 · 1인 2팩까지. 표기 가격은 회원가 기준, 산지 시세에 따라 변동될 수 있습니다.",
+      "position": { "css": ".foot .notice" }
+    },
+    {
+      "id": "footer_member",
+      "type": "text",
+      "required": false,
+      "editable": true,
+      "fallback": "매장 회원 추가 5%",
+      "position": { "css": ".foot .member" }
+    },
+    {
+      "id": "footer_qr",
+      "type": "qr",
+      "required": false,
+      "source": "field:online_mall_url",
+      "sizeMm": 18,
+      "position": { "css": ".foot .qr" }
+    },
+
+    {
+      "id": "pb_header",
+      "type": "store_header",
+      "required": false,
+      "includes": ["logo", "name", "branch", "period"],
+      "position": { "css": ".pc.page-back .head" }
+    },
+
+    {
+      "id": "next_issue_banner",
+      "type": "typography",
+      "required": false,
+      "editable": true,
+      "maxLength": 30,
+      "fallback": "봄 정육<br/><em>특집</em>.",
+      "position": { "css": ".tile.banner h2" }
+    },
+    {
+      "id": "hero_product_back",
+      "type": "product_card",
+      "required": false,
+      "variant": "hero",
+      "selection": { "mode": "highest_discount", "index": 12 },
+      "position": { "css": ".pc.page-back .tile.hero" }
+    },
+
+    {
+      "id": "small_back_1",
+      "type": "product_card",
+      "required": false,
+      "variant": "small",
+      "selection": { "mode": "highest_discount", "index": 13 },
+      "position": { "css": ".pc.page-back .tile.s1" }
+    },
+    {
+      "id": "small_back_2",
+      "type": "product_card",
+      "required": false,
+      "variant": "small",
+      "selection": { "mode": "highest_discount", "index": 14 },
+      "position": { "css": ".pc.page-back .tile.s2" }
+    },
+
+    {
+      "id": "med_back_1",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 15 },
+      "position": { "css": ".pc.page-back .tile.b" }
+    },
+    {
+      "id": "med_back_2",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 16 },
+      "position": { "css": ".pc.page-back .tile.c" }
+    },
+    {
+      "id": "med_back_3",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 17 },
+      "position": { "css": ".pc.page-back .tile.d" }
+    },
+
+    {
+      "id": "store_hours_dark",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong"],
+      "fallback": "사장님이 박는 매장 운영 안내. 영업시간 + 주차 + 배송 정보 자유 박음.",
+      "position": { "css": ".tile.g" }
+    },
+    {
+      "id": "store_map",
+      "type": "map",
+      "required": false,
+      "fallback": "",
+      "position": { "css": ".tile.m .map-canvas" }
+    },
+
+    {
+      "id": "med_back_4",
+      "type": "product_card",
+      "required": false,
+      "variant": "med",
+      "selection": { "mode": "highest_discount", "index": 18 },
+      "position": { "css": ".pc.page-back .tile.f" }
+    },
+    {
+      "id": "wide_product_back",
+      "type": "product_card",
+      "required": false,
+      "variant": "wide",
+      "selection": { "mode": "highest_discount", "index": 19 },
+      "position": { "css": ".pc.page-back .tile.e" }
+    },
+    {
+      "id": "member_card",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "매장 회원 <em>+5%</em>. 가입 즉시 <strong>3,000원 쿠폰</strong> 자동 지급.",
+      "position": { "css": ".tile.r" }
+    },
+
+    {
+      "id": "back_footer_info",
+      "type": "store_header",
+      "required": false,
+      "includes": ["address", "phone"],
+      "position": { "css": ".pc.page-back .foot" }
+    },
+    {
+      "id": "back_footer_notice",
+      "type": "footer_notice",
+      "required": false,
+      "editable": true,
+      "fallback": "* 한정 수량 · 1인 2팩. 표기 가격은 회원가 기준, 산지 시세에 따라 변동될 수 있습니다.",
+      "position": { "css": ".pc.page-back .foot .notice" }
+    },
+    {
+      "id": "back_footer_qr",
+      "type": "qr",
+      "required": false,
+      "source": "field:online_mall_url",
+      "sizeMm": 14,
+      "position": { "css": ".pc.page-back .foot .qr" }
+    }
+  ]
+}

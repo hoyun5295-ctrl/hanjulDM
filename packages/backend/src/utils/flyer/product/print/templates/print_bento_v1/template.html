@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>{{flyer.title}}</title>
+  <style>{{INLINE_CSS}}</style>
+</head>
+<body>
+  <article class="pc page-front" data-template="print_bento" data-paper="B4" data-page="1">
+
+    <!-- ═══ HEADER ═══ -->
+    <header class="head" data-slot="masthead">
+      <div class="mark" data-bind="store.logoUrl">P</div>
+      <h1>
+        <span data-bind="store.name">파인마트</span>
+        <span class="br" data-bind="store.branch">/ 합정점</span>
+      </h1>
+      <span class="pill">WEEKLY BENTO</span>
+      <div class="vol">
+        <span>ISSUE 026</span>
+        <strong data-bind="store.period">26.05.14 — 05.20</strong>
+      </div>
+    </header>
+
+    <!-- ═══ BENTO MOSAIC (앞면) ═══ -->
+    <section class="bento bento-front">
+
+      <!-- H · HERO 3×3 -->
+      <article class="tile hero" data-slot="hero_product">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="overlay">
+          <div class="top">
+            <span class="num">№ 01 / WEEK'S BEST</span>
+            <span class="stamp" data-bind="badge">BEST</span>
+          </div>
+          <div class="bot">
+            <span class="cat" data-bind="category">MEAT · 정육</span>
+            <h3 class="name" data-bind="productName">상품명</h3>
+            <div class="price-row">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">17,900</span><span class="won">원</span></span>
+              <span class="unit" data-bind="unit">/ 단위</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- T · TYPE BANNER 3×2 mustard -->
+      <article class="tile type-banner">
+        <span class="eb">● HEADLINE · WEEK 20</span>
+        <h2 data-slot="hero_title">
+          식탁에<br/>다가온 <em>봄</em>.
+        </h2>
+        <div class="footer-line">
+          <span>30 ITEMS</span>
+          <span>WEEKLY · BENTO</span>
+        </div>
+      </article>
+
+      <!-- s1, s2, s3 — small mini products -->
+      <article class="tile s1 small" data-slot="small_1">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <h5 class="name" data-bind="productName">상품명</h5>
+        <span class="price"><span data-bind="salePriceFormatted">990</span><span class="won">원</span></span>
+      </article>
+      <article class="tile s2 small" data-slot="small_2">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <h5 class="name" data-bind="productName">상품명</h5>
+        <span class="price"><span data-bind="salePriceFormatted">1,980</span><span class="won">원</span></span>
+      </article>
+      <article class="tile s3 small" data-slot="small_3">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <h5 class="name" data-bind="productName">상품명</h5>
+        <span class="price"><span data-bind="salePriceFormatted">3,990</span><span class="won">원</span></span>
+      </article>
+
+      <!-- B (2×2) -->
+      <article class="tile b img" data-slot="med_1">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span class="orig" data-bind="originalPriceFormatted"></span><span data-bind="salePriceFormatted">12,900</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <!-- C (2×2) -->
+      <article class="tile c img" data-slot="med_2">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span class="orig" data-bind="originalPriceFormatted"></span><span data-bind="salePriceFormatted">5,900</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <!-- D (2×2) -->
+      <article class="tile d img" data-slot="med_3">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span class="orig" data-bind="originalPriceFormatted"></span><span data-bind="salePriceFormatted">3,480</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <!-- E (3×2) wide-img -->
+      <article class="tile e wide-img" data-slot="wide_product">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="info">
+          <div>
+            <span class="cat" data-bind="category">GROCERY</span>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+          </div>
+          <div class="price-row">
+            <span class="orig" data-bind="originalPriceFormatted"></span>
+            <span class="price"><span data-bind="salePriceFormatted">21,900</span><span class="won">원</span></span>
+          </div>
+        </div>
+      </article>
+
+      <!-- F (2×1) -->
+      <article class="tile f img" data-slot="med_4">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span data-bind="salePriceFormatted">9,030</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <!-- G (1×2) DARK QUOTE -->
+      <article class="tile g type-vert">
+        <span class="l">FROM THE MD</span>
+        <p class="quote" data-slot="dark_quote">
+          봄에 가장 맛있는 건, 결국 가장 <em>가까운</em> 곳에서 온 것.
+        </p>
+        <span class="sig">— EDITOR'S NOTE</span>
+      </article>
+
+      <!-- I (2×2) -->
+      <article class="tile i img" data-slot="tail_1">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span data-bind="salePriceFormatted">4,980</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <!-- J (2×2) -->
+      <article class="tile j img" data-slot="tail_2">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span data-bind="salePriceFormatted">6,980</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <!-- K (2×2) -->
+      <article class="tile k img" data-slot="tail_3">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span data-bind="salePriceFormatted">6,490</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="foot">
+      <div class="col" data-slot="footer_info">
+        <span class="l">ADDR</span><span data-bind="store.address">매장 주소</span>
+        <span class="l">TEL</span><span data-bind="store.phone">매장 전화</span>
+      </div>
+      <div class="col">
+        <span class="l">HOURS</span><span data-bind="store.hours">매일 09:00 – 23:00</span>
+        <span class="l">MEMBER</span><span class="member" data-slot="footer_member">매장 회원 추가 5%</span>
+        <span class="notice" data-slot="footer_notice">* 한정 수량 · 1인 2팩까지. 표기 가격은 회원가 기준, 산지 시세에 따라 변동될 수 있습니다.</span>
+      </div>
+      <div class="qr" data-slot="footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
+    </footer>
+
+  </article>
+
+  <article class="pc page-back" data-template="print_bento" data-paper="B4" data-page="2">
+
+    <!-- ═══ MINI HEADER ═══ -->
+    <header class="head" data-slot="pb_header">
+      <div class="mark" data-bind="store.logoUrl">P</div>
+      <h1>
+        <span data-bind="store.name">파인마트</span>
+        <span class="br" data-bind="store.branch">/ 합정점</span>
+      </h1>
+      <span class="pill">PAGE 2 / 2</span>
+      <div class="vol">
+        <span>WEEKLY BENTO</span>
+        <strong data-bind="store.period">26.05.14 — 05.20</strong>
+      </div>
+    </header>
+
+    <!-- ═══ BENTO MOSAIC (뒷면 — 다른 패턴) ═══ -->
+    <section class="bento bento-back">
+
+      <!-- T · NEXT WEEK BANNER (mustard) -->
+      <article class="tile banner">
+        <span class="eb">● NEXT WEEK · 다음 주 예고</span>
+        <h2 data-slot="next_issue_banner">봄 정육<br/><em>특집</em>.</h2>
+        <div class="footer-line">
+          <span>NEXT</span><span>MAX 35% OFF</span>
+        </div>
+      </article>
+
+      <!-- H · HERO -->
+      <article class="tile hero" data-slot="hero_product_back">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="overlay">
+          <div class="top">
+            <span class="num">№ 02 / WEEKEND PICK</span>
+            <span class="stamp" data-bind="badge">SET</span>
+          </div>
+          <div class="bot">
+            <span class="cat" data-bind="category">MEAT · 정육</span>
+            <h3 class="name" data-bind="productName">상품명</h3>
+            <div class="price-row">
+              <span class="orig" data-bind="originalPriceFormatted"></span>
+              <span class="price"><span data-bind="salePriceFormatted">19,800</span><span class="won">원</span></span>
+              <span class="unit" data-bind="unit">/ 단위</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- s1, s2 -->
+      <article class="tile s1 small" data-slot="small_back_1">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <h5 class="name" data-bind="productName">상품명</h5>
+        <span class="price"><span data-bind="salePriceFormatted">990</span><span class="won">원</span></span>
+      </article>
+      <article class="tile s2 small" data-slot="small_back_2">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <h5 class="name" data-bind="productName">상품명</h5>
+        <span class="price"><span data-bind="salePriceFormatted">1,980</span><span class="won">원</span></span>
+      </article>
+
+      <!-- B, C, D -->
+      <article class="tile b img" data-slot="med_back_1">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span class="orig" data-bind="originalPriceFormatted"></span><span data-bind="salePriceFormatted">11,900</span><span class="won">원</span></span>
+        </div>
+      </article>
+      <article class="tile c img" data-slot="med_back_2">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span data-bind="salePriceFormatted">4,980</span><span class="won">원</span></span>
+        </div>
+      </article>
+      <article class="tile d img" data-slot="med_back_3">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span data-bind="salePriceFormatted">12,900</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <!-- G · DARK STORE INFO -->
+      <article class="tile g" data-slot="store_hours_dark">
+        <span class="l">STORE INFO</span>
+        <h3>매장 운영 안내</h3>
+        <div class="rows">
+          <div><span class="k">HOURS</span> <span class="v">매일 <strong>09:00 – 23:00</strong> · 연중무휴</span></div>
+          <div><span class="k">PARKING</span> <span class="v">지하 2층 · <strong>2시간 무료</strong> (5만원 이상 4시간)</span></div>
+          <div><span class="k">DELIVERY</span> <span class="v">반경 3km · 당일 <strong>2회 배송</strong></span></div>
+        </div>
+      </article>
+
+      <!-- M · MAP -->
+      <article class="tile m">
+        <div class="head">
+          <h3>매장 위치</h3>
+          <span class="l">STORE MAP</span>
+        </div>
+        <div class="map-canvas" data-slot="store_map">
+          <div class="pin"></div>
+          <div class="lbl" data-bind="store.name">매장</div>
+        </div>
+        <div class="addr">
+          <span class="l">ADDR · </span>
+          <span data-bind="store.address">매장 주소</span>
+        </div>
+      </article>
+
+      <!-- F -->
+      <article class="tile f img" data-slot="med_back_4">
+        <span class="badge" data-bind-class-suffix="badgeKind" data-bind="badgeText"></span>
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="cap">
+          <h4 class="name" data-bind="productName">상품명</h4>
+          <span class="unit" data-bind="unit">단위</span>
+          <span class="price"><span data-bind="salePriceFormatted">12,900</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <!-- E · wide -->
+      <article class="tile e wide-img" data-slot="wide_product_back">
+        <div class="ph" data-bind-bg="imageUrl"></div>
+        <div class="info">
+          <div>
+            <span class="cat" data-bind="category">HEALTH · 건강</span>
+            <h4 class="name" data-bind="productName">상품명</h4>
+            <span class="unit" data-bind="unit">단위</span>
+          </div>
+          <div class="price-row">
+            <span class="orig" data-bind="originalPriceFormatted"></span>
+            <span class="price"><span data-bind="salePriceFormatted">29,800</span><span class="won">원</span></span>
+          </div>
+        </div>
+      </article>
+
+      <!-- R · MEMBER MUSTARD -->
+      <article class="tile r" data-slot="member_card">
+        <span class="l">MEMBERSHIP</span>
+        <h3>매장 회원 <em>+5%</em></h3>
+        <p class="body"><span class="pct">전 품목</span> 회원가 자동 적용 · 가입 즉시 <strong>3,000원 쿠폰</strong>.</p>
+      </article>
+
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="foot">
+      <div class="col" data-slot="back_footer_info">
+        <span class="l">ADDR</span><span data-bind="store.address">매장 주소</span>
+        <span class="l">TEL</span><span data-bind="store.phone">매장 전화</span>
+      </div>
+      <div class="col">
+        <span class="l">HOURS</span><span data-bind="store.hours">매일 09:00 – 23:00</span>
+        <span class="notice" data-slot="back_footer_notice">* 한정 수량 · 1인 2팩. 표기 가격은 회원가 기준, 산지 시세에 따라 변동될 수 있습니다.</span>
+      </div>
+      <div class="qr" data-slot="back_footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
+    </footer>
+
+  </article>
+</body>
+</html>

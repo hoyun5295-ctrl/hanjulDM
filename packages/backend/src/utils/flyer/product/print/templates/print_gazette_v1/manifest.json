@@ -1,0 +1,243 @@
+{
+  "id": "print_gazette_v1",
+  "version": "1.0.0",
+  "name": "PRINT_GAZETTE — 시장 신문 B3 양면",
+  "description": "Newsprint Gazette / Broadsheet. 매장 큐레이션 살아있는 주간 시장 신문 컨셉. 본명조 본문 + 빈티지 빨강 + 신문지 베이지. 영웅 1 + 4 카테고리 × 3 + 4 editorial + MD 인터뷰. D159 끌로드 디자인 변환.",
+  "industry": "mart",
+  "season": "general",
+  "paper": { "size": "B3", "orientation": "portrait" },
+  "pages": 2,
+  "assets": {
+    "html": "template.html",
+    "css": "template.css",
+    "preview": "preview.png"
+  },
+  "slots": [
+    {
+      "id": "masthead",
+      "type": "store_header",
+      "required": true,
+      "includes": ["name", "period"],
+      "position": { "css": ".mast" }
+    },
+    {
+      "id": "hero_title",
+      "type": "typography",
+      "required": true,
+      "editable": true,
+      "maxLength": 30,
+      "fallback": "식탁에 <em>봄</em>이<br/>다시 들어왔다.",
+      "position": { "css": ".hs-lead h2" }
+    },
+    {
+      "id": "hero_subline",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "maxLength": 200,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "제철 식재료는 거짓말을 하지 않는다. 이번 주, 가장 좋은 산지에서 가장 좋은 가격으로 골라 모았다. 딸기는 충남 논산에서, 굴은 통영 한산도에서. 식탁의 풍경이 바뀌는 한 주.",
+      "position": { "css": ".hs-lead .deck" }
+    },
+    {
+      "id": "hero_product",
+      "type": "product_card",
+      "required": true,
+      "variant": "feature",
+      "selection": { "mode": "highest_discount", "filter": { "promoType": "main" } },
+      "position": { "css": ".hs-feature" }
+    },
+
+    {
+      "id": "cat_fresh",
+      "type": "section_banner",
+      "required": true,
+      "label": "오늘의 식탁 · TABLE OF THE DAY",
+      "number": "SEC.01",
+      "sublabel": "FRESH · PRODUCE · SEAFOOD",
+      "position": { "css": ".sec-fresh" }
+    },
+    {
+      "id": "fresh_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 4, "rows": 1,
+      "minItems": 3, "maxItems": 3,
+      "category": { "mode": "auto", "prefer": ["청과", "수산", "농산", "과일", "해산물"] },
+      "cardVariant": "article", "overflow": "shrink",
+      "position": { "css": ".fresh-grid" }
+    },
+    {
+      "id": "fresh_editorial",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "봄에 가장 맛있는 건, 결국 가장 가까운 곳에서 온 것이다. 굳이 멀리 갈 필요가 없다 — 그래서 더 자주, 더 가볍게 사면 된다.",
+      "position": { "css": ".fresh-editorial .quote" }
+    },
+
+    {
+      "id": "cat_meat",
+      "type": "section_banner",
+      "required": true,
+      "label": "고기, 그리고 다음 끼니 · TONIGHT'S MEAT",
+      "number": "SEC.02",
+      "sublabel": "MEAT · 정육",
+      "position": { "css": ".sec-meat" }
+    },
+    {
+      "id": "meat_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 4, "rows": 1,
+      "minItems": 3, "maxItems": 3,
+      "category": { "mode": "auto", "prefer": ["축산", "정육", "한우", "돼지고기", "닭고기"] },
+      "cardVariant": "article", "overflow": "shrink",
+      "position": { "css": ".meat-grid" }
+    },
+    {
+      "id": "meat_editorial",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "쌀 한 포대와 우유 한 통, 계란 한 판. 이 셋이 갖춰져 있다면 한 주가 무탈하다. 봄에는 거기에 딸기 한 팩이 더 붙는다.",
+      "position": { "css": ".meat-editorial .quote" }
+    },
+
+    {
+      "id": "footer_info",
+      "type": "store_header",
+      "required": false,
+      "includes": ["name", "address", "phone"],
+      "position": { "css": ".pc-foot .colophon" }
+    },
+    {
+      "id": "footer_notice",
+      "type": "footer_notice",
+      "required": false,
+      "editable": true,
+      "fallback": "* 본 신문에 게재된 모든 가격은 회원가 기준이며, 산지 시세에 따라 변동될 수 있습니다. 한정 수량으로 조기 품절될 수 있습니다 · 1인 2팩까지 · 모든 산지·원산지 표기는 매장 내 게시판을 참고해 주세요.",
+      "position": { "css": ".pc-foot .notice" }
+    },
+    {
+      "id": "footer_member",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong"],
+      "fallback": "매장 회원 구독시 매주 목요일<br/><strong>본 신문 자동 발송</strong>",
+      "position": { "css": ".pc-foot .member" }
+    },
+    {
+      "id": "footer_qr",
+      "type": "qr",
+      "required": false,
+      "source": "field:online_mall_url",
+      "sizeMm": 22,
+      "position": { "css": ".pc-foot .qr" }
+    },
+
+    {
+      "id": "pb_mast_mini",
+      "type": "store_header",
+      "required": false,
+      "includes": ["name", "period"],
+      "position": { "css": ".mast-mini" }
+    },
+
+    {
+      "id": "cat_beverage",
+      "type": "section_banner",
+      "required": false,
+      "label": "주말의 잔 · ONE GLASS, THIS WEEKEND",
+      "number": "SEC.03",
+      "sublabel": "BEVERAGE",
+      "position": { "css": ".sec-beverage" }
+    },
+    {
+      "id": "beverage_grid",
+      "type": "category_grid",
+      "required": false,
+      "cols": 4, "rows": 1,
+      "minItems": 3, "maxItems": 3,
+      "category": { "mode": "auto", "prefer": ["주류", "와인", "맥주", "음료"] },
+      "cardVariant": "article", "overflow": "shrink",
+      "position": { "css": ".beverage-grid" }
+    },
+    {
+      "id": "beverage_editorial",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "와인은 어렵게 마실 게 아니다. 봄에는 차게, 한 잔. 그게 가장 좋다. 안주는 등심 한 점이면 충분.",
+      "position": { "css": ".beverage-editorial .quote" }
+    },
+
+    {
+      "id": "cat_living",
+      "type": "section_banner",
+      "required": false,
+      "label": "일상의 정리 · DAILY ESSENTIALS",
+      "number": "SEC.04",
+      "sublabel": "LIVING",
+      "position": { "css": ".sec-living" }
+    },
+    {
+      "id": "living_grid",
+      "type": "category_grid",
+      "required": false,
+      "cols": 4, "rows": 1,
+      "minItems": 3, "maxItems": 3,
+      "category": { "mode": "auto", "prefer": ["생활", "가정용품", "세제", "위생"] },
+      "cardVariant": "article", "overflow": "shrink",
+      "position": { "css": ".living-grid" }
+    },
+    {
+      "id": "living_editorial",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "매주 같은 자리에 같은 세제, 같은 휴지. 일상의 안정은 의외로 이런 작은 반복에서 시작된다.",
+      "position": { "css": ".living-editorial .quote" }
+    },
+
+    {
+      "id": "md_interview",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "사장님이 직접 박는 매장 MD 인터뷰. 매장 시그니처 + 이번 주 추천 + 산지 이야기 자유 박음.",
+      "position": { "css": ".iv-body .quote" }
+    },
+    {
+      "id": "next_issue",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "<strong>다음 호 예고.</strong> 사장님이 박는 다음 주 행사 한 줄 카피.",
+      "position": { "css": ".next-card .body" }
+    },
+
+    {
+      "id": "back_footer_info",
+      "type": "store_header",
+      "required": false,
+      "includes": ["name", "address", "phone", "hours"],
+      "position": { "css": ".pc-foot-back .colophon" }
+    },
+    {
+      "id": "back_footer_qr",
+      "type": "qr",
+      "required": false,
+      "source": "field:online_mall_url",
+      "sizeMm": 20,
+      "position": { "css": ".pc-foot-back .qr" }
+    }
+  ]
+}

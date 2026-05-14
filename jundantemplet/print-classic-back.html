@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>PRINT_CLASSIC · BACK (B4)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root {
+    --color-accent: #E63946;
+    --color-accent-2: #1B4332;
+    --color-paper: #FAF8F4;
+    --color-ink: #1A1A1A;
+    --color-mute: #6B7280;
+    --color-rule: #D9D7D2;
+    --f-dis: 'Pretendard Variable', sans-serif;
+    --f-ser: 'Noto Serif KR', serif;
+    --f-mon: 'JetBrains Mono', ui-monospace, monospace;
+    --safe: 18px;
+  }
+  html, body { margin: 0; background: #E8E5DF; font-family: var(--f-dis); color: var(--color-ink); -webkit-font-smoothing: antialiased; display: flex; justify-content: center; padding: 40px 20px; }
+  .print-canvas { width: 660px; height: 945px; background: var(--color-paper); box-sizing: border-box; padding: var(--safe); box-shadow: 0 12px 40px rgba(0,0,0,0.12); display: grid; grid-template-rows: auto auto auto auto auto auto; gap: 10px; overflow: hidden; }
+
+  /* ─── MINI HEADER (뒷면 축소형) ─── */
+  .ph-mini {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--color-ink);
+  }
+  .ph-mini .left {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 11px;
+  }
+  .ph-mini .left strong { font-weight: 800; font-size: 13px; letter-spacing: -0.02em; }
+  .ph-mini .left span { color: var(--color-mute); font-family: var(--f-mon); font-size: 9px; letter-spacing: 0.1em; }
+  .ph-mini .page {
+    font-family: var(--f-mon);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: var(--color-paper);
+    background: var(--color-ink);
+    padding: 3px 7px 2px;
+  }
+
+  /* ─── CATEGORY (앞면과 동일 스타일) ─── */
+  .cat-sec { display: flex; flex-direction: column; gap: 6px; }
+  .cat-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--color-ink); }
+  .cat-head .num { font-family: var(--f-mon); font-size: 9px; color: var(--color-accent); letter-spacing: 0.12em; font-weight: 500; }
+  .cat-head h3 { margin: 0; font-size: 14px; font-weight: 800; letter-spacing: -0.025em; }
+  .cat-head .en { font-family: var(--f-mon); font-size: 8px; color: var(--color-mute); letter-spacing: 0.1em; }
+  .cat-head .meta { margin-left: auto; font-family: var(--f-mon); font-size: 8px; color: var(--color-mute); letter-spacing: 0.08em; }
+  .cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .item { position: relative; display: flex; flex-direction: column; gap: 2px; }
+  .item .ph { aspect-ratio: 1.3 / 1; background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 5px, #F4F2EE 5px, #F4F2EE 10px); display: grid; place-items: center; font-family: var(--f-mon); font-size: 7px; color: #948F86; letter-spacing: 0.04em; text-align: center; padding: 3px; }
+  .item .name { margin: 2px 0 0; font-size: 10px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .unit { font-family: var(--f-mon); font-size: 7px; color: var(--color-mute); letter-spacing: 0.04em; line-height: 1; }
+  .item .price-row { display: flex; align-items: baseline; gap: 3px; margin-top: 1px; }
+  .item .original { font-family: var(--f-mon); font-size: 7px; color: var(--color-mute); text-decoration: line-through; }
+  .item .price { font-family: var(--f-dis); font-weight: 900; font-size: 15px; letter-spacing: -0.04em; color: var(--color-accent); line-height: 0.9; }
+  .item .price .won { font-size: 8px; font-weight: 600; color: var(--color-ink); margin-left: 1px; }
+  .item .badge { position: absolute; top: 3px; left: 3px; background: var(--color-ink); color: var(--color-paper); font-family: var(--f-mon); font-size: 7px; letter-spacing: 0.08em; padding: 1px 4px 1px; z-index: 2; line-height: 1.2; }
+  .item .badge.red { background: var(--color-accent); }
+  .item .badge.green { background: var(--color-accent-2); }
+
+  /* ─── COUPON STRIP ─── */
+  .coupon-sec {
+    margin-top: 4px;
+    padding: 10px 0 8px;
+    border-top: 1px dashed var(--color-ink);
+    border-bottom: 1px dashed var(--color-ink);
+  }
+  .coupon-sec .head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .coupon-sec .head h3 {
+    margin: 0; font-size: 14px; font-weight: 800; letter-spacing: -0.025em;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .coupon-sec .head h3 .scissors {
+    font-family: var(--f-mon);
+    font-size: 10px;
+    color: var(--color-accent);
+    letter-spacing: 0.06em;
+  }
+  .coupon-sec .head .meta {
+    font-family: var(--f-mon);
+    font-size: 8px;
+    color: var(--color-mute);
+    letter-spacing: 0.1em;
+  }
+  .coupon-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .coupon {
+    border: 1.5px dashed var(--color-ink);
+    padding: 10px 10px 8px;
+    display: flex; flex-direction: column;
+    background: #FFFFFF;
+    position: relative;
+    min-height: 110px;
+  }
+  .coupon .cut-mark {
+    position: absolute;
+    top: -8px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-paper);
+    padding: 0 6px;
+    font-family: var(--f-mon);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--color-mute);
+  }
+  .coupon .value {
+    font-family: var(--f-dis);
+    font-weight: 900;
+    font-size: 30px;
+    letter-spacing: -0.05em;
+    color: var(--color-accent);
+    line-height: 0.9;
+    margin-bottom: 2px;
+  }
+  .coupon .value .unit { font-size: 14px; font-weight: 700; color: var(--color-ink); margin-left: 2px; }
+  .coupon .title {
+    margin: 4px 0 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+  .coupon .expiry {
+    margin-top: auto;
+    padding-top: 6px;
+    border-top: 1px dotted var(--color-rule);
+    font-family: var(--f-mon);
+    font-size: 7px;
+    color: var(--color-mute);
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+  }
+  .coupon .barcode {
+    margin-top: 4px;
+    height: 14px;
+    background:
+      repeating-linear-gradient(90deg, var(--color-ink) 0 1px, transparent 1px 2px, var(--color-ink) 2px 4px, transparent 4px 6px, var(--color-ink) 6px 9px, transparent 9px 10px, var(--color-ink) 10px 11px, transparent 11px 13px);
+    background-size: 100% 100%;
+  }
+
+  /* ─── FOOTER (회사 정보 — 사업자 등 박는 영역) ─── */
+  .ph-footer {
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 2px solid var(--color-ink);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .ph-footer .info {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px; row-gap: 2px;
+    font-size: 9px;
+    line-height: 1.4;
+  }
+  .ph-footer .lbl { font-family: var(--f-mon); font-size: 7px; color: var(--color-mute); letter-spacing: 0.1em; }
+  .ph-footer .notice { grid-column: 1 / -1; margin-top: 3px; font-size: 7px; color: var(--color-mute); line-height: 1.5; }
+  .ph-footer .qr {
+    width: 50px; height: 50px;
+    border: 1px solid var(--color-ink);
+    background: repeating-conic-gradient(var(--color-ink) 0% 25%, transparent 0% 50%) 0 0/9px 9px, var(--color-paper);
+    position: relative;
+  }
+  .ph-footer .qr::after { content: "QR"; position: absolute; inset: 17px; background: var(--color-paper); display: grid; place-items: center; font-family: var(--f-mon); font-size: 6px; color: var(--color-ink); letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+<article class="print-canvas" data-template="print_classic_back" data-paper="B4" data-page="2">
+
+  <!-- MINI HEADER -->
+  <header class="ph-mini">
+    <div class="left">
+      <strong data-slot="store.name">파인마트</strong>
+      <span>ISSUE 026 / <span data-slot="store.period">26.05.14 — 05.20</span></span>
+    </div>
+    <span class="page">PAGE 2 / 2 · BACK</span>
+  </header>
+
+  <!-- SECTION 04 · 주류·음료 -->
+  <section class="cat-sec">
+    <div class="cat-head">
+      <span class="num">04</span>
+      <h3>주류 · 음료</h3>
+      <span class="en">BEVERAGE</span>
+      <span class="meta">5 ITEMS</span>
+    </div>
+    <div class="cat-grid">
+      <article class="item" data-slot-group="product[22]"><div class="ph" data-slot="product[22].image">[ 칠레 와인 ]</div><h4 class="name" data-slot="product[22].name">까시예로 와인</h4><span class="unit" data-slot="product[22].unit">750ml</span><div class="price-row"><span class="original">15,900</span><span class="price"><span data-slot="product[22].price">11,900</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[23]"><div class="ph" data-slot="product[23].image">[ 호가든 ]</div><h4 class="name" data-slot="product[23].name">호가든 화이트</h4><span class="unit" data-slot="product[23].unit">330ml × 6</span><div class="price-row"><span class="price"><span data-slot="product[23].price">12,900</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[24]"><span class="badge red">30%</span><div class="ph" data-slot="product[24].image">[ 페리에 ]</div><h4 class="name" data-slot="product[24].name">페리에 미니</h4><span class="unit" data-slot="product[24].unit">200ml × 10</span><div class="price-row"><span class="original">14,900</span><span class="price"><span data-slot="product[24].price">10,430</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[25]"><div class="ph" data-slot="product[25].image">[ 켈리 ]</div><h4 class="name" data-slot="product[25].name">켈리 라거 캔</h4><span class="unit" data-slot="product[25].unit">500ml × 12</span><div class="price-row"><span class="price"><span data-slot="product[25].price">19,800</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[26]"><div class="ph" data-slot="product[26].image">[ 화요 ]</div><h4 class="name" data-slot="product[26].name">화요 17도</h4><span class="unit" data-slot="product[26].unit">375ml</span><div class="price-row"><span class="price"><span data-slot="product[26].price">14,900</span><span class="won">원</span></span></div></article>
+    </div>
+  </section>
+
+  <!-- SECTION 05 · 베이커리·델리 -->
+  <section class="cat-sec">
+    <div class="cat-head">
+      <span class="num">05</span>
+      <h3>베이커리 · 델리</h3>
+      <span class="en">BAKERY · DELI</span>
+      <span class="meta">5 ITEMS</span>
+    </div>
+    <div class="cat-grid">
+      <article class="item" data-slot-group="product[27]"><span class="badge">매장</span><div class="ph" data-slot="product[27].image">[ 식빵 ]</div><h4 class="name" data-slot="product[27].name">우리밀 식빵</h4><span class="unit" data-slot="product[27].unit">400g</span><div class="price-row"><span class="price"><span data-slot="product[27].price">3,980</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[28]"><div class="ph" data-slot="product[28].image">[ 크루아상 ]</div><h4 class="name" data-slot="product[28].name">버터 크루아상</h4><span class="unit" data-slot="product[28].unit">4입</span><div class="price-row"><span class="price"><span data-slot="product[28].price">5,900</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[29]"><div class="ph" data-slot="product[29].image">[ 김밥 ]</div><h4 class="name" data-slot="product[29].name">매장 김밥</h4><span class="unit" data-slot="product[29].unit">1줄</span><div class="price-row"><span class="price"><span data-slot="product[29].price">3,500</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[30]"><span class="badge green">친환경</span><div class="ph" data-slot="product[30].image">[ 샐러드 ]</div><h4 class="name" data-slot="product[30].name">시저 샐러드</h4><span class="unit" data-slot="product[30].unit">200g</span><div class="price-row"><span class="price"><span data-slot="product[30].price">4,980</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[31]"><div class="ph" data-slot="product[31].image">[ 치킨 ]</div><h4 class="name" data-slot="product[31].name">로스트 치킨</h4><span class="unit" data-slot="product[31].unit">1마리</span><div class="price-row"><span class="price"><span data-slot="product[31].price">11,900</span><span class="won">원</span></span></div></article>
+    </div>
+  </section>
+
+  <!-- SECTION 06 · 가정 생활 -->
+  <section class="cat-sec">
+    <div class="cat-head">
+      <span class="num">06</span>
+      <h3>가정 · 생활</h3>
+      <span class="en">LIVING</span>
+      <span class="meta">5 ITEMS</span>
+    </div>
+    <div class="cat-grid">
+      <article class="item" data-slot-group="product[32]"><div class="ph" data-slot="product[32].image">[ 다우니 ]</div><h4 class="name" data-slot="product[32].name">다우니 섬유유연제</h4><span class="unit" data-slot="product[32].unit">3L</span><div class="price-row"><span class="price"><span data-slot="product[32].price">14,900</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[33]"><div class="ph" data-slot="product[33].image">[ 크리넥스 ]</div><h4 class="name" data-slot="product[33].name">3겹 화장지</h4><span class="unit" data-slot="product[33].unit">30롤</span><div class="price-row"><span class="price"><span data-slot="product[33].price">17,900</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[34]"><span class="badge green">친환경</span><div class="ph" data-slot="product[34].image">[ 주방세제 ]</div><h4 class="name" data-slot="product[34].name">자연주의 주방세제</h4><span class="unit" data-slot="product[34].unit">2L × 2</span><div class="price-row"><span class="price"><span data-slot="product[34].price">7,900</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[35]"><div class="ph" data-slot="product[35].image">[ 종량제 ]</div><h4 class="name" data-slot="product[35].name">100L 종량제</h4><span class="unit" data-slot="product[35].unit">10매</span><div class="price-row"><span class="price"><span data-slot="product[35].price">12,500</span><span class="won">원</span></span></div></article>
+      <article class="item" data-slot-group="product[36]"><div class="ph" data-slot="product[36].image">[ 지퍼백 ]</div><h4 class="name" data-slot="product[36].name">지퍼백 중대형</h4><span class="unit" data-slot="product[36].unit">60매</span><div class="price-row"><span class="price"><span data-slot="product[36].price">4,500</span><span class="won">원</span></span></div></article>
+    </div>
+  </section>
+
+  <!-- COUPON STRIP -->
+  <section class="coupon-sec">
+    <div class="head">
+      <h3>주말 한정 쿠폰 <span class="scissors">✂ CUT HERE</span></h3>
+      <span class="meta">VALID 05.18 — 05.20 / 4 COUPONS</span>
+    </div>
+    <div class="coupon-grid">
+      <div class="coupon" data-slot-group="coupon[0]">
+        <span class="cut-mark">⋯ CUT ⋯</span>
+        <span class="value"><span data-slot="coupon[0].value">3,000</span><span class="unit">원</span></span>
+        <h4 class="title" data-slot="coupon[0].title">정육 5만원 이상</h4>
+        <span class="expiry"><span data-slot="coupon[0].expiry">VALID 05.18 — 05.20</span><br/>매장 결제시 제시</span>
+        <div class="barcode" data-slot="coupon[0].barcode"></div>
+      </div>
+      <div class="coupon" data-slot-group="coupon[1]">
+        <span class="cut-mark">⋯ CUT ⋯</span>
+        <span class="value"><span data-slot="coupon[1].value">10</span><span class="unit">%</span></span>
+        <h4 class="title" data-slot="coupon[1].title">신선식품 전 품목</h4>
+        <span class="expiry"><span data-slot="coupon[1].expiry">VALID 05.18 — 05.20</span><br/>1인 1매, 5만원 이상</span>
+        <div class="barcode" data-slot="coupon[1].barcode"></div>
+      </div>
+      <div class="coupon" data-slot-group="coupon[2]">
+        <span class="cut-mark">⋯ CUT ⋯</span>
+        <span class="value"><span data-slot="coupon[2].value">5,000</span><span class="unit">원</span></span>
+        <h4 class="title" data-slot="coupon[2].title">와인 3만원 이상</h4>
+        <span class="expiry"><span data-slot="coupon[2].expiry">VALID 05.18 — 05.20</span><br/>주류 코너에서 제시</span>
+        <div class="barcode" data-slot="coupon[2].barcode"></div>
+      </div>
+      <div class="coupon" data-slot-group="coupon[3]">
+        <span class="cut-mark">⋯ CUT ⋯</span>
+        <span class="value"><span data-slot="coupon[3].value">2,000</span><span class="unit">원</span></span>
+        <h4 class="title" data-slot="coupon[3].title">베이커리·델리</h4>
+        <span class="expiry"><span data-slot="coupon[3].expiry">VALID 05.18 — 05.20</span><br/>2만원 이상 구매시</span>
+        <div class="barcode" data-slot="coupon[3].barcode"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="ph-footer">
+    <div class="info">
+      <span class="lbl">ADDR</span><span data-slot="store.address">서울시 마포구 양화로 45, 파인빌딩 1F</span>
+      <span class="lbl">TEL</span><span data-slot="store.phone">02-336-2580</span>
+      <span class="lbl">BIZ</span><span data-slot="store.bizNumber">사업자등록번호 123-45-67890 / 통신판매업 마포-2024-0123</span>
+      <p class="notice" data-slot="footer.notice">
+        * 쿠폰은 1인 1매 사용, 타 쿠폰·할인과 중복 불가. 본 전단은 시즌 가격 안내용이며 산지 시세에 따라 변동될 수 있습니다.
+      </p>
+    </div>
+    <div class="qr" data-slot="store.qrcode" aria-label="store QR"></div>
+  </footer>
+
+</article>
+</body>
+</html>

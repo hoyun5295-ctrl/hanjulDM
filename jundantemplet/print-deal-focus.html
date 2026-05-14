@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>PRINT_DEAL_FOCUS · B4 POP</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root {
+    --color-primary:    #1A1A1A;
+    --color-accent:     #E63946;
+    --color-paper:      #F4F1EA;
+    --color-ink:        #1A1A1A;
+    --color-mute:       #6B7280;
+    --color-rule:       #D9D7D2;
+
+    --font-display:     'Pretendard Variable', sans-serif;
+    --font-body:        'Pretendard Variable', sans-serif;
+    --font-serif:       'Noto Serif KR', serif;
+    --font-mono:        'JetBrains Mono', ui-monospace, monospace;
+
+    --canvas-w: 660px;
+    --canvas-h: 945px;
+    --bleed: 5px;
+    --safe: 30px;
+  }
+
+  html, body {
+    margin: 0;
+    background: #E8E5DF;
+    font-family: var(--font-body);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .print-canvas {
+    width: var(--canvas-w);
+    height: var(--canvas-h);
+    background: var(--color-paper);
+    position: relative;
+    box-sizing: border-box;
+    padding: var(--safe);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    display: grid;
+    grid-template-rows: auto 1fr auto auto;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* ─── 헤더 (얇은 스트립) ─── */
+  .print-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--color-ink);
+  }
+  .header-mono {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--color-ink);
+  }
+  .header-issue {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-mute);
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+  }
+  .header-issue strong { color: var(--color-ink); font-weight: 500; }
+
+  /* ─── 메인 영웅 영역 ─── */
+  .hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    padding: 24px 0 0;
+    gap: 0;
+  }
+
+  .hero-eyebrow {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--color-mute);
+    margin-bottom: 18px;
+  }
+  .hero-eyebrow .dot {
+    width: 7px; height: 7px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    transform: translateY(-1px);
+  }
+
+  .hero-headline {
+    grid-column: 1 / -1;
+    margin: 0 0 14px;
+    font-size: 82px;
+    font-weight: 900;
+    letter-spacing: -0.055em;
+    line-height: 0.88;
+  }
+  .hero-headline em {
+    font-family: var(--font-serif);
+    font-style: normal;
+    font-weight: 900;
+    color: var(--color-accent);
+  }
+
+  .hero-visual {
+    grid-column: 1 / 2;
+    grid-row: 3 / 4;
+    background-image: repeating-linear-gradient(135deg, #E4DFD7 0, #E4DFD7 10px, #EEEAE2 10px, #EEEAE2 20px);
+    position: relative;
+    aspect-ratio: 1 / 1.05;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: #948F86;
+    letter-spacing: 0.06em;
+  }
+  .hero-visual .visual-tag {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: var(--color-paper);
+    padding: 4px 8px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--color-mute);
+    letter-spacing: 0.08em;
+  }
+
+  /* 할인율 배지 (영웅 위 오른쪽) */
+  .discount-stamp {
+    position: absolute;
+    top: -14px;
+    right: -8px;
+    background: var(--color-accent);
+    color: var(--color-paper);
+    padding: 12px 14px;
+    transform: rotate(4deg);
+    text-align: center;
+    z-index: 3;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.08);
+  }
+  .discount-stamp .pct {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 36px;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    display: block;
+  }
+  .discount-stamp .lbl {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    margin-top: 2px;
+    display: block;
+  }
+
+  /* 가격 블록 (오른쪽 1/2) */
+  .hero-price {
+    grid-column: 2 / 3;
+    grid-row: 3 / 4;
+    padding: 0 0 0 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+  .hero-product-line {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-bottom: 1px solid var(--color-rule);
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+  }
+  .hero-product-line .cat {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--color-mute);
+  }
+  .hero-product-line .name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    margin: 0;
+    line-height: 1.2;
+  }
+  .hero-product-line .origin {
+    font-size: 11px;
+    color: var(--color-mute);
+    margin-top: 4px;
+  }
+
+  .price-display {
+    margin: auto 0;
+  }
+  .price-display .price-orig {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--color-mute);
+    text-decoration: line-through;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .price-display .price-main {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 96px;
+    letter-spacing: -0.055em;
+    color: var(--color-accent);
+    line-height: 0.86;
+  }
+  .price-display .price-won {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-ink);
+    margin-left: 4px;
+    letter-spacing: -0.02em;
+  }
+  .price-display .price-unit {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-ink);
+    margin-top: 10px;
+    letter-spacing: 0.06em;
+  }
+  .price-display .price-unit::before {
+    content: "/ ";
+    color: var(--color-mute);
+  }
+
+  /* ─── 서브 상품 스트립 ─── */
+  .sub-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    border-top: 1px solid var(--color-ink);
+    border-bottom: 1px solid var(--color-rule);
+    padding: 18px 0;
+    margin-top: 24px;
+  }
+  .sub-strip-title {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .sub-strip-title h4 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .sub-strip-title .count {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--color-mute);
+  }
+  .sub-item {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+  .sub-item .ph {
+    width: 56px; height: 56px;
+    background-image: repeating-linear-gradient(135deg, #ECE9E4 0, #ECE9E4 6px, #F4F2EE 6px, #F4F2EE 12px);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: #948F86;
+  }
+  .sub-item .name {
+    font-size: 12px;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .sub-item .unit {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--color-mute);
+    margin-top: 2px;
+    display: block;
+  }
+  .sub-item .price {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 18px;
+    color: var(--color-accent);
+    letter-spacing: -0.03em;
+    margin-top: 4px;
+    line-height: 1;
+  }
+  .sub-item .price .won {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin-left: 2px;
+  }
+
+  /* ─── 푸터 ─── */
+  .print-footer {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 18px;
+    padding-top: 14px;
+  }
+  .footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .footer-info .line {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .footer-info .label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--color-mute);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    min-width: 38px;
+  }
+  .footer-info .store-name {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 4px;
+  }
+  .footer-info .notice {
+    font-size: 9px;
+    color: var(--color-mute);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .footer-qr {
+    width: 70px; height: 70px;
+    border: 1px solid var(--color-ink);
+    background:
+      repeating-conic-gradient(var(--color-ink) 0% 25%, transparent 0% 50%) 0 0/12px 12px,
+      var(--color-paper);
+    position: relative;
+  }
+  .footer-qr::after {
+    content: "QR";
+    position: absolute;
+    inset: 24px;
+    background: var(--color-paper);
+    display: grid; place-items: center;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: var(--color-ink);
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+  <article class="print-canvas" data-template="print_deal_focus" data-paper="B4">
+    <!-- HEADER -->
+    <header class="print-header">
+      <span class="header-mono" data-slot="store.name">파인마트 · FINEMART</span>
+      <span></span>
+      <span class="header-issue">
+        <span>ISSUE 026 / DEAL FOCUS</span><br />
+        <strong data-slot="store.period">26.05.14 — 05.20</strong>
+      </span>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-eyebrow">
+        <span><span class="dot"></span>WEEK'S BIGGEST DEAL</span>
+        <span>ONE PRODUCT · ONE PRICE</span>
+      </div>
+
+      <h2 class="hero-headline" data-slot="copy.headline">
+        딱 한 가지,<br />
+        <em>40%</em> 더 좋게.
+      </h2>
+
+      <div class="hero-visual" data-slot="product[0].image">
+        <div class="discount-stamp">
+          <span class="pct" data-slot="product[0].discount">40</span>
+          <span class="lbl">% OFF</span>
+        </div>
+        [ 메인 비주얼 · 한우 등심 ]
+        <span class="visual-tag">PRODUCT.HERO.PNG</span>
+      </div>
+
+      <div class="hero-price">
+        <div class="hero-product-line" data-slot-group="product[0]">
+          <span class="cat" data-slot="product[0].category">MEAT · 정육</span>
+          <h3 class="name" data-slot="product[0].name">1등급 한우 등심</h3>
+          <span class="origin">국내산 · 냉장 · 마블링 9 이상</span>
+        </div>
+        <div class="price-display">
+          <span class="price-orig"><span data-slot="product[0].original">29,800</span>원</span>
+          <span class="price-main"><span data-slot="product[0].price">17,900</span><span class="price-won">원</span></span>
+          <span class="price-unit" data-slot="product[0].unit">100g 기준 · 1팩부터</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUB STRIP -->
+    <section class="sub-strip">
+      <div class="sub-strip-title">
+        <h4>함께 사면 좋은</h4>
+        <span class="count">03 ITEMS</span>
+      </div>
+
+      <article class="sub-item" data-slot-group="product[1]">
+        <div class="ph" data-slot="product[1].image">[ 깻잎 ]</div>
+        <div>
+          <h5 class="name" data-slot="product[1].name">친환경 깻잎</h5>
+          <span class="unit" data-slot="product[1].unit">30g · 1팩</span>
+          <span class="price"><span data-slot="product[1].price">1,980</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <article class="sub-item" data-slot-group="product[2]">
+        <div class="ph" data-slot="product[2].image">[ 깐 마늘 ]</div>
+        <div>
+          <h5 class="name" data-slot="product[2].name">국산 깐 마늘</h5>
+          <span class="unit" data-slot="product[2].unit">200g</span>
+          <span class="price"><span data-slot="product[2].price">3,490</span><span class="won">원</span></span>
+        </div>
+      </article>
+
+      <article class="sub-item" data-slot-group="product[3]">
+        <div class="ph" data-slot="product[3].image">[ 쌈채소 ]</div>
+        <div>
+          <h5 class="name" data-slot="product[3].name">유기농 쌈채소 모듬</h5>
+          <span class="unit" data-slot="product[3].unit">200g</span>
+          <span class="price"><span data-slot="product[3].price">2,980</span><span class="won">원</span></span>
+        </div>
+      </article>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="print-footer">
+      <div class="footer-info">
+        <h6 class="store-name" data-slot="store.name">파인마트 합정점</h6>
+        <div class="line"><span class="label">ADDR</span><span data-slot="store.address">서울시 마포구 양화로 45, 1F</span></div>
+        <div class="line"><span class="label">TEL</span><span data-slot="store.phone">02-336-2580</span></div>
+        <div class="notice" data-slot="footer.notice">
+          * 한정 수량 · 1인 2팩까지. L.POINT 회원가 기준이며, 산지 시세에 따라 변동될 수 있습니다.
+        </div>
+      </div>
+      <div class="footer-qr" data-slot="store.qrcode" aria-label="store QR"></div>
+    </footer>
+  </article>
+</body>
+</html>

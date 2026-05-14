@@ -1,7 +1,119 @@
 # hanjulDM 프로젝트 현황
 
-> **업데이트:** 2026-05-13 (D156)
-> **상태:** ★ D155+D156 슈퍼관리자 고도화 + 발신번호 등록 신청 승인 플로우 + 5 신규 V4 엔진(10 엔진 매트릭스) 종결. D157+ POS Agent 연구 + 슈퍼관리자 잔여 9 영역.
+> **업데이트:** 2026-05-14 (D159 후반)
+> **상태:** ★ D159 = (1) POS Agent V2 100% 박힘 + (2) OKPOS → 투게더스(MS-SQL) 정정 + (3) **인쇄 전단 5종 박음 진행 중 (1종 80% 박힘, 4종 + 정합 정정 다음 세션)**. 다음 세션 = 09번 인계 .md 정독 + Step A-F 박음 (인쇄 5종 마무리) → 그 후 투게더스 매장 캡처 + PHASE 1 무기 4.
+
+## D159 후반 인쇄 전단 5종 박음 진행 (2026-05-14 후반)
+
+자세한 인계 = `status/hanjul-flyer-revamp/09_print_template_v3_integration_handoff.md` 정독 필수.
+
+**박힘 완료:**
+- `07_print_template_redesign_master.md` (앞면 5종 마스터 프롬프트)
+- `08_print_back_template_master.md` (뒷면 5종 마스터 프롬프트, 양면 정합)
+- 끌로드 디자인 박은 결과 = `jundantemplet/` 폴더 (5 앞면 + 5 뒷면 HTML + 5 앞면 .md + index.html + design-canvas.jsx + image-slot.js)
+- `PAPER-SIZES.ts` B3 키 추가 (374×524mm, 한국 인쇄 실무)
+- `templates/print_classic_v1/manifest.json` (15 슬롯 = masthead/hero_title/hero_subline/hero_grid/section_meat/meat_grid/section_fresh/fresh_grid/section_grocery/grocery_grid/footer_notice/footer_qr/back_extra_grid/coupon_grid/back_footer_notice)
+- `templates/print_classic_v1/template.html` (앞면만)
+- `templates/print_classic_v1/template.css` (앞면 CSS만)
+- `09_print_template_v3_integration_handoff.md` 인계 박힘 (11 섹션, 다음 세션 즉시 박음 가능)
+
+**박힘 미완 (다음 세션 첫 박음):**
+- `print_classic_v1/template.html` 뒷면 article 추가
+- `print_classic_v1/template.css` 뒷면 CSS 추가 (coupon-grid + pb-footer)
+
+**박힘 0건 (다음 세션):**
+- print_deal_focus_v1 (B4, POP 폭격)
+- print_magazine_grid_v1 (B3, 33 상품 + 다크 헤로)
+- print_gazette_v1 (B3, 신문지 무드 + 본명조)
+- print_bento_v1 (B4, 비대칭 모자이크)
+- template-registry.ts 검증 (LoadedTemplate.back 필드 박힘 여부)
+- paged-pdf.ts 양면 검증 (Paged.js page-break-after)
+- frontend PrintFlyerPage 5종 선택 UI
+- 4 패키지 tsc 빌드 검증 + atomic safe-build 실 실행
+
+**다음 세션 비토 진입 명령:** "hanjulDM 인쇄 전단 V3 시스템 박음 마무리. 09_print_template_v3_integration_handoff.md 정독 + Step A-F 순차 박음."
+
+## D159 후반 정정 (OKPOS → 투게더스 / MySQL → MS-SQL Server)
+
+비토 V2 설계 시 박은 우선순위 = OKPOS 1순위로 박았으나 Harold 명시 = **투게더스(Together's) 1순위 + MS-SQL Server 매장 관리 PC 박힘**.
+
+**정정 영역 6건:**
+- `db-detector.ts` POS_SIGNATURES 배열 togethers 1순위 (okpos 2순위로 강등) + 비고 "MS-SQL Server + Windows Authentication 박혀있을 가능성 높음 = 자격증명 추출 불필요"
+- `FLYER-POS-AGENT-V2.md` §1 + §7 + §10~11 (OKPOS → 투게더스, MySQL → MS-SQL Server, my.ini → SQL Server Configuration Manager)
+- 메모리 `project_d159_pos_agent_v2.md` + `project_next_togethers_capture_and_phase1_roi.md` (파일명 변경 포함)
+- `MEMORY.md` 인덱스 갱신
+
+**투게더스 매장 캡처 5건 (다음 세션 OKPOS adapter 박을 때 필요):**
+1. 투게더스 설치 폴더 = `C:\Together\` 또는 `C:\TogetherPOS\` 하위 `.ini/.xml/.config/.json`
+2. **MS-SQL Server 가동 확인** = `sqlservr.exe` + services.msc "SQL Server" + SQL Server Configuration Manager 인스턴스명/인증모드(Windows Auth/Mixed)/1433 포트
+3. Windows ODBC 데이터 원본 → 시스템 DSN 탭
+4. 작업관리자 → sqlservr.exe + Together*.exe + `netstat -ano | findstr 1433`
+5. 투게더스 매뉴얼/SQL Server 계정(sa 비번) 문서
+
+**MS-SQL Windows Authentication 가능성 = 자격증명 추출 영역 자체 불필요** (사장님 PC administrator 권한이면 자동 접속).
+
+## D159 POS Agent V2 종결 매트릭스 (2026-05-14)
+
+자세한 비토 메모리 = `project_d159_pos_agent_v2.md` 참조.
+상세 설계 = `status/FLYER-POS-AGENT-V2.md` 참조.
+
+| Phase | 작업 | 결과 |
+|-------|------|------|
+| A | V2 설계 문서 신설 (FLYER-POS-AGENT-V2.md 472줄) | 5축 차별성 + 14단계 + 약관 4조 |
+| B | Agent 본체 신규 8 모듈 | credential-discovery + db-detector + adapter-registry + adapters/{base,ai-fallback} + mask-bypass + local-cache + tray + remote-command + auto-updater (~2,200줄) |
+| C | Agent 본체 3 재작성 통합 | index.ts V2 13단계 + scheduler.ts cache-pusher/auto-updater cron + data-extractor.ts enqueue 패턴 (~770줄) |
+| D | Backend CT-F23 + 6 라우트 + my-agent | flyer-pos-remote.ts 신규 + utils/flyer/index.ts export 11개 + routes/flyer/pos.ts 6 라우트 (~400줄) |
+| E | DB 마이그레이션 (psql 통과 ✓) | flyer_pos_commands + flyer_pos_adapter_candidates + flyer_credential_discovery_log + flyer_pos_agents ALTER (agent_version + last_update_at) + flyer_settings 신설 + latest_pos_agent_version INSERT |
+| F | NSIS 인스톨러 + scripts + 약관 + README | installer.nsi (Unicode true + UTF-8 BOM) + LICENSE-DATA-POLICY.txt 10조 + scripts 4종 (~770줄) |
+| G | 매장 사장님 frontend PosAgentPage + App.tsx 메뉴 | 435줄 + 10초 자동 새로고침 + 마스킹 우회 3단 안내 + 약관 요약 |
+| H | 슈퍼관리자 PosAgentListPage 재작성 | 510줄 + 5초 자동 새로고침 + agent_version 컬럼 + RemoteCommandModal (6 명령 + REVOKE 확인) + CommandHistoryModal (50건 + 확장 펼침) |
+| I | 빌드 검증 (4 패키지 atomic safe-build) | tsc 0 errors + frontend 463KB + admin-frontend 308KB + backend dist/app.js + pos-agent hanjul-pos-agent.exe 99MB → NSIS Setup-1.0.0.exe **18.66 MB** (SHA-256 ce6184d150a73a025061205f597fbb95b0132fa341046866a80618b108094fb6) |
+| J | 운영 배포 (서버 git pull + atomic safe-build + pm2 restart) | hanjuldm-api 15:38:04 가동 + /api/flyer/pos/my-agent 401 (인증 미통과 정상) |
+| K | nginx config `location ^~ /downloads/` 박음 | HTTPS 443 server block 안 + location /api/ 직전 + curl 검증 Content-Type=octet-stream + Content-Length=19564431 |
+
+**D159 fix 5건 (빌드 과정 중 박힘):**
+1. pos-agent `server-client.ts pushData` 반환 타입 정합 (ok=false + error case 박음, scheduler.ts cache-pusher markFailed 분기 활성화)
+2. pos-agent `server-client.ts registerAgent` 응답 타입 companyName?: string 추가
+3. backend `flyer-pos-remote.ts getLatestAgentInfo` spread 순서 정합 (available 중복 회피)
+4. installer/installer.nsi `Unicode true` + UTF-8 BOM 박음 (NSIS 한글 인코딩 fix)
+5. installer.nsi assets/icon.ico 라인 placeholder 처리 (별도 .ico 디자인 후 활성화)
+
+**D159 메타 사고 fix (배포 과정 중):**
+- nginx config sed/awk 박힘 시 첫번째 `location / {` 매칭이 **HTTP 80 server block** (redirect 영역)에 박힘 → HTTPS 443 server block에 박히지 않음 → SPA fallback. fix = `location ^~ /downloads/` 접두사 + location /api/ 직전 박음 (정규식 우선순위 우회 + 정확 server block 매칭).
+
+## D157+D158 종결 매트릭스 (2026-05-13)
+
+자세한 비토 메모리 = `project_d157_d158_alimtalk_humuson_mirror.md` 참조.
+
+**D157 슈퍼관리자 알림톡 대행** (검수·등록·발신프로필):
+
+| Phase | 작업 | 결과 |
+|-------|------|------|
+| A | DB `flyer_kakao_*` 6 테이블(sender_profiles/templates/alarm_users/sender_categories/template_categories/webhook_events) + 인덱스 22 + FK 5 + CHECK 1 | psql 검증 통과, FK 모두 flyer_kakao_* 만, 한줄AI kakao_* 참조 0건 |
+| B | utils CT-F 5 파일 (alimtalk-api 44 API IMC 컨트롤타워 + alimtalk-jobs 스케줄러 3종 + alimtalk-webhook-handler + alimtalk-result-map + auto-notify-message) | 한줄AI 본진 100% 미러 + flyer_kakao_* 변환 + 한줄AI import 0건 |
+| C | routes/admin/alimtalk.ts 슈퍼관리자 대행 24 라우트 | flyerSuperAuthenticate + body.targetCompanyId 필수 + D147/D139/D146/D149-#A 누적 fix 미러 |
+| D | routes/flyer/alimtalk.ts 매장 본인 조회 5 라우트 | flyerAuthenticate + req.flyerUser.companyId 자동 격리 |
+| E | 웹훅(공개) + 스케줄러 startup + app.ts mount | `[flyer-alimtalk-jobs][scheduler] started` 로그 검증 |
+| F | admin-frontend 4 신규(alimtalk-types + AlimtalkManagementPage + AlimtalkSenderModal 2-Step + AlimtalkTemplateModal) + Dashboard 탭 7→8 | 슈퍼관리자 회사 선택 → yellow_id + 폰 → IMC 토큰 → SMS 코드 → createSender 즉시 APPROVED |
+| G | frontend AlimtalkPage 자산 조회 + App.tsx 메뉴 | 매장 사장님 검수 진행상황 조회만 |
+| H | 빌드 + 배포 + pm2 restart + 운영 검증 | 인비토마트 회사 dropdown + 통계 카드 정상 노출 |
+
+**D157 fix 4건**: contentType axios 타입 좁히기 + Template interface 호환 8 필드 + 응답 키 items 파싱 + localStorage admin_token(App.tsx L11 정합).
+
+**D158 매장 알림톡 발송**:
+
+| Phase | 작업 | 결과 |
+|-------|------|------|
+| A | flyer_campaigns ALTER 9 컬럼 (kakao_profile_id/kakao_template_id FK + message_template + 6 알림톡) + 2 인덱스 | 본진 campaigns 100% 미러 + flyer_kakao_* FK만 |
+| B | utils CT-F05 `replaceFlyerAlimtalkVariables` 신규(`#{변수명}` IMC 표준) + CT-F08 sendFlyerCampaign ALIMTALK 분기(insertAlimtalkQueue 호출, sms-queue.ts L719 이미 박힘) + index.ts export | 변수 치환 #{변수명} customVars 우선 + 표준 매핑 + flyer_campaigns INSERT kakao_* |
+| D | routes/flyer/campaigns.ts /send 알림톡 파라미터(template_id/template_code/profile_id/sender_key/kakao_buttons/custom_vars) + 필수 검증 | CT-F08 단일 진입점 통합 유지 |
+| G | frontend SendPage 1차 분류 "문자/알림톡" + 발신프로필/템플릿 dropdown + 정보 카드 + 변수 추출/입력 + 샘플 미리보기 | 매장 사장님 발송 시점 알림톡 선택 가능 |
+
+**D158 fix 1건**: deductFlyerPrepaid 시그니처 'ALIMTALK' 추가 (단가 임시 SMS 단가, Phase 1+ flyer_users.alimtalk_unit_price ALTER 별건).
+
+**메타 인프라 fix (D158에 영구 차단)**: frontend safe-build.sh devDependencies 자동 복구 박음(D152 분리 시 누락 보완 + typescript/vite 누락 시 npm install --include=dev 자동) + git pull HEAD SHA 비교 검증 절차.
+
+**한줄AI 영향 0건 보장 매트릭스**: DB FK 모두 flyer_* / Backend import 0건 / IMC API senderKey 공간 공유(충돌 0) / QTmsg 11라인 company_id 분리 / pm2 targetup-backend memory 671MB 안정 + restart count 1520 그대로.
 
 ## 현재 단계 (CURRENT_TASK)
 

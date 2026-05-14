@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>{{flyer.title}}</title>
+  <style>{{INLINE_CSS}}</style>
+</head>
+<body>
+  <article class="print-canvas page-front" data-template="print_deal_focus" data-paper="B4" data-page="1">
+
+    <!-- ═══ HEADER (얇은 스트립) ═══ -->
+    <header class="ph-header" data-slot="masthead">
+      <span class="hd-name">
+        <strong data-bind="store.name">파인마트</strong>
+        <span class="sep">·</span>
+        <span>FINEMART</span>
+      </span>
+      <span></span>
+      <span class="hd-issue">
+        <span>ISSUE 026 / DEAL FOCUS</span>
+        <strong data-bind="store.period">26.05.14 — 05.20</strong>
+      </span>
+    </header>
+
+    <!-- ═══ HERO ═══ -->
+    <section class="hero">
+      <div class="hero-eyebrow">
+        <span><span class="dot"></span>WEEK'S BIGGEST DEAL</span>
+        <span>ONE PRODUCT · ONE PRICE</span>
+      </div>
+
+      <h2 class="hero-headline" data-slot="hero_title">
+        딱 한 가지,<br/>
+        <em>40%</em> 더 좋게.
+      </h2>
+
+      <div class="hero-product-zone" data-slot="hero_product">
+        <div class="hero-visual" data-bind-bg="imageUrl">
+          <div class="discount-stamp" data-bind-show="discountRate">
+            <span class="pct" data-bind="discountRate">40</span>
+            <span class="lbl">% OFF</span>
+          </div>
+          <span class="visual-tag">PRODUCT.HERO</span>
+        </div>
+
+        <div class="hero-price">
+          <div class="hero-product-line">
+            <span class="cat" data-bind="category">MEAT · 정육</span>
+            <h3 class="name" data-bind="productName">1등급 한우 등심</h3>
+            <span class="origin" data-bind="origin"></span>
+          </div>
+          <div class="price-display">
+            <span class="price-orig" data-bind="originalPriceFormatted"></span>
+            <span class="price-main"><span data-bind="salePriceFormatted">17,900</span><span class="price-won">원</span></span>
+            <span class="price-unit" data-bind="unit">100g 기준</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SUB STRIP ═══ -->
+    <section class="sub-section">
+      <div class="sub-strip-title">
+        <h4>함께 사면 좋은</h4>
+        <span class="count">SUB DEAL</span>
+      </div>
+      <div class="sub-strip" data-slot="sub_products">
+        <template data-role="card">
+          <article class="sub-item">
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <div class="info">
+              <h5 class="name" data-bind="productName">상품명</h5>
+              <span class="unit" data-bind="unit">단위</span>
+              <span class="price"><span data-bind="salePriceFormatted">1,980</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="ph-footer">
+      <div class="info" data-slot="footer_info">
+        <h6 class="store-name" data-bind="store.name">파인마트 합정점</h6>
+        <div class="line"><span class="lbl">ADDR</span><span data-bind="store.address">서울시 마포구 양화로 45, 1F</span></div>
+        <div class="line"><span class="lbl">TEL</span><span data-bind="store.phone">02-336-2580</span></div>
+        <p class="notice" data-slot="footer_notice">
+          * 한정 수량 · 1인 2팩까지. 회원가 기준이며, 산지 시세에 따라 변동될 수 있습니다.
+        </p>
+      </div>
+      <div class="qr" data-slot="footer_qr" data-bind-bg="qr.imageUrl" aria-label="store QR"></div>
+    </footer>
+
+  </article>
+
+  <article class="print-canvas page-back" data-template="print_deal_focus" data-paper="B4" data-page="2">
+
+    <!-- ═══ MINI HEADER ═══ -->
+    <header class="pb-mini" data-slot="pb_mini_header">
+      <span class="hd-name">
+        <strong data-bind="store.name">파인마트</strong>
+        <span class="sep">·</span>
+        <span>FINEMART</span>
+      </span>
+      <span class="breadcrumb">ISSUE 026 · DEAL FOCUS</span>
+      <span class="page">PAGE 2 / 2</span>
+    </header>
+
+    <!-- ═══ RECIPE ═══ -->
+    <section class="recipe" data-slot="recipe_steps">
+      <div class="head">
+        <div class="left">
+          <span class="eyebrow">HOW TO COOK</span>
+          <h2>레시피 <em>4 STEPS</em></h2>
+        </div>
+        <span class="meta">사장님이 박는 매장 시그니처 가이드</span>
+      </div>
+      <div class="recipe-steps">
+        <article class="step">
+          <span class="num">01</span>
+          <div class="ph">[ STEP 01 ]</div>
+          <p class="body"><strong>실온 손질.</strong> 고기를 30분 두고 굵은 소금·후추를 양면에 충분히.</p>
+          <span class="time">30 MIN · 실온</span>
+        </article>
+        <article class="step">
+          <span class="num">02</span>
+          <div class="ph">[ STEP 02 ]</div>
+          <p class="body"><strong>팬 가열.</strong> 연기 직전까지 달군 뒤 버터·로즈마리·통마늘 투입.</p>
+          <span class="time">3 MIN · 강불</span>
+        </article>
+        <article class="step">
+          <span class="num">03</span>
+          <div class="ph">[ STEP 03 ]</div>
+          <p class="body"><strong>시어링.</strong> 앞뒤 2분씩, 옆면도 30초씩 굴려 마이야르 만들기.</p>
+          <span class="time">5 MIN · 강불</span>
+        </article>
+        <article class="step">
+          <span class="num">04</span>
+          <div class="ph">[ STEP 04 ]</div>
+          <p class="body"><strong>레스팅.</strong> 호일에 싸 5분 두고, 결 반대로 슬라이스.</p>
+          <span class="time">5 MIN · 휴지</span>
+        </article>
+      </div>
+    </section>
+
+    <!-- ═══ PAIRING ═══ -->
+    <section class="pairing">
+      <div class="head">
+        <h3>함께 사면 좋은</h3>
+        <span class="en">PAIRING</span>
+        <span class="meta">10 ITEMS</span>
+      </div>
+      <div class="pair-grid" data-slot="pairing_grid">
+        <template data-role="card">
+          <article class="pair">
+            <div class="ph" data-bind-bg="imageUrl"></div>
+            <div class="info">
+              <h5 class="name" data-bind="productName">상품명</h5>
+              <span class="price"><span data-bind="salePriceFormatted">1,000</span><span class="won">원</span></span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- ═══ BOTTOM : MAP + MEMBER + NEXT ═══ -->
+    <section class="bottom">
+      <article class="map-card">
+        <div class="head">
+          <h3>매장 위치</h3>
+          <span class="l">STORE MAP</span>
+        </div>
+        <div class="map-canvas" data-slot="store_map" data-bind-bg="">
+          <div class="pin"></div>
+          <div class="label" data-bind="store.name">매장</div>
+        </div>
+        <div class="addr">
+          <span class="l">ADDR · </span>
+          <span data-bind="store.address">매장 주소</span>
+        </div>
+      </article>
+
+      <div class="info-stack">
+        <article class="member-card">
+          <span class="l">MEMBERSHIP</span>
+          <h4>매장 멤버 혜택</h4>
+          <p class="body" data-slot="member_card">
+            전 품목 추가 <strong>5% 할인</strong> · 한우/수산 신선 주말 <strong>10%</strong> · 가입 즉시 <strong>3,000원 쿠폰</strong> 지급.
+          </p>
+        </article>
+        <article class="next-week">
+          <span class="l">NEXT WEEK · 다음 주 예고</span>
+          <p class="body" data-slot="next_issue">
+            <strong>다음 주 행사 예고</strong> · 사장님이 직접 박는 한 줄 카피.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ═══ BACK FOOTER ═══ -->
+    <footer class="pb-footer">
+      <div class="info" data-slot="back_footer_info">
+        <span class="lbl">TEL</span><span data-bind="store.phone">02-336-2580</span>
+        <span class="lbl">HOURS</span><span data-bind="store.hours">매일 09:00 – 23:00</span>
+        <p class="notice" data-slot="back_footer_notice">
+          * 레시피·페어링은 예시입니다. 표기 가격은 회원가 기준, 한정 수량으로 조기 품절될 수 있습니다.
+        </p>
+      </div>
+    </footer>
+
+  </article>
+</body>
+</html>

@@ -1,0 +1,177 @@
+{
+  "id": "print_classic_v1",
+  "version": "1.0.0",
+  "name": "PRINT_CLASSIC — 마트 클래식 B4 양면",
+  "description": "Editorial Mart / Refined Density. 동네·중형마트 주간 대형전단. 영웅 2 + 정육 5 + 신선 10 + 가공 5 = 22개 상품. 뒷면 = 추가 카테고리 + 절취선 쿠폰. D159 끌로드 디자인 변환.",
+  "industry": "mart",
+  "season": "general",
+  "paper": { "size": "B4", "orientation": "portrait" },
+  "pages": 2,
+  "assets": {
+    "html": "template.html",
+    "css": "template.css",
+    "preview": "preview.png"
+  },
+  "slots": [
+    {
+      "id": "masthead",
+      "type": "store_header",
+      "required": true,
+      "includes": ["logo", "name", "branch", "issue", "period", "phone"],
+      "position": { "css": ".ph-header" }
+    },
+    {
+      "id": "hero_title",
+      "type": "typography",
+      "required": true,
+      "editable": true,
+      "maxLength": 30,
+      "fallback": "식탁에 다가온 <em>봄</em>.",
+      "position": { "css": ".hero-title h2[data-bind=\"copy.headline\"]" }
+    },
+    {
+      "id": "hero_subline",
+      "type": "text",
+      "required": false,
+      "editable": true,
+      "maxLength": 60,
+      "fallback": "제철 식재료 22종 · 전 품목 회원가",
+      "position": { "css": ".hero-title .sub[data-bind=\"copy.subline\"]" }
+    },
+
+    {
+      "id": "hero_grid",
+      "type": "product_grid",
+      "required": true,
+      "cols": 2,
+      "rows": 1,
+      "minItems": 2,
+      "maxItems": 2,
+      "selection": { "mode": "featured", "filter": { "promoType": "main" } },
+      "cardVariant": "hero",
+      "overflow": "shrink",
+      "position": { "css": ".hero-band .hero-grid" }
+    },
+
+    {
+      "id": "section_meat",
+      "type": "section_banner",
+      "required": true,
+      "label": "정육 특가",
+      "number": "01",
+      "sublabel": "MEAT",
+      "position": { "css": ".section-meat-header" }
+    },
+    {
+      "id": "meat_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 5,
+      "rows": 1,
+      "minItems": 4,
+      "maxItems": 5,
+      "category": { "mode": "auto", "prefer": ["축산", "정육", "한우", "돼지고기", "닭고기"] },
+      "cardVariant": "compact",
+      "overflow": "shrink",
+      "position": { "css": ".meat-grid" }
+    },
+
+    {
+      "id": "section_fresh",
+      "type": "section_banner",
+      "required": true,
+      "label": "신선식품",
+      "number": "02",
+      "sublabel": "PRODUCE · SEAFOOD",
+      "position": { "css": ".section-fresh-header" }
+    },
+    {
+      "id": "fresh_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 5,
+      "rows": 2,
+      "minItems": 8,
+      "maxItems": 10,
+      "category": { "mode": "auto", "prefer": ["청과", "과일", "채소", "야채", "수산", "해산물", "생선"] },
+      "cardVariant": "compact",
+      "overflow": "shrink",
+      "position": { "css": ".fresh-grid" }
+    },
+
+    {
+      "id": "section_grocery",
+      "type": "section_banner",
+      "required": true,
+      "label": "가공 · 델리",
+      "number": "03",
+      "sublabel": "GROCERY · LIVING",
+      "position": { "css": ".section-grocery-header" }
+    },
+    {
+      "id": "grocery_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 5,
+      "rows": 1,
+      "minItems": 4,
+      "maxItems": 5,
+      "category": { "mode": "auto", "prefer": ["가공", "델리", "유제품", "쌀", "주류", "음료"] },
+      "cardVariant": "compact",
+      "overflow": "shrink",
+      "position": { "css": ".grocery-grid" }
+    },
+
+    {
+      "id": "footer_notice",
+      "type": "footer_notice",
+      "required": false,
+      "editable": true,
+      "fallback": "* 한정 수량 / 1인 2팩까지 · 표기 가격은 회원가 기준이며 일부 품목은 산지 시세에 따라 변동될 수 있습니다.",
+      "position": { "css": ".ph-footer .notice" }
+    },
+    {
+      "id": "footer_qr",
+      "type": "qr",
+      "required": false,
+      "source": "field:online_mall_url",
+      "sizeMm": 14,
+      "position": { "css": ".ph-footer .qr" }
+    },
+
+    {
+      "id": "back_extra_grid",
+      "type": "category_grid",
+      "required": false,
+      "cols": 5,
+      "rows": 3,
+      "minItems": 8,
+      "maxItems": 15,
+      "category": { "mode": "auto", "prefer": ["주류", "음료", "베이커리", "델리", "가정용품", "생활"] },
+      "cardVariant": "compact",
+      "overflow": "shrink",
+      "position": { "css": ".back-extra-grid" }
+    },
+    {
+      "id": "coupon_grid",
+      "type": "product_grid",
+      "required": false,
+      "cols": 4,
+      "rows": 1,
+      "minItems": 2,
+      "maxItems": 6,
+      "selection": { "mode": "highest_discount" },
+      "cardVariant": "coupon",
+      "overflow": "shrink",
+      "position": { "css": ".coupon-grid" }
+    },
+    {
+      "id": "back_footer_notice",
+      "type": "footer_notice",
+      "required": false,
+      "editable": true,
+      "fallback": "* 쿠폰은 1인 1매 한정. 절취 후 매장 방문 시 제시. 사진은 실제와 다를 수 있습니다.",
+      "position": { "css": ".pb-footer .notice" }
+    }
+  ]
+}

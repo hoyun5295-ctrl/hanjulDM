@@ -81,7 +81,27 @@ const TEMPLATES_V2_FALLBACK: PrintTemplateMeta[] = [
   { id: 'mart_hot_v1',     label: 'HOT특가 (레드핫)',       mood: '파격',      palette: ['#E8331F', '#FF8F2B', '#FFD33D'], recommended: '특가 · 파격 세일',      paper: 'j2' },
   { id: 'mart_premium_v1', label: '프리미엄 (다크+골드)',   mood: '엘레강스',   palette: ['#0B1428', '#C9A961', '#F7F3E9'], recommended: '한우 · 수입산 · 고급',  paper: 'j2' },
   { id: 'mart_weekend_v1', label: '주말대박 (일렉트릭)',    mood: '임팩트',     palette: ['#7C3AED', '#FDE047', '#EC4899'], recommended: '주말 · 금토일 한정',     paper: 'j2' },
+  // ★ D159 신규 5종 — 끌로드 디자인 변환 (B4 · B3 양면)
+  { id: 'print_classic_v1',        label: 'CLASSIC · 클래식 양면',     mood: 'Editorial / Refined',  palette: ['#E63946', '#1B4332', '#FAF8F4'], recommended: '동네·중형 마트 · 22 상품 + 절취 쿠폰',   paper: 'B4' },
+  { id: 'print_deal_focus_v1',     label: 'DEAL FOCUS · 단일 폭격',    mood: 'Poster POP',            palette: ['#E63946', '#F4F1EA', '#1A1A1A'], recommended: '정육·수산 단일 카테고리 · 영웅 1',       paper: 'B4' },
+  { id: 'print_magazine_grid_v1',  label: 'MAGAZINE · 대형 33상품',    mood: 'Tabloid Magazine',      palette: ['#E63946', '#1B4332', '#1A1A1A'], recommended: '대형 마트 주말 · 33 + 24 상품',          paper: 'B3' },
+  { id: 'print_gazette_v1',        label: 'GAZETTE · 시장 신문',        mood: 'Newsprint Broadsheet',  palette: ['#B83B2E', '#F1ECDF', '#1A1812'], recommended: '주간 시장 신문 · MD 인터뷰 + 4 카테고리', paper: 'B3' },
+  { id: 'print_bento_v1',          label: 'BENTO · 비대칭 모자이크',    mood: 'Bento Mosaic',          palette: ['#D4A93B', '#E63946', '#1A1A1A'], recommended: '베스트 시각 강조 · 12 + 11 cards',       paper: 'B4' },
 ];
+
+// 종이 사이즈 라벨 (사장님 친화)
+const PAPER_LABEL: Record<string, string> = {
+  j1: '1절 (788×1091mm)',
+  j2: '2절 세로 (545×788mm)',
+  j4: '4절 (394×545mm)',
+  j8: '8절 (272×394mm)',
+  j16: '16절 (137×197mm)',
+  A3: 'A3 (297×420mm)',
+  B3: 'B3 (374×524mm) 양면',
+  B4: 'B4 (260×374mm) 양면',
+  A4: 'A4 (210×297mm)',
+  tabloid: 'Tabloid (279×432mm)',
+};
 
 let idCounter = 0;
 function genId() { return `p_${Date.now()}_${++idCounter}`; }
@@ -512,18 +532,19 @@ export default function PrintFlyerPage({ token: _token }: { token: string }) {
           </div>
           <div className="flex items-center gap-3 text-xs text-text-secondary">
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 font-semibold">
-              📐 2절 세로 (545×788mm)
+              📐 {PAPER_LABEL[templates.find(t => t.id === templateCode)?.paper || 'j2'] || '2절 세로 (545×788mm)'}
             </span>
-            <span>인쇄소 표준 2절 사이즈로 자동 출력 (300dpi PDF)</span>
+            <span>선택한 템플릿 사이즈로 자동 출력 (300dpi PDF)</span>
           </div>
         </div>
       </SectionCard>
 
-      {/* ★ D129 V2 템플릿 선택 */}
-      <SectionCard title="템플릿 선택 (AI 자동 제작)">
-        <div className="grid grid-cols-2 gap-3">
+      {/* ★ D129 V2 + D159 신규 5종 템플릿 선택 */}
+      <SectionCard title={`템플릿 선택 (총 ${templates.length}종 · AI 자동 제작)`}>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {templates.map(tpl => {
             const selected = templateCode === tpl.id;
+            const paperShort = tpl.paper === 'j2' ? '2절' : tpl.paper.toUpperCase();
             return (
               <button
                 key={tpl.id}
@@ -536,7 +557,10 @@ export default function PrintFlyerPage({ token: _token }: { token: string }) {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-text truncate">{tpl.label}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-bold text-text truncate">{tpl.label}</div>
+                      <span className="shrink-0 px-1.5 py-0.5 text-[9px] font-bold bg-text/10 text-text-secondary rounded">{paperShort}</span>
+                    </div>
                     <div className="text-[11px] text-text-secondary mt-0.5">{tpl.mood}</div>
                     <div className="text-[10px] text-text-secondary/70 mt-1.5">{tpl.recommended}</div>
                   </div>
@@ -559,7 +583,7 @@ export default function PrintFlyerPage({ token: _token }: { token: string }) {
           })}
         </div>
         <div className="mt-3 text-[11px] text-text-secondary">
-          💡 템플릿을 선택하면 해당 성격/컬러로 AI가 자동 레이아웃 + 가격 강조 + 카테고리 배치를 완성합니다.
+          💡 템플릿을 선택하면 해당 성격/컬러로 AI가 자동 레이아웃 + 가격 강조 + 카테고리 배치를 완성합니다. <strong>B4·B3 종은 양면 인쇄</strong> (앞면 영웅 + 뒷면 추가 카테고리·쿠폰·캘린더).
         </div>
       </SectionCard>
 

@@ -1,0 +1,311 @@
+{
+  "id": "print_magazine_grid_v1",
+  "version": "1.0.0",
+  "name": "PRINT_MAGAZINE_GRID — 대형마트 타블로이드 B3 양면",
+  "description": "Tabloid Magazine / Dense but Refined. 대형마트 주말 전단. 영웅 3 + 5 카테고리 × 6 (앞면 33) + 뒷면 4 카테고리 × 6 + 멤버십 등급 + 4주 캘린더. D159 끌로드 디자인 변환.",
+  "industry": "mart",
+  "season": "general",
+  "paper": { "size": "B3", "orientation": "portrait" },
+  "pages": 2,
+  "assets": {
+    "html": "template.html",
+    "css": "template.css",
+    "preview": "preview.png"
+  },
+  "slots": [
+    {
+      "id": "masthead",
+      "type": "store_header",
+      "required": true,
+      "includes": ["logo", "name", "branch", "period", "phone", "hours"],
+      "position": { "css": ".pc-head" }
+    },
+    {
+      "id": "hero_title",
+      "type": "typography",
+      "required": true,
+      "editable": true,
+      "maxLength": 30,
+      "fallback": "식탁에 다가온<br/><em>봄</em>, 오롯이.",
+      "position": { "css": ".hero-title h2" }
+    },
+    {
+      "id": "hero_subline",
+      "type": "text",
+      "required": false,
+      "editable": true,
+      "maxLength": 80,
+      "fallback": "제철 식재료부터 주말 장보기 필수템까지 — 30종을 한 페이지에.",
+      "position": { "css": ".hero-title .sub" }
+    },
+    {
+      "id": "hero_grid",
+      "type": "product_grid",
+      "required": true,
+      "cols": 3,
+      "rows": 1,
+      "minItems": 3,
+      "maxItems": 3,
+      "selection": { "mode": "highest_discount", "filter": { "promoType": "main" } },
+      "cardVariant": "hero-dark",
+      "overflow": "shrink",
+      "position": { "css": ".hero-grid" }
+    },
+
+    {
+      "id": "cat_meat",
+      "type": "section_banner",
+      "required": true,
+      "label": "정육 특가",
+      "number": "01",
+      "sublabel": "MEAT",
+      "position": { "css": ".sec-meat-head" }
+    },
+    {
+      "id": "meat_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["축산", "정육", "한우", "돼지고기", "닭고기"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".meat-grid" }
+    },
+
+    {
+      "id": "cat_seafood",
+      "type": "section_banner",
+      "required": true,
+      "label": "수산 · 활어",
+      "number": "02",
+      "sublabel": "SEAFOOD",
+      "position": { "css": ".sec-seafood-head" }
+    },
+    {
+      "id": "seafood_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["수산", "해산물", "생선", "활어"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".seafood-grid" }
+    },
+
+    {
+      "id": "cat_produce",
+      "type": "section_banner",
+      "required": true,
+      "label": "농산 · 청과",
+      "number": "03",
+      "sublabel": "PRODUCE",
+      "position": { "css": ".sec-produce-head" }
+    },
+    {
+      "id": "produce_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["청과", "농산", "과일", "채소", "야채"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".produce-grid" }
+    },
+
+    {
+      "id": "cat_grocery",
+      "type": "section_banner",
+      "required": true,
+      "label": "가공 · 델리",
+      "number": "04",
+      "sublabel": "GROCERY",
+      "position": { "css": ".sec-grocery-head" }
+    },
+    {
+      "id": "grocery_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["가공", "델리", "유제품", "쌀"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".grocery-grid" }
+    },
+
+    {
+      "id": "cat_beverage",
+      "type": "section_banner",
+      "required": true,
+      "label": "주류 · 생활",
+      "number": "05",
+      "sublabel": "BEVERAGE · LIVING",
+      "position": { "css": ".sec-beverage-head" }
+    },
+    {
+      "id": "beverage_grid",
+      "type": "category_grid",
+      "required": true,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["주류", "음료", "생활", "가정용품"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".beverage-grid" }
+    },
+
+    {
+      "id": "footer_info",
+      "type": "store_header",
+      "required": false,
+      "includes": ["address", "period"],
+      "position": { "css": ".pc-foot .info" }
+    },
+    {
+      "id": "footer_notice",
+      "type": "footer_notice",
+      "required": false,
+      "editable": true,
+      "fallback": "한정 수량 · 1인 2팩까지. 표기 가격은 회원가 기준, 일부 산지·시세에 따라 변동될 수 있습니다.",
+      "position": { "css": ".pc-foot .info .note" }
+    },
+    {
+      "id": "footer_member",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong"],
+      "fallback": "매장 회원 전 품목<br/><strong>최대 5% 추가 할인</strong>",
+      "position": { "css": ".pc-foot .member" }
+    },
+    {
+      "id": "footer_qr",
+      "type": "qr",
+      "required": false,
+      "source": "field:online_mall_url",
+      "sizeMm": 22,
+      "position": { "css": ".pc-foot .qr" }
+    },
+
+    {
+      "id": "pb_dark_header",
+      "type": "store_header",
+      "required": false,
+      "includes": ["logo", "name", "branch", "period"],
+      "position": { "css": ".mini-band" }
+    },
+
+    {
+      "id": "cat_bakery",
+      "type": "section_banner",
+      "required": false,
+      "label": "베이커리 · 델리",
+      "number": "06",
+      "sublabel": "BAKERY · DELI",
+      "position": { "css": ".sec-bakery-head" }
+    },
+    {
+      "id": "bakery_grid",
+      "type": "category_grid",
+      "required": false,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["베이커리", "델리", "샐러드"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".bakery-grid" }
+    },
+
+    {
+      "id": "cat_frozen",
+      "type": "section_banner",
+      "required": false,
+      "label": "냉동 · 간편식",
+      "number": "07",
+      "sublabel": "FROZEN · READY",
+      "position": { "css": ".sec-frozen-head" }
+    },
+    {
+      "id": "frozen_grid",
+      "type": "category_grid",
+      "required": false,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["냉동", "간편식", "즉석", "HMR"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".frozen-grid" }
+    },
+
+    {
+      "id": "cat_living",
+      "type": "section_banner",
+      "required": false,
+      "label": "가정 · 생활",
+      "number": "08",
+      "sublabel": "LIVING",
+      "position": { "css": ".sec-living-head" }
+    },
+    {
+      "id": "living_grid",
+      "type": "category_grid",
+      "required": false,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["생활", "가정용품", "세제", "위생"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".living-grid" }
+    },
+
+    {
+      "id": "cat_beauty",
+      "type": "section_banner",
+      "required": false,
+      "label": "헬스 · 뷰티",
+      "number": "09",
+      "sublabel": "HEALTH · BEAUTY",
+      "position": { "css": ".sec-beauty-head" }
+    },
+    {
+      "id": "beauty_grid",
+      "type": "category_grid",
+      "required": false,
+      "cols": 6, "rows": 1,
+      "minItems": 4, "maxItems": 6,
+      "category": { "mode": "auto", "prefer": ["뷰티", "화장품", "헬스", "비타민", "약"] },
+      "cardVariant": "compact", "overflow": "shrink",
+      "position": { "css": ".beauty-grid" }
+    },
+
+    {
+      "id": "member_tier",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong"],
+      "fallback": "사장님이 박는 멤버십 등급 (BASIC / PLUS / VIP).",
+      "position": { "css": ".tier-card .tier-table" }
+    },
+    {
+      "id": "calendar_grid",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong"],
+      "fallback": "사장님이 박는 다음 4주 행사 캘린더 미리보기.",
+      "position": { "css": ".cal-list" }
+    },
+
+    {
+      "id": "back_footer_info",
+      "type": "store_header",
+      "required": false,
+      "includes": ["address", "phone", "hours"],
+      "position": { "css": ".pc-foot-back .info" }
+    },
+    {
+      "id": "back_footer_qr",
+      "type": "qr",
+      "required": false,
+      "source": "field:online_mall_url",
+      "sizeMm": 18,
+      "position": { "css": ".pc-foot-back .qr-pair" }
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "id": "print_deal_focus_v1",
+  "version": "1.0.0",
+  "name": "PRINT_DEAL_FOCUS — POP 폭격 B4 양면",
+  "description": "Poster POP / Single-Hero. 정육·수산·계절과일 등 단일 카테고리 폭탄 행사. 영웅 1 (가격 96px) + 서브 3 + 뒷면 4 STEPS 레시피 + 페어링 10. D159 끌로드 디자인 변환.",
+  "industry": "mart",
+  "season": "general",
+  "paper": { "size": "B4", "orientation": "portrait" },
+  "pages": 2,
+  "assets": {
+    "html": "template.html",
+    "css": "template.css",
+    "preview": "preview.png"
+  },
+  "slots": [
+    {
+      "id": "masthead",
+      "type": "store_header",
+      "required": true,
+      "includes": ["name", "period"],
+      "position": { "css": ".ph-header" }
+    },
+    {
+      "id": "hero_title",
+      "type": "typography",
+      "required": true,
+      "editable": true,
+      "maxLength": 40,
+      "fallback": "딱 한 가지, <em>40%</em> 더 좋게.",
+      "position": { "css": ".hero-headline" }
+    },
+    {
+      "id": "hero_product",
+      "type": "product_card",
+      "required": true,
+      "variant": "hero",
+      "selection": { "mode": "highest_discount", "filter": { "promoType": "main" } },
+      "position": { "css": ".hero-product-zone" }
+    },
+    {
+      "id": "sub_products",
+      "type": "product_grid",
+      "required": true,
+      "cols": 3,
+      "rows": 1,
+      "minItems": 2,
+      "maxItems": 3,
+      "selection": { "mode": "highest_discount", "filter": { "promoType": "sub" } },
+      "cardVariant": "compact",
+      "overflow": "shrink",
+      "position": { "css": ".sub-strip" }
+    },
+    {
+      "id": "footer_info",
+      "type": "store_header",
+      "required": false,
+      "includes": ["name", "address", "phone"],
+      "position": { "css": ".ph-footer .info" }
+    },
+    {
+      "id": "footer_notice",
+      "type": "footer_notice",
+      "required": false,
+      "editable": true,
+      "fallback": "* 한정 수량 · 1인 2팩까지. 회원가 기준이며, 산지 시세에 따라 변동될 수 있습니다.",
+      "position": { "css": ".ph-footer .notice" }
+    },
+    {
+      "id": "footer_qr",
+      "type": "qr",
+      "required": false,
+      "source": "field:online_mall_url",
+      "sizeMm": 18,
+      "position": { "css": ".ph-footer .qr" }
+    },
+
+    {
+      "id": "pb_mini_header",
+      "type": "store_header",
+      "required": false,
+      "includes": ["name"],
+      "position": { "css": ".pb-mini" }
+    },
+    {
+      "id": "recipe_steps",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong", "em"],
+      "fallback": "사장님이 직접 박는 4 STEPS 레시피. (요리·보관 팁·페어링 가이드 등 자유 박음)",
+      "position": { "css": ".recipe" }
+    },
+    {
+      "id": "pairing_grid",
+      "type": "product_grid",
+      "required": false,
+      "cols": 5,
+      "rows": 2,
+      "minItems": 5,
+      "maxItems": 10,
+      "selection": { "mode": "highest_discount" },
+      "cardVariant": "compact",
+      "overflow": "shrink",
+      "position": { "css": ".pair-grid" }
+    },
+    {
+      "id": "store_map",
+      "type": "map",
+      "required": false,
+      "fallback": "",
+      "position": { "css": ".map-canvas" }
+    },
+    {
+      "id": "member_card",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong"],
+      "fallback": "전 품목 추가 <strong>5% 할인</strong> · 한우/수산 신선 주말 <strong>10%</strong> · 가입 즉시 <strong>3,000원 쿠폰</strong> 지급.",
+      "position": { "css": ".member-card .body" }
+    },
+    {
+      "id": "next_issue",
+      "type": "rich_text",
+      "required": false,
+      "editable": true,
+      "allowedTags": ["br", "strong"],
+      "fallback": "<strong>다음 주 행사 예고</strong> · 사장님이 직접 박는 한 줄 카피.",
+      "position": { "css": ".next-week .body" }
+    },
+    {
+      "id": "back_footer_info",
+      "type": "store_header",
+      "required": false,
+      "includes": ["phone", "hours"],
+      "position": { "css": ".pb-footer .info" }
+    },
+    {
+      "id": "back_footer_notice",
+      "type": "footer_notice",
+      "required": false,
+      "editable": true,
+      "fallback": "* 레시피·페어링은 예시입니다. 표기 가격은 회원가 기준, 한정 수량으로 조기 품절될 수 있습니다.",
+      "position": { "css": ".pb-footer .notice" }
+    }
+  ]
+}
