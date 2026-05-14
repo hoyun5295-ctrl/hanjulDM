@@ -18,6 +18,10 @@ logs/
 packages/backend/uploads/
 uploads/
 
+# 테스트 산출물 (test-render PDF/PNG/HTML 출력 — 영구 untrack)
+packages/backend/pdfs/
+packages/backend/packages/
+
 # 백업
 backups/
 _archive/

@@ -90,8 +90,8 @@ function assembleHtml(
   //   page-ready 시점에 PagedConfig.after를 즉시 발화 (preview 호출 무관).
   //   기존 after 콜백이 원본 body 숨김 + __PAGED_DONE=true 를 manual preview() 전에 실행 →
   //   Puppeteer가 빈 body 스크린샷/PDF (mart/print 전 종 백지). PagedConfig.after 제거,
-  //   cleanup + __PAGED_DONE는 manual preview() 종료 후에만 실행하도록 박음.
-  //   (Paged.js wrapContent()가 원본을 <template>에 박아 inert 처리하므로 추가 hide 불요)
+  //   cleanup + __PAGED_DONE는 manual preview() 종료 후에만 실행하도록 이동.
+  //   (Paged.js wrapContent()가 원본을 <template> 안에 넣어 inert 처리하므로 추가 hide 불요)
   const pagedInit = opts.skipPagedJs
     ? `window.__PAGED_DONE = true;`
     : `window.PagedConfig = { auto: false };`;

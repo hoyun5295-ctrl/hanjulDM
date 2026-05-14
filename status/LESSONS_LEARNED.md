@@ -288,7 +288,7 @@ ready.then(async function () {
 
 `config.auto: false`는 **preview() 호출만 skip**, `config.after` 콜백은 **page-ready 시점 무조건 발화**.
 
-paged-pdf.ts 기존 PagedConfig.after 박힘:
+paged-pdf.ts 기존 PagedConfig.after 정의:
 ```js
 window.PagedConfig = {
   auto: false,
@@ -301,19 +301,19 @@ window.PagedConfig = {
 };
 ```
 
-→ polyfill auto-init이 manual `await PagedPolyfill.preview()` 호출 **전에** after 발화 → body 원본 전부 `display:none` + `__PAGED_DONE=true` 박힘 → Puppeteer `waitForFunction('__PAGED_DONE===true')` 즉시 통과 → 빈 body 스크린샷/PDF 캡처.
+→ polyfill auto-init이 manual `await PagedPolyfill.preview()` 호출 **전에** after 발화 → body 원본 전부 `display:none` + `__PAGED_DONE=true` 설정 → Puppeteer `waitForFunction('__PAGED_DONE===true')` 즉시 통과 → 빈 body 스크린샷/PDF 캡처.
 
 ### 12-3. 정답
 
 **Fix 1 — paged-pdf.ts L92-130:**
 
-`PagedConfig.after` 완전 제거. `PagedConfig = { auto: false }` 단일. cleanup + `__PAGED_DONE=true` 박는 위치 = `pagedStart` async 래퍼 안 manual `PagedPolyfill.preview()` 반환 **직후**.
+`PagedConfig.after` 완전 제거. `PagedConfig = { auto: false }` 단일. cleanup + `__PAGED_DONE=true` 설정 위치 = `pagedStart` async 래퍼 안 manual `PagedPolyfill.preview()` 반환 **직후**.
 
-Paged.js `wrapContent()`가 body innerHTML을 `<template data-ref='pagedjs-content'>` 박아 inert 자동 처리하므로 추가 hide cleanup 불요.
+Paged.js `wrapContent()`가 body innerHTML을 `<template data-ref='pagedjs-content'>` 안에 넣어 inert 자동 처리하므로 추가 hide cleanup 불요.
 
 **Fix 2 — PAPER-SIZES.ts B4 entry:**
 
-257×364mm(ISO 표준 오기재) → 260×374mm(한국 마트 전단지 8절). labelKo + note 박음. frontend PrintFlyerPage.tsx L101 `B4: 'B4 (260×374mm)'` Harold 의도 정합.
+257×364mm(ISO 표준 오기재) → 260×374mm(한국 마트 전단지 8절). labelKo + note 추가. frontend PrintFlyerPage.tsx L101 `B4: 'B4 (260×374mm)'` Harold 의도 정합.
 
 ### 12-4. 검증
 
@@ -330,8 +330,8 @@ PDF MediaBox 실측 (시장조사 가이드 편집 사이즈 정합):
 
 ### 12-6. How to apply
 
-- Paged.js 폴리필 0.4.3+ 사용 시 `PagedConfig.after` 콜백에 **절대 cleanup 로직 박지 않을 것**. manual preview() 호출 패턴에서는 after 콜백 자체 불요 (`wrapContent`이 원본 isolation 자동 처리).
-- 한국 마트 전단지 사이즈는 ISO 규격과 다름. PAPER-SIZES.ts B4=260×374 / B3=374×524 / B2=524×752 (재단). 도련 사방 2mm = 편집 사이즈 +4mm. CSS @page `bleed: 2mm`로 자동 박음. 시장조사 가이드 `C:\Users\ceo\Downloads\마트전단지_인쇄용_PDF_가이드.pdf` 정독 필수.
+- Paged.js 폴리필 0.4.3+ 사용 시 `PagedConfig.after` 콜백에 **절대 cleanup 로직 추가하지 않을 것**. manual preview() 호출 패턴에서는 after 콜백 자체 불요 (`wrapContent`이 원본 isolation 자동 처리).
+- 한국 마트 전단지 사이즈는 ISO 규격과 다름. PAPER-SIZES.ts B4=260×374 / B3=374×524 / B2=524×752 (재단). 도련 사방 2mm = 편집 사이즈 +4mm. CSS @page `bleed: 2mm`로 자동 처리. 시장조사 가이드 `C:\Users\ceo\Downloads\마트전단지_인쇄용_PDF_가이드.pdf` 정독 필수.
 - 외부 라이브러리 의심 사고 발생 시 unpkg/CDN으로 소스 직접 정독 절차 의무 — 가설 X.
 
 ## 11. 향후 누적될 영역
