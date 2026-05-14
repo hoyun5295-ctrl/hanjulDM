@@ -6,7 +6,7 @@
  *   2절            545 × 788  mm — 동네마트 표준 (최다 사용) ★ V1 누락 → V2 신규
  *   4절            394 × 545  mm — 중형
  *   A3             297 × 420  mm — 국제규격 대형
- *   B4             257 × 364  mm — 국제규격 중형
+ *   B4             260 × 374  mm — ★ 한국 마트 전단지 8절 (시장조사 가이드 정합, ISO B4 257×364와 별개)
  *   A4             210 × 297  mm — 소형
  *   8절            272 × 394  mm — 한국전통 (V1 370×260 오류 → V2 수정)
  *   16절           137 × 197  mm — DM/쿠폰
@@ -125,10 +125,11 @@ export const PAPER_SIZES: Record<PaperSizeKey, PaperSize> = {
   B4: {
     key: 'B4',
     label: 'B4',
-    labelKo: 'B4',
-    widthMm: 257,
-    heightMm: 364,
+    labelKo: 'B4 (마트 전단지 8절)',
+    widthMm: 260,
+    heightMm: 374,
     category: 'international',
+    note: '★ 한국 마트 전단지 8절 (시장조사 가이드 정합) — 재단 260×374mm / 편집 264×378mm (도련 2mm 포함). ISO B4 257×364mm과 별개',
   },
   A4: {
     key: 'A4',

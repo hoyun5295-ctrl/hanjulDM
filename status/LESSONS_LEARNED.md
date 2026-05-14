@@ -269,6 +269,71 @@ D157(슈퍼관리자 대행) + D158(매장 발송) 작업에서 박힌 사고 + 
 - **정답**: 빌드 후 `git log --oneline -1` 또는 `git rev-parse HEAD` 비교. 로컬 = 서버 SHA 정합 의무.
 - **How to apply**: 배포 후 pm2 restart 전 서버 git log 확인 절차. 빌드 통과 ≠ 코드 적용 (옛 코드도 컴파일 통과 가능). startup 로그(예: `startFlyerAlimtalkScheduler`) 검증으로 신규 코드 실 적용 확정.
 
+## 12. ★ D161 인쇄전단 전 종 PDF/PNG 백지 root cause (2026-05-14)
+
+### 12-1. 사고
+
+hanjulDM 인쇄전단 전 종(mart_*_v1 4종 + print_*_v1 5종) PDF 848~858B / PNG 21~85KB **완전 백지**. handoff `10_print_5jong_blank_page_unresolved.md`에서 "5종 한정" 가설 + 2건 fix 시도(preferCSSPageSize 제거 / section wrapper) 효과 0건. 미해결 인계.
+
+### 12-2. Root cause (Paged.js 폴리필 0.4.3 소스 직접 정독으로 100% 확정)
+
+`unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.js` auto-init 블록:
+```js
+ready.then(async function () {
+  if (config.before) await config.before();
+  if(config.auto !== false) done = await previewer.preview(...);  // auto:false면 SKIP
+  if (config.after) await config.after(done);                      // ★ 발화 무조건
+});
+```
+
+`config.auto: false`는 **preview() 호출만 skip**, `config.after` 콜백은 **page-ready 시점 무조건 발화**.
+
+paged-pdf.ts 기존 PagedConfig.after 박힘:
+```js
+window.PagedConfig = {
+  auto: false,
+  after: function(flow) {
+    // body 자식 display:none
+    var nodes = document.querySelectorAll('body > :not(.pagedjs_pages):not(script):not(style):not(link)');
+    for (var i = 0; i < nodes.length; i++) nodes[i].style.display = 'none';
+    window.__PAGED_DONE = true;
+  }
+};
+```
+
+→ polyfill auto-init이 manual `await PagedPolyfill.preview()` 호출 **전에** after 발화 → body 원본 전부 `display:none` + `__PAGED_DONE=true` 박힘 → Puppeteer `waitForFunction('__PAGED_DONE===true')` 즉시 통과 → 빈 body 스크린샷/PDF 캡처.
+
+### 12-3. 정답
+
+**Fix 1 — paged-pdf.ts L92-130:**
+
+`PagedConfig.after` 완전 제거. `PagedConfig = { auto: false }` 단일. cleanup + `__PAGED_DONE=true` 박는 위치 = `pagedStart` async 래퍼 안 manual `PagedPolyfill.preview()` 반환 **직후**.
+
+Paged.js `wrapContent()`가 body innerHTML을 `<template data-ref='pagedjs-content'>` 박아 inert 자동 처리하므로 추가 hide cleanup 불요.
+
+**Fix 2 — PAPER-SIZES.ts B4 entry:**
+
+257×364mm(ISO 표준 오기재) → 260×374mm(한국 마트 전단지 8절). labelKo + note 박음. frontend PrintFlyerPage.tsx L101 `B4: 'B4 (260×374mm)'` Harold 의도 정합.
+
+### 12-4. 검증
+
+PDF MediaBox 실측 (시장조사 가이드 편집 사이즈 정합):
+- mart_spring_v1 (j2): 557.02×800.10mm, page 1, PDF 1,667 KB
+- print_deal_focus_v1 (B4): **263.91×377.87mm**, page 2, PDF 994 KB (가이드 264×378 정합 ✓)
+- print_magazine_grid_v1 (B3): **377.87×528.15mm**, page 2, PDF 2,308 KB (가이드 378×528 정합 ✓)
+
+### 12-5. handoff 가설 폐기
+
+- 인계 fix #1 (preferCSSPageSize 제거 + 명시적 width/height) — 효과 0. `preferCSSPageSize: true` 유지가 정답 (CSS @page bleed 2mm 포함 출력 = 가이드 편집 사이즈).
+- 인계 fix #2 (article → section wrapper, commit 6d62c30) — 효과 0. root cause와 무관. 그대로 두기 (revert 시 추가 변경 위험).
+- "display: grid + overflow: hidden" / "page-break-after 분할 실패" 모두 가설 — 사실 무관.
+
+### 12-6. How to apply
+
+- Paged.js 폴리필 0.4.3+ 사용 시 `PagedConfig.after` 콜백에 **절대 cleanup 로직 박지 않을 것**. manual preview() 호출 패턴에서는 after 콜백 자체 불요 (`wrapContent`이 원본 isolation 자동 처리).
+- 한국 마트 전단지 사이즈는 ISO 규격과 다름. PAPER-SIZES.ts B4=260×374 / B3=374×524 / B2=524×752 (재단). 도련 사방 2mm = 편집 사이즈 +4mm. CSS @page `bleed: 2mm`로 자동 박음. 시장조사 가이드 `C:\Users\ceo\Downloads\마트전단지_인쇄용_PDF_가이드.pdf` 정독 필수.
+- 외부 라이브러리 의심 사고 발생 시 unpkg/CDN으로 소스 직접 정독 절차 의무 — 가설 X.
+
 ## 11. 향후 누적될 영역
 
 - PHASE 0 트랙 A·B 진행 중 사고

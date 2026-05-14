@@ -86,25 +86,15 @@ function assembleHtml(
 
   // 3. </body> 직전에 주입할 스크립트 블록
   const slotDataJson = htmlEscapeJsonForScript(slotData);
+  // ★ D161 root cause fix — Paged.js polyfill 0.4.3 auto-init은 auto:false여도
+  //   page-ready 시점에 PagedConfig.after를 즉시 발화 (preview 호출 무관).
+  //   기존 after 콜백이 원본 body 숨김 + __PAGED_DONE=true 를 manual preview() 전에 실행 →
+  //   Puppeteer가 빈 body 스크린샷/PDF (mart/print 전 종 백지). PagedConfig.after 제거,
+  //   cleanup + __PAGED_DONE는 manual preview() 종료 후에만 실행하도록 박음.
+  //   (Paged.js wrapContent()가 원본을 <template>에 박아 inert 처리하므로 추가 hide 불요)
   const pagedInit = opts.skipPagedJs
     ? `window.__PAGED_DONE = true;`
-    : `
-        window.PagedConfig = {
-          auto: false,
-          after: function(flow) {
-            // ★ Paged.js가 원본 콘텐츠를 body에 남겨두는 문제 — 원본 숨김 처리
-            // (Puppeteer가 원본+pagedjs_pages 둘 다 인쇄해서 페이지 수가 배가되는 현상 방지)
-            try {
-              var nodes = document.querySelectorAll('body > :not(.pagedjs_pages):not(script):not(style):not(link)');
-              for (var i = 0; i < nodes.length; i++) {
-                nodes[i].style.display = 'none';
-              }
-            } catch (e) {
-              console.error('[paged] dedup error', e);
-            }
-            window.__PAGED_DONE = true;
-          }
-        };`;
+    : `window.PagedConfig = { auto: false };`;
   const pagedScript = opts.skipPagedJs
     ? ''
     : `<script src="${PAGED_POLYFILL_CDN}" crossorigin="anonymous"></script>`;
@@ -122,11 +112,11 @@ function assembleHtml(
         }
         if (window.PagedPolyfill) {
           try { await window.PagedPolyfill.preview(); }
-          catch (e) { console.error('[paged] preview error', e); window.__PAGED_DONE = true; }
+          catch (e) { console.error('[paged] preview error', e); }
         } else {
           console.warn('[paged] Paged.js polyfill 미로드 — skip');
-          window.__PAGED_DONE = true;
         }
+        window.__PAGED_DONE = true;
       })();`;
 
   const injection = `
