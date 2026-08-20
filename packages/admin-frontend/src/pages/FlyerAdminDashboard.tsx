@@ -20,6 +20,7 @@ import AlimtalkManagementPage from './AlimtalkManagementPage';
 interface Props { token: string; user: any; }
 
 interface DashboardStats {
+  failedMetrics?: string[];
   activeCompanies?: number;
   totalUsers?: number;
   totalCampaigns?: number;
@@ -40,15 +41,24 @@ export default function FlyerAdminDashboard({ token: _token, user: _user }: Prop
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [tab, setTab] = useState<Tab>('companies');
 
+  const [statsError, setStatsError] = useState('');
+
   const loadStats = useCallback(async () => {
+    setStatsError('');
     try {
       const res = await apiFetch(`${API_BASE}/api/admin/flyer/dashboard`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);
+        // 일부 지표만 실패한 경우 — 숫자가 비어 보이는 이유를 화면에 드러낸다
+        if (Array.isArray(data.failedMetrics) && data.failedMetrics.length > 0) {
+          setStatsError(`집계 실패: ${data.failedMetrics.join(', ')} — 서버 로그 확인 필요`);
+        }
+      } else {
+        setStatsError('통계를 불러오지 못했습니다');
       }
     } catch {
-      // 통계 실패는 무시 (탭 화면 별도 로드)
+      setStatsError('통계를 불러오지 못했습니다');
     }
   }, []);
 
@@ -63,6 +73,12 @@ export default function FlyerAdminDashboard({ token: _token, user: _user }: Prop
         <h1 className="text-2xl font-bold text-text">한줄전단 AI 슈퍼관리자</h1>
         <p className="text-sm text-text-secondary mt-1">회사·회원·매장·POS·결제·감사로그 통합 관리</p>
       </div>
+
+      {statsError && (
+        <div className="bg-error-50 border border-error-500/20 rounded-lg px-3 py-2">
+          <p className="text-sm text-error-600">{statsError}</p>
+        </div>
+      )}
 
       {/* 통계 카드 7 (D156 확장 — 발신번호 신청 대기 추가) */}
       <div className="grid grid-cols-2 lg:grid-cols-7 gap-3">

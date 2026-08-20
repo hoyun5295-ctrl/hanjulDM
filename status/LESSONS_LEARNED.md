@@ -1,7 +1,25 @@
 # hanjulDM LESSONS_LEARNED
 
 > **분리 시점:** 2026-05-12 (D152)
-> **마지막 업데이트:** 2026-05-13 (D153 배포 종결)
+> **마지막 업데이트:** 2026-08-20 (슈퍼버전업 W3 — 프론트 테마·토큰 사고 등재)
+
+## ★ 프론트 테마·토큰 사고 (2026-08-20 슈퍼버전업 W3)
+
+### 한줄전단 프론트는 **라이트 테마**다 — targetup(다크) 관례를 가져오면 글씨가 사라진다
+
+- **드러난 형태**: 신규 제작 화면(FlyerComposerPage)을 `text-white`·`text-white/70`·`bg-black/30` 등 다크 전제로 짠다. 배포 후 화면이 헬야이었고 Harold가 즉시 지적했다.
+- **근본**: 이 프로젝트의 토큰을 **실측하지 않고** 자매 프로젝트 감각으로 값을 새로 만든 것. 표준은 이미 있었다(`src/index.css`).
+- **실존 토큰(이것만 쓴다)**: `--color-surface #ffffff` · `--color-bg #f8fafc` · `--color-border #e2e8f0` · `--color-text #1e293b` · `--color-text-secondary #64748b` · `--color-text-muted #94a3b8` · primary 계열.
+  클래스로는 `text-text` / `text-text-secondary` / `text-text-muted` / `bg-surface` / `bg-bg` / `border-border`.
+- ⛔ **유령 클래스 2종**: `text-text-tertiary`·`bg-surface-secondary`는 **토큰 정의에 없다**. 옛 화면들이 써 왔지만 스타일이 생성되지 않는다 — 보이는 것과 정의된 것은 다르다.
+- **흔 글씨가 허용되는 자리**: 그라데이션 카드·유색 버튼(primary·emerald·rose) 위뿐.
+- **입력 전 자가 검증**: 새 화면 추가 직전 `grep "text-text\|bg-surface" src/components/ui.tsx`로 공용 부품의 관례를 먼저 본다.
+
+### 프론트 검증은 `npm run build`까지가 한 작업이다
+
+로컬 `npx tsc --noEmit`은 통과했지만 서버 `build:safe`가 **미사용 변수 2건**으로 반려했다(`--noUnusedLocals`·`--noUnusedParameters` 차이).
+⇒ 프론트 수정 후엔 `npm run build`(또는 동등 플래그)까지 로컬에서 돌린다. 「빌드 성공 ≠ tsc 통과」가 아니라 **같은 플래그로 돌려야 같은 결과**다.
+
 
 ## 1. 분리 자체 (D152)
 

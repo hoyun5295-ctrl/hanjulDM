@@ -12,6 +12,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database';
+import {
+  resolveFlyerStoreAccess,
+  isFlyerBillingOpenPath,
+  type FlyerAccessResult,
+} from '../utils/flyer/billing/flyer-payment-status';
 
 export interface FlyerJwtPayload {
   service: 'flyer';
@@ -27,6 +32,8 @@ declare global {
   namespace Express {
     interface Request {
       flyerUser?: FlyerJwtPayload;
+      /** ★ CT-F26 판정 결과. 인증 통과 후 라우트가 재조회 없이 쓴다. */
+      flyerAccess?: FlyerAccessResult;
     }
   }
 }
@@ -69,39 +76,51 @@ export const flyerAuthenticate = async (req: Request, res: Response, next: NextF
     const decoded = verifyFlyerToken(token);
     req.flyerUser = decoded;
 
-    // 회사 결제 상태 확인 (suspended면 접근 차단)
-    const companyCheck = await query(
-      `SELECT payment_status, deleted_at FROM flyer_companies WHERE id = $1`,
-      [decoded.companyId]
-    );
-    if (companyCheck.rows.length === 0 || companyCheck.rows[0].deleted_at) {
-      return res.status(401).json({ error: 'Company not found or deleted' });
-    }
-    if (companyCheck.rows[0].payment_status === 'suspended') {
-      return res.status(403).json({ error: '구독이 정지되었습니다. 관리자에게 문의해주세요.' });
-    }
-
-    // 사용자 활성 + 매장별 과금 확인
-    const userCheck = await query(
-      `SELECT deleted_at, payment_status, plan_expires_at, business_type FROM flyer_users WHERE id = $1 AND company_id = $2`,
+    // ★ CT-F26: 총판 + 매장 상태를 한 번에 읽어 판정에 넘긴다.
+    //   컬럼명이 겹치므로 매장 쪽은 반드시 별칭으로 받는다(u.* 뒤에 c.payment_status를 두면 뒤 값이 이긴다).
+    const rowRes = await query(
+      `SELECT c.payment_status  AS company_payment_status,
+              c.plan_expires_at AS company_plan_expires_at,
+              c.deleted_at      AS company_deleted_at,
+              u.payment_status  AS store_payment_status,
+              u.plan_expires_at AS store_plan_expires_at,
+              u.deleted_at      AS store_deleted_at,
+              u.business_type
+       FROM flyer_users u
+       JOIN flyer_companies c ON c.id = u.company_id
+       WHERE u.id = $1 AND u.company_id = $2`,
       [decoded.userId, decoded.companyId]
     );
-    if (userCheck.rows.length === 0 || userCheck.rows[0].deleted_at) {
+    if (rowRes.rows.length === 0) {
       return res.status(401).json({ error: 'User not found or disabled' });
     }
 
-    const u = userCheck.rows[0];
-    // D113: 매장별 과금 체크
-    if (u.payment_status === 'suspended') {
-      return res.status(403).json({ error: '매장 구독이 정지되었습니다. 관리자에게 문의해주세요.' });
+    const row = rowRes.rows[0];
+    if (row.company_deleted_at) {
+      return res.status(401).json({ error: 'Company not found or deleted' });
     }
-    if (u.plan_expires_at && new Date(u.plan_expires_at) < new Date()) {
-      return res.status(403).json({ error: '매장 구독 기간이 만료되었습니다.' });
+    if (row.store_deleted_at) {
+      return res.status(401).json({ error: 'User not found or disabled' });
     }
+
+    const access = resolveFlyerStoreAccess({
+      companyPaymentStatus: row.company_payment_status,
+      companyPlanExpiresAt: row.company_plan_expires_at,
+      storePaymentStatus: row.store_payment_status,
+      storePlanExpiresAt: row.store_plan_expires_at,
+    });
+
+    // 미결제·기간만료처럼 매장이 스스로 해소할 수 있는 차단은 결제·인증 경로만 열어둔다.
+    // 결제 엔드포인트를 차단 뒤에 두면 만료된 매장이 결제 자체를 못 하는 잠금이 된다.
+    if (!access.allowed && !(access.billingAccessible && isFlyerBillingOpenPath(req.baseUrl))) {
+      return res.status(403).json({ error: access.reason, code: access.code });
+    }
+
+    req.flyerAccess = access;
 
     // D113: JWT에 businessType 없으면 DB에서 보정 (기존 토큰 하위호환)
     if (!decoded.businessType) {
-      decoded.businessType = u.business_type || 'mart';
+      decoded.businessType = row.business_type || 'mart';
       req.flyerUser = decoded;
     }
 

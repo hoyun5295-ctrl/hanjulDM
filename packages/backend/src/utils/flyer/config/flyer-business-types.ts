@@ -60,6 +60,9 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateInfo> = {
   catalog_dark:  { value: 'catalog_dark',  label: '다크 NOW PLAYING', desc: 'Netflix 다크 모드 + 음악 스트리밍 풍 swipe row',    color: 'linear-gradient(135deg, #0A0A0B, #F97316)' },
   poster_promo:  { value: 'poster_promo',  label: '포스터 임팩트', desc: '인쇄 전단풍 + 6매체 정합 본진',                        color: 'linear-gradient(135deg, #1C1917, #FBBF24)' },
   poster_pop:    { value: 'poster_pop',    label: '팝 아트 포스터', desc: '한국 팝 아트 + Memphis decorations + 큰 pop sticker',  color: 'linear-gradient(135deg, #FF3D2E, #FFD300)' },
+  // ★ 2026-08-20 신규 2종 — 마트 현장에서 가장 많이 쓰는 두 얼굴
+  market_board:  { value: 'market_board',  label: '시장 대자보',   desc: '크림 갱지 + 붉은 인장 + 점선 리더 — 사진 없어도 성립',  color: 'linear-gradient(135deg, #FBF6EA, #C0392B)' },
+  fresh_daily:   { value: 'fresh_daily',   label: '신선 데일리',   desc: '딥그린 + 큰 사진 + 원산지·규격 앞세운 신선 코너용',      color: 'linear-gradient(135deg, #15803D, #65A30D)' },
 };
 
 // ============================================================

@@ -32,6 +32,7 @@ import { enrichCategoriesWithAiCopy } from '../../utils/flyer/product/flyer-ai-c
 import { classifyProducts } from '../../utils/flyer/product/flyer-category-classifier';
 // ★ 2026-08-20 3단계 — 자동 구성 배선(13번 설계 §2): 죽어 있던 추천기·변형 렌더러 소비 시작
 import { recommendTemplateAndSeason } from '../../utils/flyer/product/template-recommender';
+import { TEMPLATE_REGISTRY } from '../../utils/flyer/config/flyer-business-types';
 import { recommendDesign, coerceDesignVariant } from '../../utils/flyer/product/claude-design-renderer';
 import type { FlyerRenderData } from '../../utils/flyer/product/flyer-templates';
 import { handleDbMigrationError, isDbMigrationError } from '../../utils/flyer/db-migration-error';
@@ -929,18 +930,28 @@ router.post('/auto-build', async (req: Request, res: Response) => {
       periodEnd: body.period_end || null,
     };
     const rec = recommendTemplateAndSeason(renderData);
+
+    // ★ 0820: 사장님이 고른 템플릿이 오면 그것을 고정한다(AI 추천도 함께 돌려준다).
+    //   레지스트리에 없는 값은 무시하고 추천으로 떨어진다 — 화이트리스트.
+    const picked = typeof body.template === 'string' && TEMPLATE_REGISTRY[body.template]
+      ? body.template : null;
+    const templateCode = picked || rec.templateCode;
+
     const seedNum = Number(body.seed);
     const variant = recommendDesign(renderData, rec.seasonToken, {
-      fixedTemplateCode: rec.templateCode,
+      fixedTemplateCode: templateCode,
       ...(Number.isFinite(seedNum) ? { fixedSeed: Math.abs(Math.floor(seedNum)) } : {}),
     });
 
     return res.json({
-      template: rec.templateCode,
+      template: templateCode,
       season_token: rec.seasonToken,
       reasons: rec.reasons,
       design_variant: variant,
       categories,
+      // 화면이 "AI 추천"과 "사장님 선택"을 구분해 보여줄 수 있게 둘 다 내린다
+      recommended_template: rec.templateCode,
+      picked: Boolean(picked),
     });
   } catch (err: any) {
     console.error('[전단AI] auto-build 실패:', err?.message || err);

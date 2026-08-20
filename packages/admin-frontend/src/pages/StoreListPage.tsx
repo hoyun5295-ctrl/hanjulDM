@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import { SectionCard, Button, Input, Select, DataTable, Badge, Toast } from '../components/ui';
+import { STORE_PAYMENT_OPTIONS, storePaymentLabel, storePaymentTone } from '../lib/payment-status';
 
 interface Store {
   id: string;
@@ -117,9 +118,7 @@ export default function StoreListPage() {
             </Select>
             <Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="w-28">
               <option value="">전체 상태</option>
-              <option value="paid">paid</option>
-              <option value="pending">pending</option>
-              <option value="suspended">suspended</option>
+              {STORE_PAYMENT_OPTIONS.map(o => (<option key={o.value} value={o.value}>{o.label}</option>))}
             </Select>
             <Input placeholder="매장명/아이디 검색" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="w-44" />
             <Button size="sm" onClick={() => { setFormTarget(null); setFormMode('create'); }}>+ 신규 매장</Button>
@@ -144,7 +143,14 @@ export default function StoreListPage() {
                 { key: 'contact_name', label: '담당자' },
                 { key: 'monthly_fee', label: '월요금', render: (v) => v ? `₩${Number(v).toLocaleString()}` : '-' },
                 { key: 'prepaid_balance', label: '잔액', render: (v) => `₩${Number(v || 0).toLocaleString()}` },
-                { key: 'payment_status', label: '상태', render: (v) => <Badge variant={v === 'paid' ? 'success' : v === 'pending' ? 'warn' : 'neutral'}>{v || '-'}</Badge> },
+                { key: 'payment_status', label: '상태', render: (v, row) => (
+                  <div className="flex items-center gap-1.5 justify-start">
+                    <Badge variant={storePaymentTone(v)}>{storePaymentLabel(v)}</Badge>
+                    {v === 'active' && row.plan_expires_at && (
+                      <span className="text-xs text-text-muted">~{String(row.plan_expires_at).slice(0, 10)}</span>
+                    )}
+                  </div>
+                ) },
                 { key: 'action', label: '액션', align: 'right', render: (_, row) => (
                   <div className="flex gap-1 justify-end">
                     <Button variant="secondary" size="sm" onClick={() => setChargeTarget(row)}>충전</Button>
@@ -315,11 +321,18 @@ function StoreFormModal({ mode, target, companies, businessTypes, onClose, onSuc
                 <Input label="만료일" type="date" value={form.plan_expires_at?.slice(0, 10) || ''} onChange={e => set('plan_expires_at', e.target.value || null)} />
               )}
               {mode === 'edit' && (
-                <Select label="결제 상태" value={form.payment_status || ''} onChange={e => set('payment_status', e.target.value)}>
-                  <option value="pending">pending</option>
-                  <option value="paid">paid</option>
-                  <option value="suspended">suspended</option>
-                </Select>
+                <div>
+                  <Select label="결제 상태" value={form.payment_status || 'pending'} onChange={e => set('payment_status', e.target.value)}>
+                    {STORE_PAYMENT_OPTIONS.map(o => (<option key={o.value} value={o.value}>{o.label}</option>))}
+                    {/* 축 밖 값(옛 'paid' 등)이 저장돼 있으면 감추지 않고 드러낸다 */}
+                    {form.payment_status && !STORE_PAYMENT_OPTIONS.some(o => o.value === form.payment_status) && (
+                      <option value={form.payment_status}>{form.payment_status} (알 수 없는 값)</option>
+                    )}
+                  </Select>
+                  {form.payment_status === 'active' && !form.plan_expires_at && (
+                    <p className="text-xs text-error-600 mt-1">이용중으로 두려면 만료일이 있어야 합니다</p>
+                  )}
+                </div>
               )}
             </Grid2>
           </Section>
@@ -352,6 +365,9 @@ function ChargeModal({ store, onClose, onSuccess }: {
   const [activate, setActivate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // 멱등 키 — 모달을 열 때 1개 발급. 더블클릭·재시도로 두 번 충전되지 않는다.
+  const [operationId] = useState(() =>
+    (globalThis.crypto?.randomUUID?.() ?? `op-${Date.now()}-${Math.floor(Math.random() * 1e9)}`));
 
   const handleCharge = async () => {
     const amt = parseInt(amount, 10);
@@ -365,7 +381,7 @@ function ChargeModal({ store, onClose, onSuccess }: {
       const res = await apiFetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amt }),
+        body: JSON.stringify({ amount: amt, operation_id: operationId }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -392,7 +408,7 @@ function ChargeModal({ store, onClose, onSuccess }: {
           <Input label="충전 금액 (원)" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="예: 100000" />
           <label className="flex items-center gap-2 text-sm text-text-secondary">
             <input type="checkbox" checked={activate} onChange={e => setActivate(e.target.checked)} className="w-4 h-4" />
-            입금 확인(activate) — D114 정책: 충전 + 매장 사장님 결제 시 활성화
+            입금 확인 충전 — 내역에 '입금충전'으로 남습니다 (이용 개시는 매장의 이용료 결제 시점)
           </label>
           {error && <p className="text-sm text-error-600">{error}</p>}
         </div>

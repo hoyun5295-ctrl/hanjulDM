@@ -5,20 +5,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import { SectionCard, Select, DataTable, Badge } from '../components/ui';
+import { billingPaymentLabel, billingPaymentTone } from '../lib/payment-status';
 
 interface BillingHistory {
   id: string;
   company_id: string;
   billing_month?: string;
-  amount?: number;
-  sms_count?: number;
-  lms_count?: number;
-  mms_count?: number;
-  status?: string;
+  monthly_fee?: number;
+  sms_overage?: number;
+  total_amount?: number;
+  payment_status?: string;
   paid_at?: string;
   created_at?: string;
   company_name?: string;
-  memo?: string;
 }
 
 interface Company { id: string; company_name?: string; }
@@ -63,8 +62,8 @@ export default function BillingPage() {
   useEffect(() => { loadCompanies(); }, [loadCompanies]);
   useEffect(() => { load(); }, [load]);
 
-  const totalAmount = records.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-  const paidCount = records.filter(r => r.status === 'paid').length;
+  const totalAmount = records.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0);
+  const paidCount = records.filter(r => r.payment_status === 'paid').length;
 
   return (
     <SectionCard
@@ -106,12 +105,11 @@ export default function BillingPage() {
           columns={[
             { key: 'billing_month', label: '청구월', render: (v) => v ? String(v).slice(0, 7) : '-' },
             { key: 'company_name', label: '회사' },
-            { key: 'sms_count', label: 'SMS', render: (v) => Number(v || 0).toLocaleString() },
-            { key: 'lms_count', label: 'LMS', render: (v) => Number(v || 0).toLocaleString() },
-            { key: 'mms_count', label: 'MMS', render: (v) => Number(v || 0).toLocaleString() },
-            { key: 'amount', label: '금액', render: (v) => `₩${Number(v || 0).toLocaleString()}` },
-            { key: 'status', label: '상태', render: (v) => (
-              <Badge variant={v === 'paid' ? 'success' : v === 'pending' ? 'warn' : 'neutral'}>{v || '-'}</Badge>
+            { key: 'monthly_fee', label: '월정액', render: (v) => `₩${Number(v || 0).toLocaleString()}` },
+            { key: 'sms_overage', label: '초과 발송비', render: (v) => `₩${Number(v || 0).toLocaleString()}` },
+            { key: 'total_amount', label: '청구액', render: (v) => `₩${Number(v || 0).toLocaleString()}` },
+            { key: 'payment_status', label: '상태', render: (v) => (
+              <Badge variant={billingPaymentTone(v)}>{billingPaymentLabel(v)}</Badge>
             ) },
             { key: 'paid_at', label: '결제일', render: (v) => v ? new Date(v).toLocaleDateString('ko-KR') : '-' },
           ]}

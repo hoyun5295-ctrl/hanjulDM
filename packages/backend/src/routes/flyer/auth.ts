@@ -17,6 +17,7 @@ import {
   FlyerJwtPayload,
 } from '../../middlewares/flyer-auth';
 import { logFlyerAudit } from '../../utils/flyer/audit/flyer-audit-log';
+import { resolveFlyerStoreAccess } from '../../utils/flyer/billing/flyer-payment-status';
 
 const router = Router();
 
@@ -27,8 +28,13 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '아이디와 비밀번호를 입력해주세요' });
     }
 
+    // ★ u.* 뒤에 같은 이름의 c.payment_status 를 두면 뒤 값이 이겨 매장 상태가 사라진다.
+    //   총판 컬럼은 전부 별칭으로 받는다.
     const result = await query(
-      `SELECT u.*, c.company_name, c.payment_status, c.plan_expires_at, c.deleted_at AS company_deleted
+      `SELECT u.*, c.company_name,
+              c.payment_status  AS company_payment_status,
+              c.plan_expires_at AS company_plan_expires_at,
+              c.deleted_at      AS company_deleted
        FROM flyer_users u
        JOIN flyer_companies c ON c.id = u.company_id
        WHERE u.login_id = $1 AND u.deleted_at IS NULL`,
@@ -43,8 +49,17 @@ router.post('/login', async (req: Request, res: Response) => {
     if (user.company_deleted) {
       return res.status(403).json({ error: '회사 계정이 삭제되었습니다' });
     }
-    if (user.payment_status === 'suspended') {
-      return res.status(403).json({ error: '구독이 정지되었습니다. 관리자에게 문의해주세요' });
+
+    // ★ CT-F26: 정지·총판 차단은 로그인 자체를 막는다.
+    //   미결제·기간만료는 로그인을 허용한다 — 결제 화면까지 가야 매장이 스스로 해소할 수 있다.
+    const access = resolveFlyerStoreAccess({
+      companyPaymentStatus: user.company_payment_status,
+      companyPlanExpiresAt: user.company_plan_expires_at,
+      storePaymentStatus: user.payment_status,
+      storePlanExpiresAt: user.plan_expires_at,
+    });
+    if (!access.allowed && !access.billingAccessible) {
+      return res.status(403).json({ error: access.reason, code: access.code });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
@@ -88,8 +103,15 @@ router.post('/login', async (req: Request, res: Response) => {
         company: {
           id: user.company_id,
           name: user.company_name,
+          paymentStatus: user.company_payment_status,
+          planExpiresAt: user.company_plan_expires_at,
+        },
+        // ★ 매장 자신의 상태 — 총판 값에 덮이지 않게 별도 축으로 내린다
+        store: {
           paymentStatus: user.payment_status,
           planExpiresAt: user.plan_expires_at,
+          serviceActive: access.allowed,
+          accessCode: access.code,
         },
       },
     });

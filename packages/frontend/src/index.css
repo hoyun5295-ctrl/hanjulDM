@@ -63,6 +63,72 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ═══════════════════════════════════════
+   전단 제작 화면 — 인쇄소 톤 (2026-08-20)
+   만드는 물건이 전단이니 화면도 전단의 언어를 쓴다.
+   ═══════════════════════════════════════ */
+
+/* 전단 헤드라인용 디스플레이 — 한국 마트 전단의 그 얼굴 */
+.font-poster {
+  font-family: 'Black Han Sans', 'Noto Sans KR', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* 한글 줄바꿈 — 단어 중간에서 끊기지 않게 */
+.kr { word-break: keep-all; overflow-wrap: break-word; }
+
+/* 종이 질감: 미세 격자 */
+.paper {
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+  background-size: 22px 22px, 22px 22px;
+}
+
+/* 잉크 그라데이션 텍스트 */
+.ink-gradient {
+  background: linear-gradient(100deg, #1e293b 0%, #ea580c 55%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 가격표 노치 */
+.price-tag { clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%); }
+
+/* 등장 — 순차 노출 */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.rise { animation: rise-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* 스켈레톤 광택 */
+@keyframes sheen {
+  0%   { background-position: -220% 0; }
+  100% { background-position: 220% 0; }
+}
+.sheen {
+  background-image: linear-gradient(100deg,
+    rgba(226, 232, 240, 0) 20%,
+    rgba(226, 232, 240, 0.85) 45%,
+    rgba(226, 232, 240, 0) 70%);
+  background-size: 220% 100%;
+  animation: sheen 1.5s linear infinite;
+}
+
+/* 살아 있는 점 */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.82); }
+}
+.pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .sheen, .pulse-dot { animation: none; }
+}
+
 /* ── 스크롤바 커스터마이징 ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

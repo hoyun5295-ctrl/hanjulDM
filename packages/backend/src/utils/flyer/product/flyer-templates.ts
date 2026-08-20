@@ -4463,7 +4463,258 @@ ${sections.join('\n')}
 }
 
 // ============================================================
-// RENDERER_MAP (신규 6 + D155 추가 5 — 02b/03b/04b/05b/06b 모두 박힘)
+// ★ 2026-08-20 신규 엔진 ① — MARKET BOARD (시장 대자보)
+// ============================================================
+/**
+ * 전통시장 손글씨 대자보. 크림 갱지 + 붉은 인장 + 점선 리더로 이름과 가격을 잇는다.
+ * 사진이 없어도 성립하는 유일한 축 — 정육·수산·명절 대목처럼 이미지 확보가 어려운 판에 쓴다.
+ */
+export function renderMarketBoardEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const ogTitle = d.storeName + ' · ' + d.title;
+  const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ');
+  const ogImage = buildOgImageUrl(d, token);
+  const period = d.periodStart && d.periodEnd
+    ? d.periodStart.replace(/-/g, '.').slice(5) + ' — ' + d.periodEnd.replace(/-/g, '.').slice(5)
+    : (d.period || '');
+
+  const sections = d.categories.map((cat, ci) => {
+    const rows = cat.items.map(it => {
+      const disc = calcDisc(it.originalPrice, it.salePrice);
+      const meta = [it.unit, it.origin].filter(Boolean).map(v => esc(String(v))).join(' · ');
+      return (
+        '<li class="row"' + productDataAttr(it, cat.name) + '>' +
+          '<div class="nm">' +
+            '<span class="t ' + nameSizeClass(it.name) + '">' + esc(it.name) + '</span>' +
+            (it.badge ? '<span class="bdg">' + esc(it.badge) + '</span>' : '') +
+            (meta ? '<span class="mt">' + meta + '</span>' : '') +
+          '</div>' +
+          '<div class="dots" aria-hidden="true"></div>' +
+          '<div class="pr">' +
+            (it.originalPrice > it.salePrice
+              ? '<span class="was">' + fmtPrice(it.originalPrice) + '</span>' : '') +
+            '<span class="now ' + priceScaleClass(it.salePrice) + '">' + fmtPrice(it.salePrice) + '<i>원</i></span>' +
+            (disc > 0 ? '<span class="off">' + disc + '%</span>' : '') +
+          '</div>' +
+        '</li>'
+      );
+    }).join('');
+    return (
+      '<section class="blk">' +
+        '<h2 class="cat"><span class="ico">' + categoryPictogram(cat.name) + '</span>' + esc(cat.name) + '<span class="ln"></span></h2>' +
+        '<ul class="rows">' + rows + '</ul>' +
+      '</section>'
+    );
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${token}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(ogTitle)}</title>
+<meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:image" content="${esc(ogImage)}"><meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-primary:#C0392B;--color-accent:#E67E22;--color-on-primary:#fff;--paper:#FBF6EA;--ink:#1A1614;}
+${seasonStyleBlock()}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:'Noto Sans KR',sans-serif;
+  background-image:radial-gradient(rgba(26,22,20,.055) 1px,transparent 1px);background-size:14px 14px;}
+.wrap{max-width:520px;margin:0 auto;padding:0 18px 64px}
+.head{position:relative;padding:30px 0 18px;text-align:center;border-bottom:3px double var(--ink)}
+.seal{position:absolute;top:22px;right:2px;width:58px;height:58px;border:3px solid var(--color-primary);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;transform:rotate(9deg);opacity:.9}
+.seal b{font-family:'Black Han Sans',sans-serif;color:var(--color-primary);font-size:13px;line-height:1.05;text-align:center}
+.store{display:inline-block;font-size:12px;letter-spacing:.32em;color:var(--color-primary);font-weight:700;margin-bottom:10px}
+h1{font-family:'Black Han Sans',sans-serif;font-size:clamp(34px,10vw,52px);line-height:1.04;word-break:keep-all}
+.per{margin-top:10px;display:inline-block;padding:4px 14px;border:1.5px solid var(--ink);border-radius:999px;font-size:12px;font-weight:700}
+.blk{margin-top:26px}
+.cat{display:flex;align-items:center;gap:8px;font-family:'Black Han Sans',sans-serif;font-size:19px;color:var(--color-primary)}
+.cat .ico{font-size:20px;line-height:1}
+.cat .ln{flex:1;height:2px;background:repeating-linear-gradient(90deg,var(--ink) 0 8px,transparent 8px 14px);opacity:.35}
+.rows{list-style:none;margin-top:12px}
+.row{display:flex;align-items:flex-end;gap:8px;padding:11px 0;border-bottom:1px dashed rgba(26,22,20,.28)}
+.nm{min-width:0;flex-shrink:1}
+.nm .t{display:block;font-weight:700;font-size:17px;line-height:1.25;word-break:keep-all}
+.nm .t.long{font-size:15px}.nm .t.xlong{font-size:13.5px}
+.nm .bdg{display:inline-block;margin-top:5px;padding:2px 7px;background:var(--color-primary);color:#fff;font-size:11px;font-weight:900;border-radius:3px}
+.nm .mt{display:block;margin-top:4px;font-size:11px;color:rgba(26,22,20,.55)}
+.dots{flex:1;min-width:14px;height:0;border-bottom:2px dotted rgba(26,22,20,.35);margin-bottom:9px}
+.pr{text-align:right;white-space:nowrap;flex-shrink:0}
+.pr .was{display:block;font-size:12px;color:rgba(26,22,20,.45);text-decoration:line-through}
+.pr .now{font-family:'Black Han Sans',sans-serif;font-size:34px;line-height:1;color:var(--ink)}
+.pr .now.p-lg{font-size:30px}.pr .now.p-xl{font-size:26px}
+.pr .now i{font-style:normal;font-size:15px;margin-left:2px}
+.pr .off{display:inline-block;margin-left:6px;padding:2px 6px;background:var(--ink);color:var(--paper);font-size:12px;font-weight:900;border-radius:3px}
+.foot{margin-top:34px;padding-top:16px;border-top:3px double var(--ink);text-align:center}
+.foot .nm2{font-family:'Black Han Sans',sans-serif;font-size:22px}
+.foot .cp{margin-top:6px;font-size:11px;color:rgba(26,22,20,.5)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div class="seal"><b>특가<br>세일</b></div>
+    <span class="store">${esc(d.storeName)}</span>
+    <h1>${esc(d.title)}</h1>
+    ${period ? '<div class="per">' + esc(period) + '</div>' : ''}
+  </header>
+  ${sections}
+  <footer class="foot">
+    <p class="nm2">${esc(d.storeName)}</p>
+    <p class="cp">가격은 행사 기간 내 매장 사정에 따라 조기 소진될 수 있습니다</p>
+  </footer>
+</div>
+</body>
+</html>`;
+}
+
+// ============================================================
+// ★ 2026-08-20 신규 엔진 ② — FRESH DAILY (신선 데일리)
+// ============================================================
+/**
+ * 신선식품 코너의 얼굴. 흰 바탕 + 딥그린, 사진을 크게 쓰고 원산지·규격을 앞세운다.
+ * 첫 상품은 대표 카드로 크게, 나머지는 2열. 청과·수산·축산 판에 쓴다.
+ */
+export function renderFreshDailyEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const hero = items[0];
+  const rest = items.slice(1);
+  const ogTitle = d.storeName + ' · ' + d.title;
+  const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ');
+  const ogImage = buildOgImageUrl(d, token);
+  const period = d.periodStart && d.periodEnd
+    ? d.periodStart.replace(/-/g, '.').slice(5) + ' ~ ' + d.periodEnd.replace(/-/g, '.').slice(5)
+    : (d.period || '');
+
+  const chip = (it: FlyerRenderItem) => {
+    const parts: string[] = [];
+    if (it.origin) parts.push('<span class="ch org">' + esc(it.origin) + '</span>');
+    if (it.unit) parts.push('<span class="ch">' + esc(it.unit) + '</span>');
+    if (it.cardDiscount) parts.push('<span class="ch card">' + esc(it.cardDiscount) + '</span>');
+    return parts.join('');
+  };
+
+  const heroHtml = hero ? (
+    '<article class="hero"' + productDataAttr(hero, hero.category) + '>' +
+      '<div class="ph">' + resolveImg(hero.name, 520, hero.imageUrl) + '</div>' +
+      '<div class="body">' +
+        '<span class="tag">이번 주 대표</span>' +
+        '<h2 class="' + nameSizeClass(hero.name) + '">' + esc(hero.name) + '</h2>' +
+        '<div class="chips">' + chip(hero) + '</div>' +
+        '<div class="prc">' +
+          (hero.originalPrice > hero.salePrice ? '<span class="was">' + fmtPrice(hero.originalPrice) + '원</span>' : '') +
+          '<strong class="' + priceScaleClass(hero.salePrice) + '">' + fmtPrice(hero.salePrice) + '<i>원</i></strong>' +
+          (calcDisc(hero.originalPrice, hero.salePrice) > 0
+            ? '<span class="off">' + calcDisc(hero.originalPrice, hero.salePrice) + '% ↓</span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</article>'
+  ) : '';
+
+  const gridHtml = d.categories.map(cat => {
+    const list = cat.items.filter(it => !hero || it.name !== hero.name || cat.name !== hero.category);
+    if (list.length === 0) return '';
+    const cards = list.map(it => (
+      '<article class="card"' + productDataAttr(it, cat.name) + '>' +
+        '<div class="ph">' + resolveImg(it.name, 300, it.imageUrl) + '</div>' +
+        '<div class="body">' +
+          '<h3 class="' + nameSizeClass(it.name) + '">' + esc(it.name) + '</h3>' +
+          '<div class="chips">' + chip(it) + '</div>' +
+          '<div class="prc">' +
+            (it.originalPrice > it.salePrice ? '<span class="was">' + fmtPrice(it.originalPrice) + '원</span>' : '') +
+            '<strong class="' + priceScaleClass(it.salePrice) + '">' + fmtPrice(it.salePrice) + '<i>원</i></strong>' +
+          '</div>' +
+        '</div>' +
+      '</article>'
+    )).join('');
+    return (
+      '<section class="sec">' +
+        '<h2 class="cat"><span class="ico">' + categoryPictogram(cat.name) + '</span>' + esc(cat.name) +
+          '<span class="cnt">' + list.length + '</span></h2>' +
+        '<div class="grid">' + cards + '</div>' +
+      '</section>'
+    );
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${token}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(ogTitle)}</title>
+<meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:image" content="${esc(ogImage)}"><meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-primary:#15803D;--color-accent:#65A30D;--color-on-primary:#fff;--ink:#111827;--line:#E5E7EB;}
+${seasonStyleBlock()}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;color:var(--ink);font-family:'Noto Sans KR',sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:520px;margin:0 auto;padding-bottom:64px}
+.top{padding:26px 20px 20px;background:linear-gradient(160deg,var(--color-primary),var(--color-accent));color:#fff}
+.top .st{font-size:12px;letter-spacing:.28em;opacity:.9;font-weight:700}
+.top h1{font-family:'Black Han Sans',sans-serif;font-size:clamp(30px,8.5vw,42px);line-height:1.08;margin-top:8px;word-break:keep-all}
+.top .per{margin-top:10px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+  background:rgba(255,255,255,.2);padding:5px 12px;border-radius:999px}
+.hero{margin:-18px 16px 0;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;
+  box-shadow:0 12px 30px -12px rgba(17,24,39,.28)}
+.hero .ph{aspect-ratio:16/10;background:#F3F4F6;overflow:hidden}
+.hero .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.hero .body{padding:16px 18px 18px}
+.tag{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:11px;font-weight:900}
+.hero h2{font-size:23px;font-weight:900;line-height:1.25;margin-top:9px;word-break:keep-all}
+.hero h2.long{font-size:20px}.hero h2.xlong{font-size:18px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.ch{padding:3px 8px;border-radius:6px;background:#F3F4F6;font-size:11px;font-weight:700;color:#4B5563}
+.ch.org{background:#DCFCE7;color:#166534}
+.ch.card{background:#EFF6FF;color:#1D4ED8}
+.prc{display:flex;align-items:baseline;gap:8px;margin-top:12px;flex-wrap:wrap}
+.prc .was{font-size:13px;color:#9CA3AF;text-decoration:line-through}
+.prc strong{font-family:'Black Han Sans',sans-serif;font-size:36px;line-height:1;color:var(--ink)}
+.prc strong.p-lg{font-size:31px}.prc strong.p-xl{font-size:27px}
+.prc strong i{font-style:normal;font-size:16px;margin-left:1px}
+.prc .off{font-size:13px;font-weight:900;color:var(--color-primary)}
+.sec{margin-top:28px;padding:0 16px}
+.cat{display:flex;align-items:center;gap:7px;font-size:17px;font-weight:900}
+.cat .ico{font-size:19px;line-height:1}
+.cat .cnt{margin-left:auto;font-size:12px;font-weight:700;color:#9CA3AF}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;margin-top:12px}
+.card{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff}
+.card .ph{aspect-ratio:1/1;background:#F3F4F6;overflow:hidden}
+.card .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.card .body{padding:10px 11px 12px}
+.card h3{font-size:14px;font-weight:700;line-height:1.3;word-break:keep-all}
+.card h3.long{font-size:13px}.card h3.xlong{font-size:12px}
+.card .prc{margin-top:8px;gap:6px}
+.card .prc strong{font-size:22px}
+.card .prc strong.p-lg{font-size:20px}.card .prc strong.p-xl{font-size:18px}
+.card .prc strong i{font-size:12px}
+.foot{margin-top:34px;padding:20px 16px 0;text-align:center;border-top:1px solid var(--line)}
+.foot p{font-size:11px;color:#9CA3AF;line-height:1.6}
+[data-band="large"] .grid{gap:9px}
+[data-band="large"] .card h3{font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <p class="st">${esc(d.storeName)}</p>
+    <h1>${esc(d.title)}</h1>
+    ${period ? '<span class="per">' + esc(period) + '</span>' : ''}
+  </header>
+  ${heroHtml}
+  ${gridHtml}
+  <footer class="foot"><p>산지·기상 사정에 따라 조기 품절될 수 있습니다<br>${esc(d.storeName)}</p></footer>
+</div>
+</body>
+</html>`;
+}
+
+// ============================================================
+// RENDERER_MAP (신규 6 + D155 추가 5 + 0820 신규 2)
 // STORY 함수는 코드 유지(옛 발행 폴백) but REGISTRY/DEFAULT에서 제거 예정
 // ============================================================
 
@@ -4479,6 +4730,9 @@ const RENDERERS: Record<string, (d: FlyerRenderData, token: SeasonToken) => stri
   catalog_dark:  renderCatalogDarkEngine,
   poster_promo:  renderPosterPromoEngine,
   poster_pop:    renderPosterPopEngine,
+  // ★ 2026-08-20 신규 2종 — 마트 현장에서 가장 많이 쓰는 두 얼굴
+  market_board:  renderMarketBoardEngine,
+  fresh_daily:   renderFreshDailyEngine,
 };
 
 // ============================================================

@@ -89,6 +89,41 @@ export {
   refundFlyerPrepaid,
 } from './billing/flyer-billing';
 
+// CT-F26: 결제 상태 판정 (값 축 + 접근 판정의 유일 기준)
+export {
+  STORE_PAYMENT_STATUSES,
+  COMPANY_PAYMENT_STATUSES,
+  BILLING_PAYMENT_STATUSES,
+  STORE_PAYMENT_STATUS_LABELS,
+  COMPANY_PAYMENT_STATUS_LABELS,
+  isValidStorePaymentStatus,
+  isValidCompanyPaymentStatus,
+  isPlanExpired,
+  resolveFlyerStoreAccess,
+  isFlyerBillingOpenPath,
+} from './billing/flyer-payment-status';
+export type {
+  StorePaymentStatus,
+  CompanyPaymentStatus,
+  BillingPaymentStatus,
+  FlyerAccessCode,
+  FlyerAccessInput,
+  FlyerAccessResult,
+} from './billing/flyer-payment-status';
+
+// CT-F27: 잔액 원장 (prepaid_balance 이동의 유일 경로)
+export {
+  FLYER_BALANCE_TX_LABELS,
+  withFlyerTx,
+  changeFlyerBalance,
+  queryFlyerBalanceTransactions,
+} from './billing/flyer-balance-ledger';
+export type {
+  FlyerBalanceTxType,
+  FlyerBalanceChangeParams,
+  FlyerBalanceChangeResult,
+} from './billing/flyer-balance-ledger';
+
 // ═══════════════════════════════════════════
 // product/ — 상품/전단 도메인
 // ═══════════════════════════════════════════

@@ -104,7 +104,8 @@ export default function SettingsPage({ token }: { token: string }) {
               { label: '브랜드명', value: settings?.brand_name || settings?.name },
               { label: '업종', value: settings?.industry },
               { label: '요금제', value: settings?.plan_name },
-              { label: '과금 방식', value: settings?.billing_type === 'prepaid' ? '선불' : '후불' },
+              // 전단AI는 100% 선불. 서버가 내려주지 않는 값(billing_type)으로 삼항을 돌려 반대말이 찍히던 자리다.
+              { label: '과금 방식', value: '선불' },
             ].map(item => (
               <div key={item.label} className="flex items-center justify-between py-1">
                 <span className="text-sm text-text-secondary">{item.label}</span>

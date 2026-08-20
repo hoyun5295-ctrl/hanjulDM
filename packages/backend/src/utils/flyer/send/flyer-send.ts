@@ -21,7 +21,7 @@ import {
   toQtmsgType,
 } from './flyer-sms-queue';
 import { insertAlimtalkQueue } from '../../sms-queue';
-import { canFlyerStoreSend, deductFlyerPrepaid } from '../billing/flyer-billing';
+import { canFlyerStoreSend, deductFlyerPrepaid, refundFlyerPrepaid } from '../billing/flyer-billing';
 import { resolveFlyerCallback } from './flyer-callback-filter';
 import { deduplicateWithStats, FlyerRecipient } from './flyer-deduplicate';
 import { filterOutFlyerUnsubscribed } from './flyer-unsubscribe-helper';
@@ -208,7 +208,7 @@ export async function sendFlyerCampaign(params: FlyerSendParams): Promise<FlyerS
   const campaignId = campaignResult.rows[0].id;
 
   // 8. 선불 잔액 차감 (100% 선불 — 후불 없음)
-  const deductResult = await deductFlyerPrepaid(userId, working.length, messageType);
+  const deductResult = await deductFlyerPrepaid(userId, working.length, messageType, { campaignId });
   if (!deductResult.ok) {
     // 잔액 부족 → 캠페인 취소 처리
     await query(`UPDATE flyer_campaigns SET status = 'cancelled' WHERE id = $1`, [campaignId]);
@@ -265,6 +265,9 @@ export async function sendFlyerCampaign(params: FlyerSendParams): Promise<FlyerS
   }
 
   // 10. MySQL 큐 INSERT — 채널별 분기
+  // ★ 0820: 적재가 실패하면 돈만 빠지고 발송은 0건이 된다.
+  //   차감은 이미 커밋됐으므로 여기서 보상 환불(CT-F27 멱등)로 되돌리고 캠페인을 취소로 닫는다.
+  try {
   const tables = await getFlyerCompanySmsTables(companyId);
 
   if (messageType === 'ALIMTALK') {
@@ -304,6 +307,26 @@ export async function sendFlyerCampaign(params: FlyerSendParams): Promise<FlyerS
       mmsImages[2] || '',          // file_name3
     ]);
     await bulkInsertSmsQueue(tables, rowsForQueue, true); // useNow=true 즉시발송
+  }
+  } catch (queueErr: any) {
+    console.error('[CT-F08] 발송 큐 적재 실패 — 차감 보상 환불 진행:', queueErr?.message || queueErr);
+    const refunded = await refundFlyerPrepaid(userId, deductResult.deducted || 0, {
+      campaignId,
+      reason: '발송 큐 적재 실패 환불',
+    });
+    await query(`UPDATE flyer_campaigns SET status = 'cancelled' WHERE id = $1`, [campaignId]);
+    return {
+      ok: false,
+      campaignId,
+      totalRequested: recipients.length,
+      deduplicated: dedupRemoved,
+      unsubscribedRemoved: unsubRemoved,
+      enqueued: 0,
+      callbackUsed: cb.callback,
+      error: refunded.ok
+        ? '발송 처리에 실패해 결제 금액을 되돌렸습니다. 다시 시도해주세요.'
+        : '발송 처리에 실패했습니다. 차감 금액 확인이 필요합니다 — 관리자에게 문의해주세요.',
+    };
   }
 
   // 11. 발송 상태 업데이트

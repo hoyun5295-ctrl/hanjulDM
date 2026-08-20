@@ -39,7 +39,12 @@ interface AutoBuild {
   reasons: string[];
   design_variant: any;
   categories: Array<{ name: string; items: NormItem[] }>;
+  /** AI가 스스로 골랐을 값 — 사장님이 고른 것과 구분해 표시한다 */
+  recommended_template?: string;
+  picked?: boolean;
 }
+/** 템플릿 레지스트리(backend TEMPLATE_REGISTRY) — label/desc/color 그대로 화면 카드가 된다 */
+interface TemplateInfo { value: string; label: string; desc: string; color: string; }
 interface RecentFlyer {
   id: string; title: string; status: string; short_code: string | null;
   period_start: string | null; period_end: string | null;
@@ -88,6 +93,11 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const [sheetChecked, setSheetChecked] = useState<Record<string, boolean>>({});
   const [sheetLoading, setSheetLoading] = useState(false);
 
+  // 템플릿 갤러리 (AI 추천 + 사장님 선택)
+  const [templates, setTemplates] = useState<TemplateInfo[]>([]);
+  const [pickedTemplate, setPickedTemplate] = useState<string | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+
   // 손질
   const [pricePop, setPricePop] = useState<{ idx: number; value: string } | null>(null);
   const [namePop, setNamePop] = useState<{ idx: number; value: string } | null>(null);
@@ -115,10 +125,23 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   }, []);
   useEffect(() => { loadRecent(); }, [loadRecent]);
 
+  // ── 템플릿 레지스트리 로드 — 엔진에 살아 있는 10종을 화면에 그대로 편다 ──
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiFetch(`${API_BASE}/api/flyer/business-types/templates`);
+        if (!res.ok) return;
+        const reg = await res.json();
+        setTemplates(Object.values(reg || {}) as TemplateInfo[]);
+      } catch { /* 갤러리는 없어도 자동 구성은 된다 */ }
+    })();
+  }, []);
+
   // ── 자동 완성: 담긴 상품이 바뀌면 서버가 구성한다(분류·엔진·변형 판정 전부 서버 — 화면 판정 0) ──
-  const requestBuild = useCallback((nextItems: NormItem[], nextSeed: number | null) => {
+  const requestBuild = useCallback((nextItems: NormItem[], nextSeed: number | null, forceTemplate?: string | null) => {
     if (buildTimer.current) window.clearTimeout(buildTimer.current);
     if (nextItems.length === 0) { setBuild(null); return; }
+    const tpl = forceTemplate !== undefined ? forceTemplate : pickedTemplate;
     buildTimer.current = window.setTimeout(async () => {
       const seq = ++buildSeq.current;
       setBuilding(true);
@@ -130,6 +153,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
             title, store_name: storeName, period_start: periodStart || null, period_end: periodEnd || null,
             business_type: businessType,
             products: nextItems,
+            ...(tpl ? { template: tpl } : {}),
             ...(nextSeed !== null ? { seed: nextSeed } : {}),
           }),
         });
@@ -144,7 +168,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       } catch { /* 다음 변경에서 재시도 */ }
       finally { if (seq === buildSeq.current) setBuilding(false); }
     }, 600);
-  }, [title, storeName, periodStart, periodEnd, businessType]);
+  }, [title, storeName, periodStart, periodEnd, businessType, pickedTemplate]);
 
   const setItemsAndBuild = useCallback((next: NormItem[]) => {
     setItems(next);
@@ -434,47 +458,161 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
 
   // ══════════════════ 렌더 ══════════════════
   if (view === 'home') {
+    const publishedCount = recent.filter(r => r.status === 'published').length;
     return (
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div>
-          <h2 className="text-xl font-extrabold text-text">오늘 뭐 하실래요?</h2>
-          <p className="text-sm text-text-muted mt-1">상품만 담으면 전단이 완성됩니다. 편집은 필요 없어요.</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button onClick={() => startPreset('weekly')} className="text-left rounded-2xl p-5 bg-gradient-to-br from-orange-500/90 to-rose-500/90 text-white shadow-lg hover:shadow-xl transition-all">
-            <p className="text-lg font-extrabold">이번 주 행사</p>
-            <p className="text-xs mt-1 opacity-90">{recent.length > 0 ? '지난 전단 그대로, 가격만 바꿔서' : '이번 주 상품으로 새로 만들기'}</p>
-          </button>
-          <button onClick={() => startPreset('clearance')} className="text-left rounded-2xl p-5 bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-lg hover:shadow-xl transition-all">
-            <p className="text-lg font-extrabold">오늘 급처분</p>
-            <p className="text-xs mt-1 opacity-80">상품 1개 + 가격 하나면 끝. POP과 전단이 같이 나와요</p>
-          </button>
-          <button onClick={() => startPreset('seasonal')} className="text-left rounded-2xl p-5 bg-gradient-to-br from-red-700 to-amber-600 text-white shadow-lg hover:shadow-xl transition-all">
-            <p className="text-lg font-extrabold">명절 대목</p>
-            <p className="text-xs mt-1 opacity-90">명절 분위기로, 인쇄 전단까지 한 번에</p>
-          </button>
-        </div>
+      <div className="max-w-5xl mx-auto space-y-7">
 
-        {recent.length > 0 && (
-          <div className="bg-surface rounded-2xl border border-border p-4">
-            <p className="text-sm font-bold text-text mb-3">최근 전단</p>
-            <div className="space-y-2">
-              {recent.map(f => (
-                <div key={f.id} className="flex items-center gap-3 bg-bg rounded-xl px-3 py-2.5">
-                  <button onClick={() => openAsBase(f)} className="flex-1 text-left min-w-0">
-                    <p className="text-sm font-semibold text-text truncate">{f.title}</p>
-                    <p className="text-[11px] text-text-muted">{f.status === 'published' ? '발행됨' : '초안'} · {String(f.created_at).slice(0, 10)}</p>
-                  </button>
-                  {f.short_code && (
-                    <button onClick={() => copyUrl(f.short_code!)} className="text-[11px] px-2.5 py-1.5 rounded-lg bg-surface border border-border text-text-secondary hover:text-text">URL 복사</button>
-                  )}
-                  <button onClick={() => openAsBase(f)} className="text-[11px] px-2.5 py-1.5 rounded-lg bg-surface border border-border text-text-secondary hover:text-text">{f.status === 'published' ? '이걸로 새로' : '이어 만들기'}</button>
-                  <button onClick={() => setDeleteModal({ show: true, id: f.id, title: f.title })} className="text-[11px] px-2 py-1.5 rounded-lg text-text-muted hover:text-rose-500">삭제</button>
+        {/* ══ 히어로 ══ */}
+        <section className="relative overflow-hidden rounded-3xl border border-border paper rise">
+          <div className="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-brand-500/15 blur-3xl" />
+          <div className="absolute -bottom-28 -left-10 w-64 h-64 rounded-full bg-primary-500/10 blur-3xl" />
+          <div className="relative px-6 sm:px-9 py-8 sm:py-10">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[11px] font-bold tracking-wide">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot" />
+                AI 자동 구성
+              </span>
+              <span className="text-[11px] text-text-muted">담는 순간 완성본이 섭니다</span>
+            </div>
+
+            <h1 className="font-poster text-[38px] sm:text-[52px] leading-[1.05] kr">
+              <span className="ink-gradient">오늘 뭐 파실래요?</span>
+            </h1>
+            <p className="mt-3 text-[15px] text-text-secondary kr max-w-lg">
+              상품만 담으면 전단·POP·인쇄물이 한 번에 나옵니다. 편집은 필요 없습니다.
+            </p>
+
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <button onClick={() => startPreset('weekly')}
+                className="px-6 py-3 rounded-2xl bg-slate-900 text-white text-sm font-bold shadow-elevated hover:bg-slate-800 transition-colors">
+                바로 시작하기
+              </button>
+              <button onClick={() => { setView('compose'); openSheet('pos'); }}
+                className="px-4 py-3 rounded-2xl bg-surface border border-border text-sm font-semibold text-text hover:border-brand-500 transition-colors">
+                POS 인기 상품으로
+              </button>
+              <button onClick={() => { setView('compose'); openSheet('excel'); }}
+                className="px-4 py-3 rounded-2xl bg-surface border border-border text-sm font-semibold text-text hover:border-brand-500 transition-colors">
+                엑셀 올리기
+              </button>
+            </div>
+
+            <div className="mt-7 flex flex-wrap gap-x-7 gap-y-2">
+              {[
+                { n: String(templates.length || 10), u: '종', l: '전단 디자인' },
+                { n: '4', u: '종', l: 'POP·가격표' },
+                { n: '5', u: '종', l: '인쇄 전단' },
+                { n: String(recent.length), u: '건', l: publishedCount ? `만든 전단 · 발행 ${publishedCount}` : '만든 전단' },
+              ].map(m => (
+                <div key={m.l}>
+                  <p className="font-poster text-2xl text-text leading-none">
+                    {m.n}<span className="text-sm text-text-muted ml-0.5">{m.u}</span>
+                  </p>
+                  <p className="text-[11px] text-text-muted mt-1">{m.l}</p>
                 </div>
               ))}
             </div>
           </div>
-        )}
+        </section>
+
+        {/* ══ 3 프리셋 ══ */}
+        <section>
+          <div className="flex items-end justify-between mb-3">
+            <h2 className="text-base font-extrabold text-text">무엇부터 만들까요</h2>
+            <span className="text-[11px] text-text-muted">클릭 한 번이면 상품 담기로 넘어갑니다</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {([
+              { key: 'weekly' as Preset, tag: '주간', title: '이번 주 행사',
+                hint: recent.length > 0 ? '지난 전단 그대로, 가격만 새로' : '이번 주 상품으로 새로 만들기',
+                meta: '가장 많이 쓰는 방식', bg: 'linear-gradient(135deg,#F97316,#E11D48)' },
+              { key: 'clearance' as Preset, tag: '오늘', title: '오늘 급처분',
+                hint: '상품 하나면 끝. POP까지 같이',
+                meta: '30초 컷', bg: 'linear-gradient(135deg,#0F172A,#334155)' },
+              { key: 'seasonal' as Preset, tag: '대목', title: '명절 대목',
+                hint: '명절 톤으로, 인쇄까지 한 번에',
+                meta: '인쇄 발주 연결', bg: 'linear-gradient(135deg,#B91C1C,#D97706)' },
+            ]).map((c, i) => (
+              <button key={c.key} onClick={() => startPreset(c.key)}
+                style={{ backgroundImage: c.bg, animationDelay: `${i * 70}ms` }}
+                className="rise group relative overflow-hidden text-left rounded-2xl p-5 min-h-[168px] flex flex-col justify-between text-white shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all">
+                <span className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 group-hover:scale-125 transition-transform" />
+                <span className="relative inline-flex self-start px-2 py-0.5 rounded-md bg-white/20 text-[10px] font-bold tracking-wider">{c.tag}</span>
+                <span className="relative block">
+                  <span className="block font-poster text-2xl leading-tight">{c.title}</span>
+                  <span className="block text-[12px] mt-1.5 text-white/85 kr leading-snug">{c.hint}</span>
+                </span>
+                <span className="relative flex items-center gap-1.5 text-[11px] text-white/70">
+                  <span className="w-1 h-1 rounded-full bg-white/70" />{c.meta}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ══ 만들어지는 방식 ══ */}
+        <section className="rounded-2xl border border-border bg-surface p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { n: '01', t: '상품을 담는다', d: 'POS 인기·지난 전단·카탈로그·엑셀에서 체크만' },
+              { n: '02', t: 'AI가 구성한다', d: '분류·디자인·시즌 톤까지 자동. 마음에 안 들면 한 번 더' },
+              { n: '03', t: '뽑아 쓴다', d: '전단 URL·POP·인쇄물·문자 발송까지 그대로' },
+            ].map((st, i) => (
+              <div key={st.n} className="relative flex gap-3">
+                <span className="font-poster text-2xl text-brand-500/70 leading-none">{st.n}</span>
+                <div>
+                  <p className="text-sm font-bold text-text">{st.t}</p>
+                  <p className="text-[12px] text-text-muted kr mt-0.5 leading-snug">{st.d}</p>
+                </div>
+                {i < 2 && <span className="hidden sm:block absolute right-[-8px] top-3 text-border-strong">→</span>}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ══ 최근 전단 ══ */}
+        <section>
+          <div className="flex items-end justify-between mb-3">
+            <h2 className="text-base font-extrabold text-text">최근 전단</h2>
+            {recent.length > 0 && <span className="text-[11px] text-text-muted">누르면 그대로 이어서 만듭니다</span>}
+          </div>
+          {recent.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border-strong bg-surface p-8 text-center">
+              <p className="font-poster text-xl text-text-muted">아직 만든 전단이 없습니다</p>
+              <p className="text-[12px] text-text-muted mt-1.5 kr">위에서 하나 고르면 몇 분 안에 첫 전단이 나옵니다.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {recent.map(f => (
+                <div key={f.id} className="group rounded-2xl border border-border bg-surface p-4 hover:border-brand-500/60 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-14 rounded-lg bg-bg border border-border flex items-center justify-center shrink-0">
+                      <span className="font-poster text-[11px] text-text-muted leading-none">전단</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-text truncate">{f.title}</p>
+                        <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${f.status === 'published' ? 'bg-success-50 text-success-600' : 'bg-bg text-text-muted'}`}>
+                          {f.status === 'published' ? '발행됨' : '초안'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-text-muted mt-0.5">{String(f.created_at).slice(0, 10)}</p>
+                      <div className="flex items-center gap-1.5 mt-2.5">
+                        <button onClick={() => openAsBase(f)} className="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 transition-colors">
+                          {f.status === 'published' ? '이걸로 새로' : '이어 만들기'}
+                        </button>
+                        {f.short_code && (
+                          <button onClick={() => copyUrl(f.short_code!)} className="px-2.5 py-1.5 rounded-lg bg-surface border border-border text-[11px] text-text-secondary hover:text-text">URL 복사</button>
+                        )}
+                        <button onClick={() => setDeleteModal({ show: true, id: f.id, title: f.title })} className="ml-auto px-2 py-1.5 rounded-lg text-[11px] text-text-muted hover:text-error-500">삭제</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <ConfirmModal show={deleteModal.show} icon="🗑️" title="전단지 삭제" message={`"${deleteModal.title}"을(를) 삭제하시겠습니까?`} danger confirmLabel="삭제" onConfirm={() => removeFlyer(deleteModal.id)} onCancel={() => setDeleteModal({ show: false, id: '', title: '' })} />
         <Toast show={copyToast} message="URL이 복사되었습니다" />
@@ -485,54 +623,125 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
 
   // ── compose ──
   const previewCategories = build?.categories?.length ? build.categories : (items.length ? [{ name: '상품', items }] : []);
+  const templateLabel = (code?: string) =>
+    templates.find(t => t.value === code)?.label || code || '자동';
+  const applyTemplate = (code: string | null) => {
+    setPickedTemplate(code);
+    setGalleryOpen(false);
+    setPublished(null); // 디자인이 바뀌면 앞서 발행한 결과는 과거다
+    if (items.length > 0) requestBuild(items, seed, code);
+  };
   return (
     <div className="max-w-5xl mx-auto pb-24">
-      {/* 상단: 돌아가기 + 소스 4칩 */}
-      <div className="flex items-center gap-2 flex-wrap mb-4">
-        <button onClick={() => setView('home')} className="px-3 py-2 rounded-xl bg-surface border border-border text-text-secondary text-sm hover:text-text">← 처음</button>
-        <div className="flex gap-1.5 flex-wrap">
-          <button onClick={() => openSheet('pos')} className="px-3 py-2 rounded-full bg-surface border border-border text-sm text-text hover:border-primary-400">POS 인기 상품</button>
-          <button onClick={() => openSheet('last')} className="px-3 py-2 rounded-full bg-surface border border-border text-sm text-text hover:border-primary-400">지난 전단</button>
-          <button onClick={() => openSheet('catalog')} className="px-3 py-2 rounded-full bg-surface border border-border text-sm text-text hover:border-primary-400">카탈로그</button>
-          <button onClick={() => openSheet('excel')} className="px-3 py-2 rounded-full bg-surface border border-border text-sm text-text hover:border-primary-400">엑셀 올리기</button>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          {build && (
-            <button onClick={reroll} disabled={building} className="px-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold shadow disabled:opacity-60">
-              {building ? '만드는 중...' : '다른 느낌으로'}
-            </button>
-          )}
+      {/* ══ 상단 툴바 — 돌아가기 + 상품 담기 4소스 ══ */}
+      <div className="sticky top-14 z-30 -mx-4 px-4 py-3 mb-4 bg-bg/90 backdrop-blur border-b border-border">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setView('home')} className="w-9 h-9 rounded-xl bg-surface border border-border text-text-secondary hover:text-text hover:border-border-strong transition-colors" aria-label="처음으로">←</button>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-bold text-text-muted mr-0.5">상품 담기</span>
+            {([
+              { k: 'pos' as SheetKind, label: 'POS 인기' },
+              { k: 'last' as SheetKind, label: '지난 전단' },
+              { k: 'catalog' as SheetKind, label: '카탈로그' },
+              { k: 'excel' as SheetKind, label: '엑셀' },
+            ]).map(c => (
+              <button key={String(c.k)} onClick={() => openSheet(c.k)}
+                className="px-3 py-2 rounded-full bg-surface border border-border text-[13px] font-semibold text-text hover:border-brand-500 hover:text-brand-600 transition-colors">
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            {items.length > 0 && (
+              <span className="text-[12px] text-text-muted tabular-nums">담긴 상품 <b className="text-text">{items.length}</b></span>
+            )}
+            {build && (
+              <button onClick={reroll} disabled={building}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-[13px] font-bold hover:bg-slate-800 disabled:opacity-60 transition-colors">
+                {building ? '만드는 중...' : '다른 느낌으로'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        {/* 좌: 미리보기(완성본이 곧 화면) */}
-        <div className="bg-surface rounded-2xl border border-border p-3">
-          <div className="flex items-center justify-between px-1 pb-2">
-            <p className="text-xs text-text-muted">
-              {build ? `자동 구성 완료 · ${build.reasons?.[0] || ''}` : items.length > 0 ? '구성 중...' : '상품을 담으면 완성본이 나타납니다'}
-            </p>
-            {building && <span className="text-[11px] text-primary-600">업데이트 중</span>}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
+        {/* 좌: 미리보기 = 발행본 */}
+        <div>
+          {/* AI 구성 결과 스트립 */}
+          <div className="rounded-t-2xl border border-b-0 border-border bg-slate-900 text-white px-4 py-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold">
+                <span className={`w-1.5 h-1.5 rounded-full ${building ? 'bg-amber-400 pulse-dot' : build ? 'bg-emerald-400' : 'bg-white/40'}`} />
+                {building ? 'AI가 구성하는 중' : build ? 'AI 구성 완료' : '상품을 기다리는 중'}
+              </span>
+              {build && (
+                <>
+                  <span className="text-[11px] text-white/40">|</span>
+                  <span className="px-2 py-0.5 rounded-md bg-white/10 text-[11px] font-bold">
+                    {templateLabel(build.template)}
+                  </span>
+                  {build.picked
+                    ? <span className="px-2 py-0.5 rounded-md bg-brand-500 text-[10px] font-bold">직접 고름</span>
+                    : <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">AI 추천</span>}
+                </>
+              )}
+              <button onClick={() => setGalleryOpen(true)}
+                className="ml-auto px-3 py-1.5 rounded-lg bg-white text-slate-900 text-[11px] font-bold hover:bg-white/90 transition-colors">
+                디자인 바꾸기 {templates.length > 0 ? `(${templates.length})` : ''}
+              </button>
+            </div>
+            {build?.reasons?.length ? (
+              <div className="flex gap-1.5 flex-wrap mt-2">
+                {build.reasons.slice(0, 3).map((r, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/60 kr">{r}</span>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <div className="h-[560px] rounded-xl overflow-hidden bg-bg border border-border">
-            <FlyerPreview
-              title={title} storeName={storeName}
-              periodStart={periodStart} periodEnd={periodEnd}
-              categories={previewCategories as any}
-              template={build?.template || 'grid_hero'}
-              designVariant={build?.design_variant || null}
-            />
+
+          {/* 종이 */}
+          <div className="rounded-b-2xl border border-border bg-surface p-4">
+            <div className="relative h-[560px] rounded-xl overflow-hidden bg-bg border border-border shadow-inner">
+              {items.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center gap-3 px-6 text-center">
+                  <div className="w-16 h-20 rounded-lg border-2 border-dashed border-border-strong flex items-center justify-center">
+                    <span className="font-poster text-[11px] text-text-muted">전단</span>
+                  </div>
+                  <p className="font-poster text-lg text-text">상품을 담아 주세요</p>
+                  <p className="text-[12px] text-text-muted kr max-w-[240px]">담는 순간 AI가 분류·디자인·시즌 톤까지 정해 완성본을 세웁니다.</p>
+                  <button onClick={() => openSheet('pos')} className="mt-1 px-4 py-2 rounded-xl bg-slate-900 text-white text-[12px] font-bold">POS 인기 상품에서 담기</button>
+                </div>
+              ) : (
+                <>
+                  <FlyerPreview
+                    title={title} storeName={storeName}
+                    periodStart={periodStart} periodEnd={periodEnd}
+                    categories={previewCategories as any}
+                    template={build?.template || 'grid_hero'}
+                    designVariant={build?.design_variant || null}
+                  />
+                  {building && (
+                    <div className="absolute inset-x-0 top-0 h-1 sheen bg-border" />
+                  )}
+                </>
+              )}
+            </div>
+            <p className="text-[10px] text-text-muted italic mt-2 text-center">
+              이 미리보기가 그대로 발행됩니다 — 발행본과 동일한 서버 렌더
+            </p>
           </div>
         </div>
 
-        {/* 우: 담긴 상품(손질 4종만) + 행사 정보 최소 */}
+        {/* 우: 행사 정보 + 담긴 상품 + 발행 */}
         <div className="space-y-3">
-          <div className="bg-surface rounded-2xl border border-border p-4 space-y-2">
-            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="행사 이름 (예: 이번 주 행사)" />
-            <Input value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="매장 이름 (전단에 표시)" />
+          <div className="bg-surface rounded-2xl border border-border p-4 space-y-2.5">
+            <p className="text-[11px] font-bold text-text-muted tracking-wider">행사 정보</p>
+            <Input label="행사 이름" value={title} onChange={e => setTitle(e.target.value)} placeholder="예: 이번 주 행사" />
+            <Input label="매장 이름" value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="전단에 표시됩니다" />
             <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} />
-              <Input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} />
+              <Input label="시작일" type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} />
+              <Input label="종료일" type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} />
             </div>
           </div>
 
@@ -655,6 +864,85 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ══ 디자인 갤러리 — 엔진에 살아 있는 전 템플릿을 눈으로 고른다 ══ */}
+      {galleryOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center"
+          onMouseDown={e => { if (e.target === e.currentTarget) setGalleryOpen(false); }}>
+          <div className="bg-bg w-full sm:max-w-3xl sm:rounded-3xl rounded-t-3xl border border-border max-h-[86vh] flex flex-col overflow-hidden">
+            <div className="px-6 py-5 bg-surface border-b border-border">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-poster text-2xl text-text leading-tight">디자인 고르기</p>
+                  <p className="text-[12px] text-text-muted mt-1 kr">
+                    누르면 바로 그 디자인으로 다시 섭니다. 담긴 상품은 그대로예요.
+                  </p>
+                </div>
+                <button onClick={() => setGalleryOpen(false)} className="w-9 h-9 rounded-xl bg-bg border border-border text-text-muted hover:text-text shrink-0" aria-label="닫기">✕</button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {/* AI 자동 */}
+              <button onClick={() => applyTemplate(null)}
+                className={`w-full text-left rounded-2xl p-4 mb-3 border-2 transition-all ${
+                  pickedTemplate === null ? 'border-slate-900 bg-surface shadow-card' : 'border-border bg-surface hover:border-border-strong'
+                }`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-xl shrink-0 flex items-center justify-center bg-slate-900">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 pulse-dot" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-text">AI가 알아서</p>
+                      {pickedTemplate === null && <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold">사용 중</span>}
+                    </div>
+                    <p className="text-[12px] text-text-muted kr mt-0.5">
+                      담긴 상품 수·카테고리·시즌을 보고 매번 가장 어울리는 디자인을 고릅니다
+                      {build?.recommended_template ? ` — 지금은 「${templateLabel(build.recommended_template)}」` : ''}
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <p className="text-[11px] font-bold text-text-muted tracking-wider px-1 mb-2">직접 고르기 · {templates.length}종</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {templates.map((t, i) => {
+                  const active = pickedTemplate === t.value;
+                  const isAiPick = !pickedTemplate && build?.template === t.value;
+                  return (
+                    <button key={t.value} onClick={() => applyTemplate(t.value)}
+                      style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                      className={`rise text-left rounded-2xl overflow-hidden border-2 transition-all hover:-translate-y-0.5 ${
+                        active ? 'border-slate-900 shadow-elevated' : 'border-border hover:border-border-strong'
+                      }`}>
+                      {/* 색 견본 — 레지스트리 gradient 그대로 */}
+                      <div className="h-20 relative" style={{ backgroundImage: t.color }}>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="font-poster text-white/95 text-lg drop-shadow">{t.label}</span>
+                        </div>
+                        {(active || isAiPick) && (
+                          <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                            active ? 'bg-white text-slate-900' : 'bg-emerald-500 text-white'
+                          }`}>
+                            {active ? '사용 중' : 'AI 추천'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="px-3.5 py-3 bg-surface">
+                        <p className="text-[12px] text-text-secondary kr leading-snug">{t.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {templates.length === 0 && (
+                <p className="text-sm text-text-muted text-center py-10">디자인 목록을 불러오는 중입니다...</p>
+              )}
+            </div>
           </div>
         </div>
       )}

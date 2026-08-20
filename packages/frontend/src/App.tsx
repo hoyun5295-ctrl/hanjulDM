@@ -25,7 +25,20 @@ export const API_BASE = import.meta.env.VITE_API_URL || '';
 export function getToken(): string { return localStorage.getItem('flyer_token') || ''; }
 export type Page = 'flyer' | 'send' | 'pop' | 'customers' | 'catalog' | 'coupons' | 'orders' | 'print-flyer' | 'results' | 'balance' | 'unsubscribes' | 'settings' | 'senders' | 'alimtalk' | 'pos-agent';
 
-/** 공통 fetch — 401 시 자동 로그아웃 */
+/** 서버(CT-F25)가 내려주는 접근 차단 코드 */
+export type FlyerAccessCode =
+  | 'COMPANY_SUSPENDED' | 'COMPANY_EXPIRED' | 'STORE_SUSPENDED'
+  | 'STORE_PENDING' | 'STORE_STATUS_UNKNOWN' | 'PLAN_EXPIRED';
+
+const ACCESS_CODES: string[] = [
+  'COMPANY_SUSPENDED', 'COMPANY_EXPIRED', 'STORE_SUSPENDED',
+  'STORE_PENDING', 'STORE_STATUS_UNKNOWN', 'PLAN_EXPIRED',
+];
+
+/** 결제로 해소 가능한 차단 = 충전관리로 유도 */
+export const PAYABLE_ACCESS_CODES: string[] = ['STORE_PENDING', 'STORE_STATUS_UNKNOWN', 'PLAN_EXPIRED'];
+
+/** 공통 fetch — 401 시 자동 로그아웃, 403(이용 차단)은 사유를 화면에 알린다 */
 export async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
   const token = getToken();
   const headers: Record<string, string> = { ...(options?.headers as Record<string, string> || {}) };
@@ -36,6 +49,17 @@ export async function apiFetch(url: string, options?: RequestInit): Promise<Resp
     localStorage.removeItem('flyer_user');
     window.dispatchEvent(new Event('flyer-auth-expired'));
     throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.');
+  }
+  // ★ 403 이용 차단 — 예전에는 화면이 조용히 비어 원인을 알 수 없었다.
+  if (res.status === 403) {
+    try {
+      const data = await res.clone().json();
+      if (data?.code && ACCESS_CODES.includes(data.code)) {
+        window.dispatchEvent(new CustomEvent('flyer-access-blocked', {
+          detail: { code: data.code, message: data.error || '이용이 제한되었습니다' },
+        }));
+      }
+    } catch { /* 본문 없는 403은 각 화면이 처리 */ }
   }
   return res;
 }
@@ -77,10 +101,18 @@ function App() {
     setToken(''); setUser(null); setCurrentPage('flyer');
   };
 
+  const [blocked, setBlocked] = useState<{ code: string; message: string } | null>(null);
+
   useEffect(() => {
     const handler = () => handleLogout();
     window.addEventListener('flyer-auth-expired', handler);
     return () => window.removeEventListener('flyer-auth-expired', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => setBlocked((e as CustomEvent).detail);
+    window.addEventListener('flyer-access-blocked', handler);
+    return () => window.removeEventListener('flyer-access-blocked', handler);
   }, []);
 
   // ★ 세션 30분 자동 로그아웃 (전단AI 전용 — 한줄로와 완전 분리)
@@ -165,6 +197,30 @@ function App() {
 
       {/* ── 페이지 ── */}
       <main className="max-w-6xl mx-auto px-6 py-6">
+        {/* ★ 이용 차단 안내 — 화면이 비어 보이는 이유를 사장님에게 알린다 */}
+        {blocked && (
+          <div className="mb-5 rounded-xl border border-warn-500/30 bg-warn-50 px-4 py-3 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-text">{blocked.message}</p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {PAYABLE_ACCESS_CODES.includes(blocked.code)
+                  ? '충전관리에서 이용료를 결제하시면 바로 이용하실 수 있습니다.'
+                  : '관리자 확인이 필요한 상태입니다.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {PAYABLE_ACCESS_CODES.includes(blocked.code) && currentPage !== 'balance' && (
+                <button
+                  onClick={() => { setCurrentPage('balance'); setBlocked(null); }}
+                  className="px-4 py-2 text-xs font-bold rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                >
+                  충전관리로 이동
+                </button>
+              )}
+              <button onClick={() => setBlocked(null)} className="text-xs text-text-muted hover:text-text transition-colors">닫기</button>
+            </div>
+          </div>
+        )}
         {currentPage === 'flyer' && <FlyerComposerPage token={token} businessType={user?.businessType || 'mart'} />}
         {currentPage === 'pop' && <PopPage token={token} />}
         {currentPage === 'send' && <SendPage token={token} />}

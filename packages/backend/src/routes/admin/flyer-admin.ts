@@ -8,8 +8,18 @@
 
 import { Request, Response, Router } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { query } from '../../config/database';
 import { flyerSuperAuthenticate } from '../../middlewares/super-auth';
+import {
+  STORE_PAYMENT_STATUSES,
+  COMPANY_PAYMENT_STATUSES,
+  isValidStorePaymentStatus,
+  isValidCompanyPaymentStatus,
+  withFlyerTx,
+  changeFlyerBalance,
+} from '../../utils/flyer';
+import { handleDbMigrationError } from '../../utils/flyer/db-migration-error';
 
 const router = Router();
 
@@ -23,7 +33,9 @@ router.use(flyerSuperAuthenticate);
 router.get('/dashboard', async (req: Request, res: Response) => {
   try {
     // ★ D155 확장: 매장수 + POS Agent 활성/전체 + 이달 청구액 추가
-    const [companies, users, campaigns, customers, stores, posAgents, billing, senderReg] = await Promise.all([
+    // ★ 0820: allSettled — 쿼리 하나가 실패해도 나머지 카드는 살린다.
+    //   (기존 Promise.all은 청구 쿼리 하나 때문에 카드 7개가 동시에 비었다)
+    const settled = await Promise.allSettled([
       query(`SELECT COUNT(*)::int AS cnt FROM flyer_companies WHERE deleted_at IS NULL`),
       query(`SELECT COUNT(*)::int AS cnt FROM flyer_users WHERE deleted_at IS NULL`),
       query(`SELECT
@@ -37,30 +49,45 @@ router.get('/dashboard', async (req: Request, res: Response) => {
                COUNT(*)::int AS total,
                COUNT(*) FILTER (WHERE last_heartbeat > NOW() - INTERVAL '5 minutes')::int AS active
              FROM flyer_pos_agents`),
+      // ★ 컬럼은 total_amount / payment_status 다. amount·status 는 이 테이블에 없다(2026-08-20 실측).
       query(`SELECT
-               COALESCE(SUM(amount), 0)::bigint AS month_total,
-               COUNT(*) FILTER (WHERE status != 'paid')::int AS unpaid_count
+               COALESCE(SUM(total_amount), 0)::bigint AS month_total,
+               COUNT(*) FILTER (WHERE payment_status IS DISTINCT FROM 'paid')::int AS unpaid_count
              FROM flyer_billing_history
              WHERE billing_month >= DATE_TRUNC('month', CURRENT_DATE)`),
       // ★ D156: 발신번호 등록 신청 대기 카운트
       query(`SELECT COUNT(*)::int AS cnt FROM flyer_sender_registrations WHERE status = 'pending'`),
     ]);
 
+    const KEYS = ['companies', 'users', 'campaigns', 'customers', 'stores', 'posAgents', 'billing', 'senderReg'];
+    const failed: string[] = [];
+    const rows = settled.map((s, i) => {
+      if (s.status === 'fulfilled') return s.value.rows[0] || {};
+      failed.push(KEYS[i]);
+      console.error(`[admin/flyer] dashboard ${KEYS[i]} 집계 실패:`, s.reason?.message);
+      return null;
+    });
+    const [companies, users, campaigns, customers, stores, posAgents, billing, senderReg] = rows;
+
+    // 실패한 지표는 0으로 덮지 않고 undefined 로 둔다 — 화면이 "0건"과 "집계 실패"를 구분해야 한다.
+    const num = (row: any, key: string) => (row ? Number(row[key] || 0) : undefined);
+
     return res.json({
-      activeCompanies: companies.rows[0]?.cnt || 0,
-      totalUsers: users.rows[0]?.cnt || 0,
-      totalCampaigns: campaigns.rows[0]?.total || 0,
-      totalSent: campaigns.rows[0]?.total_sent || 0,
-      totalSuccess: campaigns.rows[0]?.total_success || 0,
-      totalCustomers: customers.rows[0]?.cnt || 0,
+      activeCompanies: num(companies, 'cnt'),
+      totalUsers: num(users, 'cnt'),
+      totalCampaigns: num(campaigns, 'total'),
+      totalSent: num(campaigns, 'total_sent'),
+      totalSuccess: num(campaigns, 'total_success'),
+      totalCustomers: num(customers, 'cnt'),
       // D155 확장
-      totalStores: stores.rows[0]?.cnt || 0,
-      posAgentsTotal: posAgents.rows[0]?.total || 0,
-      posAgentsActive: posAgents.rows[0]?.active || 0,
-      monthlyBilling: Number(billing.rows[0]?.month_total || 0),
-      unpaidCount: billing.rows[0]?.unpaid_count || 0,
+      totalStores: num(stores, 'cnt'),
+      posAgentsTotal: num(posAgents, 'total'),
+      posAgentsActive: num(posAgents, 'active'),
+      monthlyBilling: num(billing, 'month_total'),
+      unpaidCount: num(billing, 'unpaid_count'),
       // D156 확장
-      senderRegPending: senderReg.rows[0]?.cnt || 0,
+      senderRegPending: num(senderReg, 'cnt'),
+      failedMetrics: failed.length > 0 ? failed : undefined,
     });
   } catch (error: any) {
     console.error('[admin/flyer] dashboard error:', error);
@@ -205,6 +232,13 @@ router.put('/companies/:id', async (req: Request, res: Response) => {
       'business_reg_name', 'business_reg_owner', 'business_category', 'business_item',
       'business_address', 'tax_email', 'tax_manager_name', 'tax_manager_phone',
     ];
+
+    // ★ CT-F26: 총판 결제 상태 축(active/expired/suspended) 밖 값 저장 차단
+    if (fields.payment_status !== undefined && !isValidCompanyPaymentStatus(fields.payment_status)) {
+      return res.status(400).json({
+        error: `결제 상태는 ${COMPANY_PAYMENT_STATUSES.join(' / ')} 중 하나여야 합니다`,
+      });
+    }
 
     const sets: string[] = [];
     const params: any[] = [id];
@@ -535,6 +569,25 @@ router.put('/stores/:id', async (req: Request, res: Response) => {
       'memo',
     ];
 
+    // ★ CT-F26: 매장 결제 상태는 축(pending/active/suspended) 밖 값을 저장하지 않는다.
+    //   DB에 CHECK 제약이 없어(2026-08-20 실측) 여기서 막지 않으면 오타가 그대로 저장된다.
+    if (fields.payment_status !== undefined && !isValidStorePaymentStatus(fields.payment_status)) {
+      return res.status(400).json({
+        error: `결제 상태는 ${STORE_PAYMENT_STATUSES.join(' / ')} 중 하나여야 합니다`,
+      });
+    }
+
+    // 상태와 기간이 따로 노는 것을 막는다 — 이용중인데 만료일이 없으면 무기한 무료가 된다.
+    if (fields.payment_status === 'active') {
+      const nextExpires = fields.plan_expires_at !== undefined
+        ? fields.plan_expires_at
+        : (await query(`SELECT plan_expires_at FROM flyer_users WHERE id = $1 AND deleted_at IS NULL`, [req.params.id]))
+            .rows[0]?.plan_expires_at;
+      if (!nextExpires) {
+        return res.status(400).json({ error: '이용중으로 두려면 만료일이 있어야 합니다' });
+      }
+    }
+
     const sets: string[] = [];
     const params: any[] = [req.params.id];
     for (const key of allowed) {
@@ -549,6 +602,7 @@ router.put('/stores/:id', async (req: Request, res: Response) => {
     await query(`UPDATE flyer_users SET ${sets.join(', ')} WHERE id = $1 AND deleted_at IS NULL`, params);
     return res.json({ message: '수정되었습니다' });
   } catch (error: any) {
+    console.error('[admin/flyer] store update error:', error);
     return res.status(500).json({ error: 'Server error' });
   }
 });
@@ -557,48 +611,85 @@ router.put('/stores/:id', async (req: Request, res: Response) => {
  * POST /stores/:id/activate — 입금 확인 → 잔액 충전 (active 아님!)
  * ★ D114: 입금확인 = 충전만. 매장 사장님이 "이용료 결제" 해야 active.
  */
-router.post('/stores/:id/activate', async (req: Request, res: Response) => {
-  try {
-    const { amount } = req.body; // 입금 금액
-    const chargeAmount = parseInt(String(amount || '0'), 10);
-    if (chargeAmount <= 0) return res.status(400).json({ error: '입금 금액을 입력해주세요' });
-
-    const result = await query(
-      `UPDATE flyer_users
-       SET prepaid_balance = prepaid_balance + $1, updated_at = NOW()
-       WHERE id = $2 AND deleted_at IS NULL
-       RETURNING id, store_name, prepaid_balance, payment_status`,
-      [chargeAmount, req.params.id]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-    return res.json({ ...result.rows[0], message: `₩${chargeAmount.toLocaleString()} 충전 완료. 매장에서 이용료 결제 시 활성화됩니다.` });
-  } catch (error: any) {
-    return res.status(500).json({ error: 'Server error' });
-  }
-});
+router.post('/stores/:id/activate', (req: Request, res: Response) =>
+  chargeStoreBalance(req, res, 'deposit_charge')
+);
 
 /**
  * POST /stores/:id/charge — 선불 잔액 충전
  */
-router.post('/stores/:id/charge', async (req: Request, res: Response) => {
-  try {
-    const { amount } = req.body;
-    const chargeAmount = parseInt(String(amount || '0'), 10);
-    if (chargeAmount <= 0) return res.status(400).json({ error: '충전 금액은 1원 이상' });
+router.post('/stores/:id/charge', (req: Request, res: Response) =>
+  chargeStoreBalance(req, res, 'admin_charge')
+);
 
-    const result = await query(
-      `UPDATE flyer_users
-       SET prepaid_balance = prepaid_balance + $1, updated_at = NOW()
-       WHERE id = $2 AND deleted_at IS NULL
-       RETURNING id, store_name, prepaid_balance`,
-      [chargeAmount, req.params.id]
+/**
+ * 관리자 충전 공통 — 잔액 이동은 CT-F27이 소유한다(원장 기록 동반).
+ */
+async function chargeStoreBalance(req: Request, res: Response, type: 'deposit_charge' | 'admin_charge') {
+  const superAdmin = req.flyerSuperUser!;
+  const isDeposit = type === 'deposit_charge';
+  try {
+    const chargeAmount = parseInt(String(req.body?.amount || '0'), 10);
+    if (!Number.isFinite(chargeAmount) || chargeAmount <= 0) {
+      return res.status(400).json({ error: isDeposit ? '입금 금액을 입력해주세요' : '충전 금액은 1원 이상' });
+    }
+
+    const storeRes = await query(
+      `SELECT id, store_name, company_id FROM flyer_users WHERE id = $1 AND deleted_at IS NULL`,
+      [req.params.id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-    return res.json(result.rows[0]);
+    if (storeRes.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const store = storeRes.rows[0];
+
+    // 멱등 키 — 화면이 요청마다 발급한 값. 더블클릭·재시도로 두 번 충전되지 않는다.
+    const opId = typeof req.body?.operation_id === 'string' && req.body.operation_id.trim()
+      ? `charge:${req.body.operation_id.trim().slice(0, 80)}`
+      : `charge:${randomUUID()}`;
+
+    const result = await withFlyerTx(client =>
+      changeFlyerBalance(client, {
+        userId: store.id,
+        amount: chargeAmount,
+        type,
+        description: isDeposit ? '입금 확인 충전' : '관리자 충전',
+        operationId: opId,
+        createdBy: superAdmin.adminId,
+      })
+    );
+    if (!result.ok) return res.status(400).json({ error: result.reason });
+    if (result.replayed) {
+      return res.json({
+        id: store.id, store_name: store.store_name, prepaid_balance: result.balanceAfter,
+        message: '이미 처리된 충전입니다. 잔액은 그대로입니다.',
+      });
+    }
+
+    await logFlyerSuperAdminAudit({
+      superAdminId: superAdmin.adminId,
+      superAdminLoginId: superAdmin.loginId,
+      action: 'balance_charge',
+      targetType: 'user',
+      targetId: store.id,
+      targetCompanyId: store.company_id,
+      details: { amount: chargeAmount, balanceAfter: result.balanceAfter, chargeType: type },
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
+    });
+
+    return res.json({
+      id: store.id,
+      store_name: store.store_name,
+      prepaid_balance: result.balanceAfter,
+      message: isDeposit
+        ? `₩${chargeAmount.toLocaleString()} 충전 완료. 매장에서 이용료 결제 시 활성화됩니다.`
+        : `₩${chargeAmount.toLocaleString()} 충전 완료`,
+    });
   } catch (error: any) {
+    if (handleDbMigrationError(error, res, 'flyer_balance_transactions 신규 테이블')) return;
+    console.error('[admin/flyer] store charge error:', error);
     return res.status(500).json({ error: 'Server error' });
   }
-});
+}
 
 // ══════════════════════════════════════════
 // ★ D113: 업종 관리 (flyer_business_types)

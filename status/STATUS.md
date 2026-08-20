@@ -1,22 +1,46 @@
 # hanjulDM 프로젝트 현황
 
-> **업데이트:** 2026-08-20 (슈퍼버전업 W3 구현) — 그 아래 D159 절은 당시 기록 원문 보존
+> **업데이트:** 2026-08-20 (결제 상태·잔액 축 정정 / 슈퍼버전업 W3 구현) — 그 아래 D159 절은 당시 기록 원문 보존
 
-## ★ 2026-08-20 슈퍼버전업 — W3 전단·POP 제작 축 구현 완료(배포 대기)
+## ★ 2026-08-20 제작 화면 재설계 + 템플릿 갤러리 복원 — **코드 완료 · 배포 대기**
+
+**SoT = `status/hanjul-flyer-revamp/15_composer_design_and_template_gallery.md`**.
+한 줄 요약 = **템플릿 10종은 엔진에 그대로 살아 있었고 W3이 고르는 UI만 지운 것**이었다. 갤러리로 되살리고 2종을 더해 **12종**.
+제작 화면은 인쇄소 톤(Black Han Sans 헤드·종이 질감·한글 keep-all)으로 다시 짰다.
+검증 = tsc 0 · 양쪽 build · vitest 65건(실렌더 스모크 72조합).
+
+## ★ 2026-08-20 결제 상태·잔액 축 정정 — **코드 완료 · DDL·배포 대기**
+
+**SoT = `status/hanjul-flyer-revamp/14_payment_status_balance_axis.md`** (접수·실측·설계·구현·잔여·⛔ 전부 그 문서가 소유).
+값 축 코드 SoT = `utils/flyer/billing/flyer-payment-status.ts`(CT-F26) · 잔액 이동 = `flyer-balance-ledger.ts`(CT-F27).
+
+한 줄 요약 = **같은 뜻의 결제 상태를 화면마다 다른 값으로 불러 매장이 잠겼고, 잔액은 기록 없이 움직이고 있었다.**
+검증 = backend tsc 0 · 양쪽 frontend build 성공 · vitest 56건(기존 29 + 신규 27).
+**다음 = 14번 문서 §6 DDL 실행 → 배포 → §7 실측.** 배포 후 현재 `suspended` 인 총판·매장을 화면에서 되돌려야 잠금이 풀린다.
+
+## ★ 2026-08-20 슈퍼버전업 — W3 전단·POP 제작 축 전면 개편 **배포완료**
 
 **SoT = `status/hanjul-flyer-revamp/13_w3_tool_super_versionup_design.md`** (5역할 브레인스토밍 수렴 · Harold 승인).
 검수 = 11(W4 알림톡 — 착수 후순위) · 12(W3) 문서. 실사용 0 실측(회사 2·캠페인 0) = 하위호환 제약 없음.
 
 **구현된 것(전부 코드 완료 · tsc 0 · 게이트 테스트 29건 통과):**
-- 0단계 잔재 제거: DALL-E 생성 폐기(라우트 410 차단) · 죽은 미러 333줄 삭제 · pos-auto INSERT 컴럼/템플릿 코드 정정
+- 0단계 잔재 제거: DALL-E 생성 폐기(라우트 410 차단) · 죽은 미러 333줄 삭제 · pos-auto INSERT 컬럼/템플릿 코드 정정
 - 이미지 정책(§3): 네이버 = 후보 제시 전용(자동 확정 금지) · 자동 채움 = 카탈로그→로컬 2단 · 인쇄 로컬만(핫링크 차단) · 쿼리 정규화 + 신뢰도 게이트 + 429 표면화 · enrichCategoriesWithImages 삭제
 - 렌더 품질(§4): CT-F24 신설(프로모 badge 분리·밴드 3단·이름/가격 계급·SVG 픽토그램 15종) · grid_hero/poster_promo 수술(무이미지 스펙 슬랩) · POP 시즌 토큰 실배선 · 매대 띄지 1종 신규
-- 파이프라인(§2): POST /auto-build 신설(분류→엔진 자동 선정→변형) · renderTemplate variant 주입 · 발행 스냅샷(ALTER 4컴럼 + 503 안전망) · /copy 기간 갱신+변형 승계 · 인쇄 seasonToken 전달
+- 파이프라인(§2): POST /auto-build 신설(분류→엔진 자동 선정→변형) · renderTemplate variant 주입 · 발행 스냅샷(ALTER 4컬럼 + 503 안전망) · /copy 기간 갱신+변형 승계 · 인쇄 seasonToken 전달
 - 화면(§1): FlyerComposerPage 신설(화면 1개 · 3카드 프리셋 · 소스 4칩 · 손질 4종 · 발행 1버튼 · POP 뽑기 · 인쇄 관문) — 옛 FlyerPage(1,310줄) 삭제 · PopPage/PrintFlyerPage native dialog 0건 정리
 - 게이트(§8): vitest 신설(devDep · 빌드 제외 exclude) · `super-versionup-gates.test.ts` 29건 = 소비처 검증(미배선 재발 차단) + 재현성 + 실렌더 스모크 120조합 + 미러 부활 차단 + 이미지 정책
 
-**배포 순서:** hdm-push → 서버 build:safe → pm2 reload → **DDL(flyers ALTER 4컴럼 — 배포 뒤)** → 실측(13번 §7 6단계).
+**배포 이력(0820):** `a8350b8` 본체 → `b3fd740` 빌드 정정(미사용 변수 2 — 서버 tsc가 로컬 `--noEmit`보다 엄격) → `93389e6` **라이트 테마 정정**. 배포는 끝났고 **잔여 = DDL + 실측**이다.
+
+**DDL 실행완료(0820)** — `flyers` 4컬럼 실측 확인: `design_variant` jsonb · `media_assets` jsonb · `recommended_engine` jsonb · `render_schema_version` integer. 배포 축은 여기서 완결됐다.
+
+**⚠ 남은 것 = 실측만** — 13번 §7 6단계(상품 담기 → 자동 완성 → 「다른 느낌」 → 발행 → 재열람 재현성 2회 → POP·인쇄 뽑기). 예시 엑셀 = `한줄전단_상품_예시_30.xlsx`(상품 30 — 밴드 21+·1+1 토큰·긴 이름·6자리 가격·신선 원산지 케이스 포함).
 **실측 대기:** POS 이미지 보유율(실매장 확보 시) · rembg 컨테이너 미가동(보조 축) · 전수 실렌더 육안 검수.
+**배포 과정에서 잡은 결함 2건(전부 정정됨):**
+- 서버 빌드 tsc가 미사용 변수 2건을 잡았다 — **로컬 `tsc --noEmit`은 서버 빌드와 같지 않다**(`--noUnusedLocals` 차이). 프론트 작업 검증은 `npm run build`까지 돌려야 같은 기준이다.
+- **라이트 테마 화면에 다크 클래스를 썼다** — 신규 화면을 targetup(다크) 관례로 짜서 글씨가 보이지 않았다. 더불어 옛 코드가 쓰던 `text-text-tertiary`·`bg-surface-secondary`는 **이 프로젝트 토큰에 없는 유령 클래스**였다(스타일 미생성). 상세·재발 방지 = LESSONS_LEARNED.md 상단.
+
 **범위 밖 기록:** SenderRegistrationPage confirm() 1건(W3 밖) · W2 결제 축 = PAY 답 대기 · W4 알림톡 = 11번 문서 대기.
 
 ---

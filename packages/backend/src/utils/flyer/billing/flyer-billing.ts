@@ -10,7 +10,10 @@
  * 기존 canFlyerCompanySend는 총판 레벨 체크용으로 유지 (하위호환).
  */
 
+import { randomUUID } from 'crypto';
 import { query } from '../../../config/database';
+import { resolveFlyerStoreAccess, type FlyerAccessCode } from './flyer-payment-status';
+import { withFlyerTx, changeFlyerBalance } from './flyer-balance-ledger';
 
 export interface FlyerBillingSummary {
   company_id: string;
@@ -93,47 +96,56 @@ export async function recordFlyerMonthlyBilling(companyId: string, yearMonth: st
 
 /**
  * [하위호환] 총판(flyer_companies) 레벨 발송 가능 여부.
- * 총판 정지 시 하위 전체 매장 차단. canFlyerStoreSend에서 내부 호출됨.
+ * 판정은 CT-F26이 소유한다. 여기서는 조회만 한다.
  */
-export async function canFlyerCompanySend(companyId: string): Promise<{ ok: boolean; reason?: string }> {
+export async function canFlyerCompanySend(
+  companyId: string
+): Promise<{ ok: boolean; reason?: string; code?: FlyerAccessCode }> {
   const result = await query(
-    `SELECT payment_status, plan_expires_at FROM flyer_companies WHERE id = $1`,
+    `SELECT payment_status, plan_expires_at FROM flyer_companies WHERE id = $1 AND deleted_at IS NULL`,
     [companyId]
   );
   if (result.rows.length === 0) return { ok: false, reason: 'company_not_found' };
 
   const c = result.rows[0];
-  if (c.payment_status === 'suspended') return { ok: false, reason: '총판 계정이 정지되었습니다' };
-  if (c.plan_expires_at && new Date(c.plan_expires_at) < new Date()) {
-    return { ok: false, reason: '총판 구독 기간이 만료되었습니다' };
-  }
-  return { ok: true };
+  const access = resolveFlyerStoreAccess({
+    companyPaymentStatus: c.payment_status,
+    companyPlanExpiresAt: c.plan_expires_at,
+    // 총판만 보는 호출이므로 매장 축은 통과값으로 둔다
+    storePaymentStatus: 'active',
+    storePlanExpiresAt: null,
+  });
+  return access.allowed ? { ok: true } : { ok: false, reason: access.reason, code: access.code };
 }
 
 /**
  * ★ D113: 매장(flyer_users) 레벨 발송 가능 여부 확인.
- * 1. 매장 payment_status + plan_expires_at 체크
- * 2. 총판(flyer_companies) 레벨도 체크 (상위 차단)
+ * 총판 + 매장을 한 번에 읽어 CT-F26 판정에 넘긴다.
+ * ⚠ 화이트리스트 판정이라 축에 없는 값('paid' 등)은 통과하지 않는다.
  */
-export async function canFlyerStoreSend(userId: string): Promise<{ ok: boolean; reason?: string }> {
+export async function canFlyerStoreSend(
+  userId: string
+): Promise<{ ok: boolean; reason?: string; code?: FlyerAccessCode }> {
   const userRes = await query(
-    `SELECT u.payment_status, u.plan_expires_at, u.company_id
-     FROM flyer_users u WHERE u.id = $1 AND u.deleted_at IS NULL`,
+    `SELECT u.payment_status  AS store_payment_status,
+            u.plan_expires_at AS store_plan_expires_at,
+            c.payment_status  AS company_payment_status,
+            c.plan_expires_at AS company_plan_expires_at
+     FROM flyer_users u
+     JOIN flyer_companies c ON c.id = u.company_id
+     WHERE u.id = $1 AND u.deleted_at IS NULL AND c.deleted_at IS NULL`,
     [userId]
   );
   if (userRes.rows.length === 0) return { ok: false, reason: '매장 정보를 찾을 수 없습니다' };
 
-  const u = userRes.rows[0];
-
-  // 매장 레벨 체크
-  if (u.payment_status === 'suspended') return { ok: false, reason: '매장 구독이 정지되었습니다' };
-  if (u.payment_status === 'pending') return { ok: false, reason: '매장 구독이 아직 활성화되지 않았습니다' };
-  if (u.plan_expires_at && new Date(u.plan_expires_at) < new Date()) {
-    return { ok: false, reason: '매장 구독 기간이 만료되었습니다' };
-  }
-
-  // 총판 레벨 체크
-  return canFlyerCompanySend(u.company_id);
+  const r = userRes.rows[0];
+  const access = resolveFlyerStoreAccess({
+    companyPaymentStatus: r.company_payment_status,
+    companyPlanExpiresAt: r.company_plan_expires_at,
+    storePaymentStatus: r.store_payment_status,
+    storePlanExpiresAt: r.store_plan_expires_at,
+  });
+  return access.allowed ? { ok: true } : { ok: false, reason: access.reason, code: access.code };
 }
 
 /**
@@ -143,7 +155,8 @@ export async function canFlyerStoreSend(userId: string): Promise<{ ok: boolean; 
 export async function deductFlyerPrepaid(
   userId: string,
   count: number,
-  messageType: 'SMS' | 'LMS' | 'MMS' | 'ALIMTALK'
+  messageType: 'SMS' | 'LMS' | 'MMS' | 'ALIMTALK',
+  ref?: { campaignId?: string | null }
 ): Promise<{ ok: boolean; deducted?: number; balance?: number; reason?: string }> {
   // 단가 조회
   const priceRes = await query(
@@ -165,29 +178,35 @@ export async function deductFlyerPrepaid(
   const unitPrice = priceMap[messageType] || 9;
   const totalAmount = Math.ceil(unitPrice * count);
 
-  // Atomic 차감: balance >= totalAmount 조건
-  const updateRes = await query(
-    `UPDATE flyer_users
-     SET prepaid_balance = prepaid_balance - $1
-     WHERE id = $2 AND prepaid_balance >= $1 AND deleted_at IS NULL
-     RETURNING prepaid_balance`,
-    [totalAmount, userId]
-  );
-
-  if (updateRes.rows.length === 0) {
-    const currentBalance = Number(u.prepaid_balance || 0);
-    return {
-      ok: false,
-      balance: currentBalance,
-      reason: `잔액이 부족합니다 (필요: ₩${totalAmount.toLocaleString()}, 잔액: ₩${currentBalance.toLocaleString()})`,
-    };
+  // ★ CT-F27: 차감 + 원장 기록을 한 트랜잭션에서. 기록 없는 잔액 이동을 만들지 않는다.
+  //   멱등 키 = 캠페인 1건당 차감 1회. 같은 캠페인으로 재진입해도 두 번 빠지지 않는다.
+  const opId = ref?.campaignId ? `deduct:${ref.campaignId}` : `deduct:${randomUUID()}`;
+  let result: Awaited<ReturnType<typeof changeFlyerBalance>>;
+  try {
+    result = await withFlyerTx(client =>
+      changeFlyerBalance(client, {
+        userId,
+        amount: -totalAmount,
+        type: 'deduct',
+        description: `${messageType} 발송 ${count.toLocaleString()}건 (건당 ₩${unitPrice.toLocaleString()})`,
+        operationId: opId,
+        refType: ref?.campaignId ? 'campaign' : null,
+        refId: ref?.campaignId || null,
+        createdBy: 'store',
+      })
+    );
+  } catch (err: any) {
+    // ★ 던지면 발송 오케스트레이터가 캠페인을 'sending'인 채로 두고 끝난다.
+    //   실패는 반환값으로 돌려 호출부가 캠페인을 취소 처리하게 한다.
+    console.error('[CT-F03] 잔액 차감 실패:', err?.message || err);
+    return { ok: false, reason: '잔액 처리 중 오류가 발생했습니다. 발송이 취소되었습니다.' };
   }
 
-  return {
-    ok: true,
-    deducted: totalAmount,
-    balance: Number(updateRes.rows[0].prepaid_balance),
-  };
+  if (!result.ok) {
+    return { ok: false, balance: result.balance, reason: result.reason };
+  }
+
+  return { ok: true, deducted: totalAmount, balance: result.balanceAfter };
 }
 
 /**
@@ -195,18 +214,30 @@ export async function deductFlyerPrepaid(
  */
 export async function refundFlyerPrepaid(
   userId: string,
-  amount: number
+  amount: number,
+  ref?: { campaignId?: string | null; reason?: string }
 ): Promise<{ ok: boolean; balance?: number }> {
   if (amount <= 0) return { ok: true };
 
-  const result = await query(
-    `UPDATE flyer_users
-     SET prepaid_balance = prepaid_balance + $1
-     WHERE id = $2 AND deleted_at IS NULL
-     RETURNING prepaid_balance`,
-    [amount, userId]
-  );
-
-  if (result.rows.length === 0) return { ok: false };
-  return { ok: true, balance: Number(result.rows[0].prepaid_balance) };
+  // 멱등 키 = 캠페인 1건당 환불 1회. 재시도해도 두 번 돌려주지 않는다.
+  const opId = ref?.campaignId ? `refund:${ref.campaignId}` : `refund:${randomUUID()}`;
+  try {
+    const result = await withFlyerTx(client =>
+      changeFlyerBalance(client, {
+        userId,
+        amount: Math.trunc(amount),
+        type: 'refund',
+        description: ref?.reason || '발송 취소 환불',
+        operationId: opId,
+        refType: ref?.campaignId ? 'campaign' : null,
+        refId: ref?.campaignId || null,
+        createdBy: 'system',
+      })
+    );
+    if (!result.ok) return { ok: false };
+    return { ok: true, balance: result.balanceAfter };
+  } catch (err: any) {
+    console.error('[CT-F03] 환불 실패:', err?.message || err);
+    return { ok: false };
+  }
 }

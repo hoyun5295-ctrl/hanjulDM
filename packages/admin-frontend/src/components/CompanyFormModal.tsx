@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import { Button, Input, Select } from './ui';
+import { COMPANY_PAYMENT_OPTIONS } from '../lib/payment-status';
 
 interface CompanyFormProps {
   mode: 'create' | 'edit';
@@ -152,9 +153,7 @@ export default function CompanyFormModal({ mode, targetId, onClose, onSuccess }:
                   <Grid2>
                     <Input label="월 요금 (원)" type="number" value={String(form.monthly_fee || '')} onChange={e => set('monthly_fee', Number(e.target.value))} />
                     <Select label="결제 상태" value={form.payment_status || 'active'} onChange={e => set('payment_status', e.target.value)}>
-                      <option value="active">active</option>
-                      <option value="suspended">suspended</option>
-                      <option value="expired">expired</option>
+                      {COMPANY_PAYMENT_OPTIONS.map(o => (<option key={o.value} value={o.value}>{o.label}</option>))}
                     </Select>
                     <Input label="SMS 단가" type="number" value={String(form.sms_unit_price || '')} onChange={e => set('sms_unit_price', Number(e.target.value))} />
                     <Input label="LMS 단가" type="number" value={String(form.lms_unit_price || '')} onChange={e => set('lms_unit_price', Number(e.target.value))} />

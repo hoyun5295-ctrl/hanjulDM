@@ -102,7 +102,7 @@ function makeData(count: number, withImage: boolean): FlyerRenderData {
 }
 
 describe('게이트 2 — 렌더 재현성·실렌더 스모크', () => {
-  const ENGINES = ['grid_hero', 'poster_promo', 'deal_feed', 'magazine', 'catalog_swipe', 'grid_muji', 'deal_bento', 'poster_pop', 'magazine_zine', 'catalog_dark'];
+  const ENGINES = ['grid_hero', 'poster_promo', 'deal_feed', 'magazine', 'catalog_swipe', 'grid_muji', 'deal_bento', 'poster_pop', 'magazine_zine', 'catalog_dark', 'market_board', 'fresh_daily'];
 
   it('전 엔진 × 수량 밴드(1·6·21) × 이미지 유무 — 예외 없이 렌더되고 밴드 속성이 붙는다', () => {
     for (const engine of ENGINES) {

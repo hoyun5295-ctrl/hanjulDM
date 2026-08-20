@@ -3,9 +3,45 @@ import { API_BASE, apiFetch } from '../App';
 import AlertModal from '../components/AlertModal';
 import { SectionCard, StatCard, DataTable, Badge, Button, Input, Select } from '../components/ui';
 
-interface BalanceInfo { balance: number; billing_type: string; costPerSms?: number; costPerLms?: number; costPerMms?: number; }
-interface Transaction { id: string; amount: number; type: string; description: string; created_at: string; }
+interface PlanInfo {
+  monthly_fee: number;
+  payment_status: string;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+  /** ★ 이용 가능 판정은 서버(CT-F25)가 한다. 화면에서 상태 문자열을 다시 비교하지 않는다. */
+  service_active: boolean;
+  access_code: string;
+  access_reason: string;
+  payable: boolean;
+}
+interface BalanceInfo {
+  balance: number;
+  billing_type: string;
+  costPerSms?: number;
+  costPerLms?: number;
+  costPerMms?: number;
+  plan?: PlanInfo;
+}
+interface Transaction {
+  id: string;
+  amount: number;
+  balance_after: number;
+  type: string;
+  description: string;
+  created_at: string;
+}
 interface MonthlySummary { month: string; total_charged: number; total_deducted: number; total_refunded: number; transaction_count: number; }
+
+const DEFAULT_PLAN: PlanInfo = {
+  monthly_fee: 150000,
+  payment_status: 'pending',
+  plan_started_at: null,
+  plan_expires_at: null,
+  service_active: false,
+  access_code: 'STORE_PENDING',
+  access_reason: '',
+  payable: true,
+};
 
 export default function BalancePage({ token }: { token: string }) {
   const [balance, setBalance] = useState<BalanceInfo | null>(null);
@@ -18,6 +54,9 @@ export default function BalancePage({ token }: { token: string }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // ★ 응답 실패와 "값이 0" 을 구분한다. 예전에는 실패해도 화면이 조용히 비어 있었다.
+  const [loadError, setLoadError] = useState('');
+
   // 충전 요청
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
@@ -26,13 +65,14 @@ export default function BalancePage({ token }: { token: string }) {
 
   // ★ D114: 이용료 결제
   const [subscribing, setSubscribing] = useState(false);
-  const [planStatus, setPlanStatus] = useState<{ payment_status: string; plan_expires_at: string | null; monthly_fee: number }>({ payment_status: 'pending', plan_expires_at: null, monthly_fee: 150000 });
+  const [plan, setPlan] = useState<PlanInfo>(DEFAULT_PLAN);
 
   const [alert, setAlert] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'error' | 'info' }>({ show: false, title: '', message: '', type: 'info' });
   const PER_PAGE = 20;
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(PER_PAGE) });
       if (typeFilter) params.set('type', typeFilter);
@@ -44,21 +84,38 @@ export default function BalancePage({ token }: { token: string }) {
         apiFetch(`${API_BASE}/api/flyer/balance/transactions?${params}`),
         apiFetch(`${API_BASE}/api/flyer/balance/summary?months=6`),
       ]);
+
+      // 첫 실패 사유만 남긴다(뒤 요청 실패가 앞 사유를 덮지 않게)
+      let firstError = '';
+
       if (bRes.ok) {
         const bData = await bRes.json();
         setBalance(bData);
-        // ★ D114: 매장 구독 상태 (plan 응답에서 추출)
-        if (bData.plan) {
-          setPlanStatus({
-            payment_status: bData.plan.payment_status || 'pending',
-            plan_expires_at: bData.plan.plan_expires_at || null,
-            monthly_fee: Number(bData.plan.monthly_fee || 150000),
-          });
-        }
+        if (bData.plan) setPlan({ ...DEFAULT_PLAN, ...bData.plan });
+      } else {
+        const e = await bRes.json().catch(() => ({}));
+        setBalance(null);
+        firstError = e.error || '잔액 정보를 불러오지 못했습니다.';
       }
-      if (tRes.ok) { const d = await tRes.json(); setTransactions(d.transactions || d || []); setTotal(d.total || 0); }
+
+      if (tRes.ok) {
+        const d = await tRes.json();
+        setTransactions(d.transactions || []);
+        setTotal(d.total || 0);
+      } else {
+        setTransactions([]);
+        setTotal(0);
+        const e = await tRes.json().catch(() => ({}));
+        if (!firstError) firstError = e.error || '거래 내역을 불러오지 못했습니다.';
+      }
+
       if (sRes.ok) { const d = await sRes.json(); setSummary(d.summary || []); }
-    } catch {}
+      else setSummary([]);
+
+      setLoadError(firstError);
+    } catch (err: any) {
+      setLoadError(err?.message || '네트워크 오류로 정보를 불러오지 못했습니다.');
+    }
     finally { setLoading(false); }
   };
 
@@ -81,18 +138,18 @@ export default function BalancePage({ token }: { token: string }) {
         body: JSON.stringify({ amount, depositorName: depositorName.trim() }),
       });
       if (res.ok) {
-        setAlert({ show: true, title: '충전 요청 완료', message: `${fmtMoney(amount)}원 충전 요청이 접수되었습니다.\n입금 확인 후 자동 충전됩니다.`, type: 'success' });
+        setAlert({ show: true, title: '충전 요청 완료', message: `${fmtMoney(amount)}원 충전 요청이 접수되었습니다.\n입금 확인 후 충전됩니다.`, type: 'success' });
         setShowDeposit(false); setDepositAmount(''); setDepositorName('');
         loadData();
       } else {
         const e = await res.json();
         setAlert({ show: true, title: '요청 실패', message: e.error || '충전 요청에 실패했습니다.', type: 'error' });
       }
-    } catch { setAlert({ show: true, title: '오���', message: '네트워크 오류', type: 'error' }); }
+    } catch { setAlert({ show: true, title: '오류', message: '네트워크 오류', type: 'error' }); }
     finally { setDepositing(false); }
   };
 
-  // ★ D114: 이용료 결제 (잔액에서 15만원 차감 → 30일 active)
+  // ★ D114: 이용료 결제 (잔액에서 월 이용료 차감 → 30일 이용)
   const handleSubscribe = async () => {
     setSubscribing(true);
     try {
@@ -111,17 +168,18 @@ export default function BalancePage({ token }: { token: string }) {
     finally { setSubscribing(false); }
   };
 
-  const isActive = planStatus.payment_status === 'active' && planStatus.plan_expires_at && new Date(planStatus.plan_expires_at) > new Date();
-  const daysLeft = planStatus.plan_expires_at ? Math.max(0, Math.ceil((new Date(planStatus.plan_expires_at).getTime() - Date.now()) / 86400000)) : 0;
+  const isActive = plan.service_active;
+  const daysLeft = plan.plan_expires_at
+    ? Math.max(0, Math.ceil((new Date(plan.plan_expires_at).getTime() - Date.now()) / 86400000))
+    : 0;
 
   const typeLabel = (t: string) => {
     const map: Record<string, { variant: 'success' | 'error' | 'warn' | 'neutral'; label: string }> = {
-      charge: { variant: 'success', label: '충전' },
-      deposit_charge: { variant: 'success', label: '입금충전' },
       admin_charge: { variant: 'success', label: '관리자충전' },
+      deposit_charge: { variant: 'success', label: '입금충전' },
+      subscribe: { variant: 'warn', label: '이용료결제' },
       deduct: { variant: 'error', label: '사용' },
       refund: { variant: 'warn', label: '환불' },
-      admin_deduct: { variant: 'error', label: '관리자차감' },
     };
     const m = map[t] || { variant: 'neutral' as const, label: t };
     return <Badge variant={m.variant}>{m.label}</Badge>;
@@ -133,52 +191,66 @@ export default function BalancePage({ token }: { token: string }) {
     <>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold text-text">충전 관리</h2>
-        {balance?.billing_type === 'prepaid' && (
-          <Button onClick={() => setShowDeposit(!showDeposit)}>{showDeposit ? '닫기' : '충전 요청'}</Button>
-        )}
+        <Button onClick={() => setShowDeposit(!showDeposit)}>{showDeposit ? '닫기' : '충전 요청'}</Button>
       </div>
 
+      {loadError && (
+        <div className="mb-5 rounded-xl border border-error-500/30 bg-error-50 px-4 py-3 flex items-center justify-between gap-4">
+          <p className="text-sm font-medium text-error-600">{loadError}</p>
+          <button onClick={loadData} className="text-xs font-bold text-error-600 hover:underline shrink-0">다시 시도</button>
+        </div>
+      )}
+
       {/* ★ D114: 이용료 결제 카드 */}
-      <div className={`rounded-2xl border-2 p-6 mb-6 ${isActive ? 'border-green-200 bg-green-50' : 'border-orange-300 bg-orange-50'}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center ${isActive ? 'bg-green-100' : 'bg-orange-100'}`}>
-              <span className="text-2xl">{isActive ? '✅' : '🔒'}</span>
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-800">
-                {isActive ? '전단AI 이용 중' : '전단AI 이용료 결제가 필요합니다'}
-              </h3>
-              <p className="text-sm text-gray-600 mt-0.5">
-                {isActive
-                  ? `${planStatus.plan_expires_at?.slice(0, 10)}까지 (${daysLeft}일 남음)`
-                  : `월 ₩${planStatus.monthly_fee.toLocaleString()} / 결제 후 30일간 전단 제작·발송 기능이 열립니다`
-                }
+      <div className={`rounded-2xl border p-6 mb-6 ${isActive ? 'border-success-500/30 bg-success-50' : 'border-warn-500/40 bg-warn-50'}`}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-lg font-bold text-text">
+              {isActive ? '전단AI 이용 중' : '전단AI 이용료 결제가 필요합니다'}
+            </h3>
+            <p className="text-sm text-text-secondary mt-1">
+              {isActive
+                ? `${plan.plan_expires_at?.slice(0, 10)}까지 (${daysLeft}일 남음)`
+                : (plan.access_reason || `월 ₩${plan.monthly_fee.toLocaleString()} / 결제 후 30일간 전단 제작·발송 기능이 열립니다`)
+              }
+            </p>
+            {!isActive && plan.payable && (
+              <p className="text-xs text-text-muted mt-1">
+                월 ₩{plan.monthly_fee.toLocaleString()} · 현재 잔액에서 차감됩니다
               </p>
-            </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {isActive && daysLeft <= 7 && (
-              <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">곧 만료</span>
+              <span className="px-3 py-1 bg-warn-50 text-warn-500 text-xs font-bold rounded-full border border-warn-500/30">곧 만료</span>
             )}
-            <button
-              onClick={handleSubscribe}
-              disabled={subscribing}
-              className={`px-6 py-3 text-sm font-bold rounded-xl shadow-sm transition ${
-                isActive
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-orange-500 text-white hover:bg-orange-600 animate-pulse'
-              } disabled:opacity-50`}
-            >
-              {subscribing ? '처리 중...' : isActive ? '30일 연장 결제' : `₩${planStatus.monthly_fee.toLocaleString()} 이용료 결제`}
-            </button>
+            {plan.payable ? (
+              <button
+                onClick={handleSubscribe}
+                disabled={subscribing}
+                className={`px-6 py-3 text-sm font-bold rounded-xl shadow-card transition-colors disabled:opacity-50 ${
+                  isActive
+                    ? 'bg-success-600 text-white hover:bg-success-500'
+                    : 'bg-primary-600 text-white hover:bg-primary-700'
+                }`}
+              >
+                {subscribing ? '처리 중...' : isActive ? '30일 연장 결제' : `₩${plan.monthly_fee.toLocaleString()} 이용료 결제`}
+              </button>
+            ) : (
+              <span className="text-xs text-text-secondary">관리자 확인이 필요한 상태입니다</span>
+            )}
           </div>
         </div>
       </div>
 
       {/* 잔액 + 월별 요약 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="현재 잔액" value={balance ? `${fmtMoney(balance.balance)}원` : '-'} sub={balance?.billing_type === 'prepaid' ? '선불 요금제' : '후불 요금제'} className="md:col-span-1" />
+        <StatCard
+          label="현재 잔액"
+          value={balance ? `${fmtMoney(balance.balance)}원` : '불러오지 못함'}
+          sub="선불 요금제"
+          className="md:col-span-1"
+        />
         {summary.length > 0 && (
           <>
             <StatCard label="이번 달 충전" value={`${fmtMoney(summary[0]?.total_charged || 0)}원`} sub={summary[0]?.month || ''} />
@@ -202,7 +274,7 @@ export default function BalancePage({ token }: { token: string }) {
             <Button disabled={depositing} onClick={handleDeposit}>{depositing ? '요청 중...' : '충전 요청'}</Button>
           </div>
           <div className="mt-3 p-3 bg-primary-50 rounded-lg">
-            <p className="text-xs text-primary-600 font-medium">충전 요청 후 아래 계좌로 입금해주세요. 입금 확인 후 자동 충전됩니다.</p>
+            <p className="text-xs text-primary-600 font-medium">충전 요청 후 아래 계좌로 입금해주세요. 입금 확인 후 충전됩니다.</p>
             <p className="text-xs text-text-muted mt-1">* 정확한 입금 계좌는 관리자에게 문의해주세요.</p>
           </div>
         </SectionCard>
@@ -231,11 +303,12 @@ export default function BalancePage({ token }: { token: string }) {
 
       {/* 거래 내역 */}
       <DataTable
-        emptyMessage="거래 내역이 없습니다"
+        emptyMessage={loadError ? '거래 내역을 불러오지 못했습니다' : '거래 내역이 없습니다'}
         columns={[
           { key: 'description', label: '내역', render: (v) => <span className="font-medium text-text">{v || '-'}</span> },
           { key: 'type', label: '구분', align: 'center', render: (v) => typeLabel(v) },
           { key: 'amount', label: '금액', align: 'right', render: (v) => <span className={`font-semibold ${v > 0 ? 'text-success-600' : 'text-error-500'}`}>{v > 0 ? '+' : ''}{fmtMoney(v)}원</span> },
+          { key: 'balance_after', label: '잔액', align: 'right', render: (v) => <span className="text-text-secondary">{fmtMoney(Number(v || 0))}원</span> },
           { key: 'created_at', label: '날짜', align: 'center', render: (v) => <span className="text-text-muted text-xs">{fmtDate(v)}</span> },
         ]}
         rows={transactions}

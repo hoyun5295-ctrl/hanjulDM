@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import { SectionCard, Button, Input, DataTable, Badge, ConfirmModal, Toast } from '../components/ui';
 import CompanyFormModal from '../components/CompanyFormModal';
+import { companyPaymentLabel, companyPaymentTone } from '../lib/payment-status';
 
 interface Company {
   id: string;
@@ -106,7 +107,7 @@ export default function CompanyListPage() {
               { key: 'owner_name', label: '대표자' },
               { key: 'owner_phone', label: '연락처' },
               { key: 'plan_type', label: '요금제' },
-              { key: 'payment_status', label: '상태', render: (v) => <Badge variant={v === 'paid' ? 'success' : 'neutral'}>{v || '-'}</Badge> },
+              { key: 'payment_status', label: '상태', render: (v) => <Badge variant={companyPaymentTone(v)}>{companyPaymentLabel(v)}</Badge> },
               { key: 'created_at', label: '등록일', render: (v) => v ? new Date(v).toLocaleDateString('ko-KR') : '-' },
               { key: 'action', label: '액션', align: 'right', render: (_, row) => (
                 <div className="flex gap-1 justify-end">
