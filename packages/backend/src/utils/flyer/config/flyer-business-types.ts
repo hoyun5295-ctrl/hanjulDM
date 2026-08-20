@@ -50,19 +50,17 @@ export interface TemplateInfo {
 // deprecated 22종 발행 전단 안전 렌더: DEPRECATED_FALLBACK_MAP + CT-F14 renderTemplate 분기.
 // ============================================================
 export const TEMPLATE_REGISTRY: Record<string, TemplateInfo> = {
-  magazine:      { value: 'magazine',      label: '매거진 스크롤', desc: '패럴랙스 + 챕터 헤드 무드보드',                       color: 'linear-gradient(135deg, #292524, #C2410C)' },
-  magazine_zine: { value: 'magazine_zine', label: '매거진 ZINE',   desc: 'Riso 인쇄 + halftone + 미스레지스트레이션 인쇄 미감', color: 'linear-gradient(135deg, #FF3D2E, #2056FF)' },
-  deal_feed:     { value: 'deal_feed',     label: '오늘의 핫딜',   desc: '카운트다운 + 잔여수량 + 좋아요·공유',                  color: 'linear-gradient(135deg, #171717, #EF4444)' },
-  deal_bento:    { value: 'deal_bento',    label: '핫딜 벤또',     desc: '파스텔 8 컬러 벤또 그리드 + 카운트다운 + 마감 임박',   color: 'linear-gradient(135deg, #FFC9A0, #FFE9C6)' },
-  grid_hero:     { value: 'grid_hero',     label: '위클리 메인',   desc: 'Hero + 카테고리 sticky + 그리드 + 단가',               color: 'linear-gradient(135deg, #7C3AED, #EC4899)' },
-  grid_muji:     { value: 'grid_muji',     label: '미니멀 카탈로그', desc: 'MUJI 미니멀 + 카테고리 section + pgrid 2col',         color: 'linear-gradient(135deg, #FAFAFA, #C8261A)' },
-  catalog_swipe: { value: 'catalog_swipe', label: '카탈로그 가로', desc: '카테고리별 가로 스와이프 + hold 확대',                 color: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' },
-  catalog_dark:  { value: 'catalog_dark',  label: '다크 NOW PLAYING', desc: 'Netflix 다크 모드 + 음악 스트리밍 풍 swipe row',    color: 'linear-gradient(135deg, #0A0A0B, #F97316)' },
-  poster_promo:  { value: 'poster_promo',  label: '포스터 임팩트', desc: '인쇄 전단풍 + 6매체 정합 본진',                        color: 'linear-gradient(135deg, #1C1917, #FBBF24)' },
-  poster_pop:    { value: 'poster_pop',    label: '팝 아트 포스터', desc: '한국 팝 아트 + Memphis decorations + 큰 pop sticker',  color: 'linear-gradient(135deg, #FF3D2E, #FFD300)' },
-  // ★ 2026-08-20 신규 2종 — 마트 현장에서 가장 많이 쓰는 두 얼굴
-  market_board:  { value: 'market_board',  label: '시장 대자보',   desc: '크림 갱지 + 붉은 인장 + 점선 리더 — 사진 없어도 성립',  color: 'linear-gradient(135deg, #FBF6EA, #C0392B)' },
-  fresh_daily:   { value: 'fresh_daily',   label: '신선 데일리',   desc: '딥그린 + 큰 사진 + 원산지·규격 앞세운 신선 코너용',      color: 'linear-gradient(135deg, #15803D, #65A30D)' },
+  // ★ 2026-08-20 베스트 10 (16번 설계 §3) — 각 템플릿이 장사 장면 하나씩을 소유한다.
+  grid_hero:     { value: 'grid_hero',     label: '위클리 메인',     desc: '커머스 그리드 · 주간 행사 기본값 — 어떤 매장이든 안전한 첫 선택',   color: 'linear-gradient(135deg, #7C3AED, #EC4899)' },
+  fresh_daily:   { value: 'fresh_daily',   label: '신선 데일리',     desc: '딥그린 + 큰 사진 + 원산지 먼저 — 청과·수산·축산 신선 소구',        color: 'linear-gradient(135deg, #15803D, #65A30D)' },
+  market_board:  { value: 'market_board',  label: '시장 대자보',     desc: '갱지 + 붉은 인장 + 점선 리더 — 사진 없이도 서는 유일한 판',         color: 'linear-gradient(135deg, #FBF6EA, #C0392B)' },
+  deal_feed:     { value: 'deal_feed',     label: '오늘의 핫딜',     desc: '카운트다운 + 마감 임박 — 타임세일·급처분의 긴박',                   color: 'linear-gradient(135deg, #0A0A0B, #FF2E2E)' },
+  deal_bento:    { value: 'deal_bento',    label: '벤또 마켓',       desc: '파스텔 벤또 블록 — 소량 상품·감성 소구에 최강',                     color: 'linear-gradient(135deg, #FFC9A0, #FFE9C6)' },
+  grid_muji:     { value: 'grid_muji',     label: '프리미엄 셀렉트', desc: '여백 + 세리프 — 선물세트·고단가 상품의 정갈한 얼굴',               color: 'linear-gradient(135deg, #FAFAFA, #292524)' },
+  poster_promo:  { value: 'poster_promo',  label: '포스터 임팩트',   desc: '인쇄 전단 룩 그대로 — POP·인쇄까지 6매체 정합 본진',               color: 'linear-gradient(135deg, #1C1917, #FBBF24)' },
+  poster_pop:    { value: 'poster_pop',    label: '팝 아트',         desc: '멤피스 스티커 + 형광 — 개점·이벤트·젊은 상권',                     color: 'linear-gradient(135deg, #FF3D2E, #FFD300)' },
+  magazine:      { value: 'magazine',      label: '매거진 스토리',   desc: '세리프 표지 + 챕터 — 사진 좋은 매장의 브랜드 전단',                 color: 'linear-gradient(135deg, #211D19, #B4552D)' },
+  catalog_dark:  { value: 'catalog_dark',  label: '다크 쇼케이스',   desc: '블랙 무대 + 조명 앰버 — 심야·주류·프리미엄 정육',                   color: 'linear-gradient(135deg, #050505, #FFB020)' },
 };
 
 // ============================================================
@@ -75,6 +73,9 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateInfo> = {
 // DB 마이그레이션 0건 — 코드 분기로만 안전 렌더 보장. (옛 발행 전단 흔들림 0)
 // ============================================================
 export const DEPRECATED_FALLBACK_MAP: Record<string, string> = {
+  // ★ 2026-08-20 16번 설계 §3 — 베스트 10 통합으로 폐기된 2코드
+  magazine_zine:    'magazine',
+  catalog_swipe:    'catalog_dark',
   // 기본 5 → 신규
   grid:             'grid_hero',
   magazine:         'magazine',
@@ -96,10 +97,10 @@ export const DEPRECATED_FALLBACK_MAP: Record<string, string> = {
   event_grand_open: 'poster_promo',
 
   // 마트 4 → 신규
-  mart_fresh:       'catalog_swipe',
+  mart_fresh:       'fresh_daily',   // 0820 정정 — swipe 폐기로 이중 홉 차단
   mart_clearance:   'deal_feed',
   mart_general:     'grid_hero',
-  mart_seafood:     'catalog_swipe',
+  mart_seafood:     'fresh_daily',   // 0820 정정 — swipe 폐기로 이중 홉 차단
 
   // 정육 3 → 신규 (PHASE 1에서 정육 prefix 분리 별도 작업 예정)
   butcher_premium:  'magazine',

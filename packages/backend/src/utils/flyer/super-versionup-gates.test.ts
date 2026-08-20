@@ -8,7 +8,7 @@
  *   2. 렌더 재현성·실렌더 스모크 — 같은 입력 = 같은 HTML, 변형 주입이 실제로 결과를 바꾼다,
  *      밴드 3단·무이미지 슬랩·프로모 badge 분리·계급 클래스가 실 HTML에 나온다.
  *   3. 미리보기 = 발행 — 프론트 미러 렌더러 부활 차단(FlyerPage 죽은 미러 280줄 사고 재발 방지).
- *   4. 이미지 정책 — 네이버 자동 확정 금지(autoMatchImage는 항상 후보만) · 인쇄 파이프라인의 네이버 소싱 0.
+ *   4. 이미지 정책 — 웹 전단만 1클릭 자동 부착(게이트+로컬저장+출처표기) · 인쇄 파이프라인의 네이버 소싱 0 · 인쇄는 동의 필수.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
@@ -20,6 +20,10 @@ import {
   extractPromoToken, itemCountBand, nameSizeClass, priceScaleClass, categoryPictogram,
 } from '../flyer/product/flyer-render-prep';
 import { cleanProductName, imageMatchConfidence, autoMatchImage } from '../flyer/product/flyer-naver-search';
+import { TEMPLATE_REGISTRY } from '../flyer/config/flyer-business-types';
+
+// ★ 16번 설계 §3 — 베스트 10 확정 라인업
+const BEST10 = ['grid_hero', 'fresh_daily', 'market_board', 'deal_feed', 'deal_bento', 'grid_muji', 'poster_promo', 'poster_pop', 'magazine', 'catalog_dark'];
 
 const BACKEND_SRC = path.resolve(__dirname, '..', '..');
 const FRONTEND_SRC = path.resolve(__dirname, '..', '..', '..', '..', 'frontend', 'src');
@@ -102,7 +106,8 @@ function makeData(count: number, withImage: boolean): FlyerRenderData {
 }
 
 describe('게이트 2 — 렌더 재현성·실렌더 스모크', () => {
-  const ENGINES = ['grid_hero', 'poster_promo', 'deal_feed', 'magazine', 'catalog_swipe', 'grid_muji', 'deal_bento', 'poster_pop', 'magazine_zine', 'catalog_dark', 'market_board', 'fresh_daily'];
+  // ★ 16번 설계 §3 — 베스트 10 확정 라인업(폐기 2코드는 게이트 6에서 폴백 검증)
+  const ENGINES = BEST10;
 
   it('전 엔진 × 수량 밴드(1·6·21) × 이미지 유무 — 예외 없이 렌더되고 밴드 속성이 붙는다', () => {
     for (const engine of ENGINES) {
@@ -178,6 +183,23 @@ describe('게이트 4 — 이미지 정책', () => {
   it('autoMatchImage는 어떤 경우에도 imageUrl을 확정하지 않는다(후보만)', async () => {
     const r = await autoMatchImage('테스트상품', 'test-company');
     expect(r.imageUrl).toBeNull();
+  });
+
+  // ★ 2026-08-20 정책 변경(Harold 지시) — 웹 전단 한정으로 1클릭 자동 부착을 연다.
+  //   막았던 이유가 "인쇄물로 나가는 구조"였으므로, 그 조건 3개를 코드에 남긴 채로만 연다.
+  it('자동 부착 경로(/auto-images)는 게이트 통과분만 붙이고 받아서 저장한다', () => {
+    const route = fs.readFileSync(path.join(BACKEND_SRC, 'routes', 'flyer', 'flyers.ts'), 'utf-8');
+    const block = route.slice(route.indexOf("router.post('/auto-images'"), route.indexOf("router.post('/classify-products'"));
+    expect(block).toContain('passesMatchGate(imageMatchConfidence');  // 오매칭 차단
+    expect(block).toContain('downloadAndSaveImage');                  // 핫링크 금지
+    expect(block).toContain("source: 'naver'");                       // 출처 표기
+  });
+
+  it('자동 부착분은 화면에서 출처가 네이버로 남아 인쇄 동의 게이트에 걸린다', () => {
+    const page = fs.readFileSync(path.join(FRONTEND_SRC, 'pages', 'FlyerComposerPage.tsx'), 'utf-8');
+    expect(page).toContain("imageSource: '네이버'");
+    // 인쇄 관문의 자동 이미지 판정이 '카탈로그'만 통과시키는 구조여야 네이버분이 동의 대상이 된다
+    expect(page).toContain("r.src !== '없음' && r.src !== '카탈로그'");
   });
 
   it('인쇄 이미지 파이프라인에 네이버 소싱이 없다(제3자 저작물 인쇄 차단 — §0-3)', () => {
@@ -269,5 +291,71 @@ describe('게이트 5 — 제작 화면 경계 계약', () => {
     }
     expect(marketBoard).toContain('nm-m');
     expect(marketBoard).toContain('pr-m');
+  });
+});
+
+// ────────────────────────────────────────────────────
+// 6. 베스트10 골격 계약 (16번 설계 §4 — 10종 전부의 하한)
+// ────────────────────────────────────────────────────
+describe('게이트 6 — 베스트10 골격 계약(16번 §4)', () => {
+  const data = makeData(6, false); // 이미지 0 — 슬랩 계약까지 한 렌더로 검증
+  const rendered = new Map(BEST10.map(e => [e, renderTemplate(e, data)]));
+
+  for (const eng of BEST10) {
+    const html = rendered.get(eng)!;
+
+    it(`${eng} — 헤더 3요소(매장·행사·기간)가 렌더에 있다`, () => {
+      expect(html).toContain('실측마트');
+      expect(html).toContain('이번 주 행사');
+      const hasPeriod = ['8/20', '08.20', '8.20', '08/20'].some(f => html.includes(f));
+      expect(hasPeriod, `${eng} 기간 표기 없음`).toBe(true);
+    });
+
+    it(`${eng} — 무이미지 렌더에 시각 폴백(svg)이 있다(빈 회색 박스 금지)`, () => {
+      expect(html).toContain('<svg');
+    });
+
+    it(`${eng} — 매장명 푸터 재노출(≥2회)`, () => {
+      expect(html.split('실측마트').length - 1).toBeGreaterThanOrEqual(2);
+    });
+
+    it(`${eng} — 더보기 패턴 금지(§1-1 시대성)`, () => {
+      expect(html.includes('더 보기')).toBe(false);
+      expect(html.includes('더보기')).toBe(false);
+    });
+
+    it(`${eng} — keyframes 가 있으면 reduced-motion 무력화가 있다`, () => {
+      if (html.includes('@keyframes')) {
+        expect(html).toContain('prefers-reduced-motion');
+      }
+    });
+
+    it(`${eng} — 장바구니 계약(data-product) 유지`, () => {
+      // 서버 렌더 속성 또는 런타임 조립(setAttribute) 어느 쪽이든 카트 스크립트가 읽는다
+      const ok = html.includes('data-product=') || html.includes("setAttribute('data-product'");
+      expect(ok, `${eng} 카드에 data-product 계약 없음`).toBe(true);
+    });
+  }
+
+  it('REGISTRY = 정확히 베스트 10', () => {
+    expect(Object.keys(TEMPLATE_REGISTRY).sort()).toEqual([...BEST10].sort());
+  });
+
+  it('폐기 2코드(magazine_zine·catalog_swipe)는 새 본체로 폴백 렌더된다', () => {
+    for (const dead of ['magazine_zine', 'catalog_swipe']) {
+      const html = renderTemplate(dead, data);
+      expect(html.length).toBeGreaterThan(1000);
+      expect(html).toContain('data-band');
+    }
+  });
+
+  it('전화·길찾기 액션(externalLinks)이 dyn 섹션으로 렌더된다', () => {
+    const withLinks = { ...makeData(4, false), externalLinks: [
+      { label: '전화', url: 'tel:0000000000', icon: 'phone' },
+      { label: '길찾기', url: 'https://map.example', icon: 'map' },
+    ]};
+    const html = renderTemplate('grid_hero', withLinks);
+    expect(html).toContain('dyn-link');
+    expect(html).toContain('tel:0000000000');
   });
 });

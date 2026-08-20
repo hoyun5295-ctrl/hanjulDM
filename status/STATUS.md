@@ -2,6 +2,13 @@
 
 > **업데이트:** 2026-08-20 (결제 상태·잔액 축 정정 / 슈퍼버전업 W3 구현) — 그 아래 D159 절은 당시 기록 원문 보존
 
+## ★ 2026-08-20 모바일 전단 베스트 10 재탄생 — **M1~M5 구현 완료 · 배포 대기**
+
+**SoT = `status/hanjul-flyer-revamp/16_mobile_template_best10_redesign.md`** (설계·이행 현황·⛔ 소유).
+한 줄 요약 = 12종을 **통합 2(zine→magazine · swipe→catalog_dark)로 베스트 10** 재편 + 골격 계약 게이트(총 135건) 신설.
+게이트가 기존 실결함 4건을 잡았다(행사명 무시 3엔진 · 죽은 판매 게이지 · 픽토그램 투명 · 폴백 이중 홉) — 전부 정정.
+잔여 = 배포 후 갤러리 10종 육안 순회(Harold).
+
 ## ★ 2026-08-20 제작 화면 재설계 + 템플릿 갤러리 복원 — **코드 완료 · 배포 대기**
 
 **SoT = `status/hanjul-flyer-revamp/15_composer_design_and_template_gallery.md`**.

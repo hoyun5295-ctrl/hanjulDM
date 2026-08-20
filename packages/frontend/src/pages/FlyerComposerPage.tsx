@@ -10,7 +10,7 @@
  *
  * 옛 FlyerPage(목록+폼 1,310줄)를 대체한다 — 이력 관리는 홈의 「최근 전단」 조각이 잇는다.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import AlertModal from '../components/AlertModal';
 import { Button, Input, ConfirmModal, Toast } from '../components/ui';
@@ -31,7 +31,8 @@ interface NormItem {
   /** 담을 때의 원본가(가격 확인 시트 diff 근거 — POS·카탈로그 값) */
   sourcePrice?: number;
   /** 이미지 출처 — 인쇄 확인 시트 3열(§1-5). manual = 사장님 업로드/카탈로그 저장분 */
-  imageSource?: '카탈로그' | 'POS' | '기본 자산' | '없음';
+  /** 이미지 출처 — 인쇄 확인 시트 3열(§1-5). '네이버'는 자동 매칭분이라 인쇄 시 별도 동의를 받는다 */
+  imageSource?: '카탈로그' | 'POS' | '기본 자산' | '네이버' | '없음';
 }
 interface AutoBuild {
   template: string;
@@ -97,6 +98,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [pickedTemplate, setPickedTemplate] = useState<string | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [imageFilling, setImageFilling] = useState(false);
 
   // 손질
   const [pricePop, setPricePop] = useState<{ idx: number; value: string } | null>(null);
@@ -300,6 +302,48 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       return;
     }
     setItemsAndBuild(next);
+  };
+
+  // ── 상품 이미지 한 번에 채우기 (네이버 쇼핑 · 게이트 통과분만 · 로컬 저장본) ──
+  const fillImages = async () => {
+    const targets = items.map((it, i) => ({ index: i, name: it.name })).filter((t, i) => !items[i].imageUrl && t.name);
+    if (targets.length === 0) return;
+    setImageFilling(true);
+    try {
+      const res = await apiFetch(`${API_BASE}/api/flyer/flyers/auto-images`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: targets }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setAlert({ show: true, title: '이미지 채우기 실패', message: d.error || '잠시 후 다시 시도해 주세요.', type: 'error' });
+        return;
+      }
+      const next = [...items];
+      for (const f of (d.filled || [])) {
+        // 출처를 '네이버'로 남긴다 — 인쇄 관문의 자동 이미지 동의 체크가 이 값으로 걸린다
+        if (next[f.index]) next[f.index] = { ...next[f.index], imageUrl: f.imageUrl, imageSource: '네이버' };
+      }
+      setItemsAndBuild(next);
+
+      const filledN = (d.filled || []).length;
+      const quota = d.quota_exhausted;
+      setAlert({
+        show: true,
+        title: filledN > 0 ? `이미지 ${filledN}건 채웠습니다` : '채운 이미지가 없습니다',
+        type: filledN > 0 ? 'success' : 'error',
+        message: [
+          filledN > 0 ? `상품 ${targets.length}개 중 ${filledN}개에 이미지를 붙였습니다.` : `상품 ${targets.length}개에서 확실한 이미지를 찾지 못했습니다.`,
+          (d.missed || []).length > 0 && !quota ? '못 찾은 상품은 이름이 짧거나 규격이 특이한 경우입니다. 카탈로그에 직접 올리면 다음부터 자동으로 붙습니다.' : '',
+          quota ? '오늘 이미지 검색 한도를 다 써서 나머지는 건너뛰었습니다. 내일 다시 시도해 주세요.' : '',
+        ].filter(Boolean).join('\n'),
+      });
+    } catch {
+      setAlert({ show: true, title: '오류', message: '네트워크 오류', type: 'error' });
+    } finally {
+      setImageFilling(false);
+    }
   };
 
   // ── 손질 4종 ──
@@ -569,20 +613,29 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
 
         {/* ══ 만들어지는 방식 ══ */}
         <section className="rounded-2xl border border-border bg-surface p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* 화살표를 칸 안에 absolute 로 띄우면 글줄을 덮는다 — 제 칸을 가진 flex 아이템으로 둔다 */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0">
             {[
               { n: '01', t: '상품을 담는다', d: 'POS 인기·지난 전단·카탈로그·엑셀에서 체크만' },
-              { n: '02', t: 'AI가 구성한다', d: '분류·디자인·시즌 톤까지 자동. 마음에 안 들면 한 번 더' },
-              { n: '03', t: '뽑아 쓴다', d: '전단 URL·POP·인쇄물·문자 발송까지 그대로' },
+              { n: '02', t: 'AI가 구성한다', d: '분류·디자인·시즌 톤까지 자동 구성' },
+              { n: '03', t: '뽑아 쓴다', d: '전단 URL·POP·인쇄물·문자 발송까지' },
             ].map((st, i) => (
-              <div key={st.n} className="relative flex gap-3">
-                <span className="font-poster text-2xl text-brand-500/70 leading-none">{st.n}</span>
-                <div>
-                  <p className="text-sm font-bold text-text">{st.t}</p>
-                  <p className="text-[12px] text-text-muted kr mt-0.5 leading-snug">{st.d}</p>
+              <Fragment key={st.n}>
+                <div className="flex-1 min-w-0 flex gap-3">
+                  <span className="font-poster text-2xl text-brand-500/70 leading-none shrink-0">{st.n}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-text">{st.t}</p>
+                    <p className="text-[12px] text-text-muted kr mt-0.5 leading-snug">{st.d}</p>
+                  </div>
                 </div>
-                {i < 2 && <span className="hidden sm:block absolute right-[-8px] top-3 text-border-strong">→</span>}
-              </div>
+                {i < 2 && (
+                  <div className="hidden sm:flex items-center justify-center w-10 shrink-0" aria-hidden="true">
+                    <svg width="18" height="8" viewBox="0 0 18 8" fill="none" className="text-border-strong">
+                      <path d="M0 4h15M12 1l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
+              </Fragment>
             ))}
           </div>
         </section>
@@ -642,6 +695,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const previewCategories = build?.categories?.length ? build.categories : (items.length ? [{ name: '상품', items }] : []);
   const templateLabel = (code?: string) =>
     templates.find(t => t.value === code)?.label || code || '자동';
+  const noImageCount = items.filter(it => !it.imageUrl).length;
   const applyTemplate = (code: string | null) => {
     setPickedTemplate(code);
     setGalleryOpen(false);
@@ -763,8 +817,14 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           </div>
 
           <div className="bg-surface rounded-2xl border border-border p-4">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2">
               <p className="text-sm font-bold text-text">담긴 상품 <span className="text-text-muted">{items.length}</span></p>
+              {noImageCount > 0 && (
+                <button onClick={fillImages} disabled={imageFilling}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 disabled:opacity-60 transition-colors shrink-0">
+                  {imageFilling ? '이미지 찾는 중...' : `이미지 한 번에 채우기 (${noImageCount})`}
+                </button>
+              )}
             </div>
             {items.length === 0 ? (
               <p className="text-xs text-text-muted py-6 text-center">위의 칩에서 상품을 담아 주세요.<br />담는 순간 전단이 만들어집니다.</p>
