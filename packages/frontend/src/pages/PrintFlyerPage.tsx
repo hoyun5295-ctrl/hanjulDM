@@ -112,6 +112,9 @@ function genId() { return `p_${Date.now()}_${++idCounter}`; }
 export default function PrintFlyerPage({ token: _token }: { token: string }) {
   // 기본 설정
   const [title, setTitle] = useState('');
+  // ★ 2026-08-20 native prompt/confirm 폐기 — 커스텀 팝오버(금칙 규율)
+  const [catPop, setCatPop] = useState<{ mode: 'add' | 'rename'; catId?: string; value: string } | null>(null);
+  const [catDelete, setCatDelete] = useState<string | null>(null);
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [templateCode, setTemplateCode] = useState('mart_spring_v1');
@@ -205,23 +208,20 @@ export default function PrintFlyerPage({ token: _token }: { token: string }) {
   // ============================================================
   // 카테고리 관리
   // ============================================================
-  const addCategory = () => {
-    const name = prompt('카테고리 이름을 입력하세요');
-    if (!name) return;
-    setCategories(prev => [...prev, { id: genId(), name, items: [] }]);
-  };
-
-  const removeCategory = (catId: string) => {
-    if (!confirm('이 카테고리를 삭제하시겠습니까?')) return;
-    setCategories(prev => prev.filter(c => c.id !== catId));
-  };
-
+  const addCategory = () => setCatPop({ mode: 'add', value: '' });
+  const removeCategory = (catId: string) => setCatDelete(catId);
   const renameCat = (catId: string) => {
     const cat = categories.find(c => c.id === catId);
     if (!cat) return;
-    const name = prompt('카테고리 이름', cat.name);
-    if (!name) return;
-    setCategories(prev => prev.map(c => c.id === catId ? { ...c, name } : c));
+    setCatPop({ mode: 'rename', catId, value: cat.name });
+  };
+  const applyCatPop = () => {
+    if (!catPop) return;
+    const name = catPop.value.trim();
+    if (!name) { setCatPop(null); return; }
+    if (catPop.mode === 'add') setCategories(prev => [...prev, { id: genId(), name, items: [] }]);
+    else setCategories(prev => prev.map(c => c.id === catPop.catId ? { ...c, name } : c));
+    setCatPop(null);
   };
 
   // ============================================================
@@ -857,6 +857,34 @@ export default function PrintFlyerPage({ token: _token }: { token: string }) {
         onClose={() => setShowExcelModal(false)}
         onComplete={handleExcelComplete}
       />
+      {catPop && (
+        <div className="fixed inset-0 z-[2000] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setCatPop(null); }}>
+          <div className="bg-surface rounded-2xl border border-border p-5 w-[300px] space-y-3">
+            <p className="text-sm font-bold text-white">{catPop.mode === 'add' ? '카테고리 추가' : '카테고리 이름 변경'}</p>
+            <input autoFocus value={catPop.value}
+              onChange={e => setCatPop({ ...catPop, value: e.target.value })}
+              onKeyDown={e => { if (e.key === 'Enter') applyCatPop(); }}
+              placeholder="카테고리 이름"
+              className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-2 text-sm text-white outline-none" />
+            <div className="flex gap-2">
+              <button onClick={() => setCatPop(null)} className="flex-1 py-2 rounded-lg bg-surface-secondary text-white/70 text-sm">취소</button>
+              <button onClick={applyCatPop} className="flex-1 py-2 rounded-lg bg-primary-600 text-white text-sm font-bold">확인</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {catDelete && (
+        <div className="fixed inset-0 z-[2000] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setCatDelete(null); }}>
+          <div className="bg-surface rounded-2xl border border-border p-5 w-[300px] space-y-3">
+            <p className="text-sm font-bold text-white">카테고리 삭제</p>
+            <p className="text-xs text-text-tertiary">이 카테고리와 안의 상품이 목록에서 빠집니다.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setCatDelete(null)} className="flex-1 py-2 rounded-lg bg-surface-secondary text-white/70 text-sm">취소</button>
+              <button onClick={() => { setCategories(prev => prev.filter(c => c.id !== catDelete)); setCatDelete(null); }} className="flex-1 py-2 rounded-lg bg-rose-600 text-white text-sm font-bold">삭제</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

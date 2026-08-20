@@ -27,6 +27,10 @@ import { renderProductImage, resolveProductImageUrl } from '../../../utils/produ
 import { resolveSeasonToken, SEASON_TOKENS, type SeasonToken } from './season-resolver';
 import { DEPRECATED_FALLBACK_MAP } from '../config/flyer-business-types';
 import { renderQrSection, renderCartScript } from './flyer-page-injections';
+// ★ 2026-08-20 슈퍼버전업 2단계 — 렌더 준비 CT(프로모 분리·밴드·픽토그램) + URL 매체 토큰(13번 설계 §4·§5)
+import { prepareFlyerData, itemCountBand, countItems, bandStyleBlock, categoryPictogram, nameSizeClass, priceScaleClass } from './flyer-render-prep';
+import { generateMediaCssBlock } from './design-tokens';
+import { variantToStyleBlock, type DesignVariant } from './claude-design-renderer';
 
 // ============================================================
 // 인터페이스
@@ -202,23 +206,9 @@ export function categoryEn(name: string): string {
   return map[trimmed] || (trimmed ? trimmed.toUpperCase() : 'GOODS');
 }
 
-/** D154 PHASE 0: 카테고리 → 이미지 placeholder 이모지 (imageUrl 미존재 시) */
-export function categoryEmoji(name: string): string {
-  const trimmed = (name || '').trim();
-  const map: Record<string, string> = {
-    '청과/야채': '🥬', '청과': '🍎', '야채': '🥬', '과일': '🍊',
-    '축산': '🥩', '정육': '🥩', '한우': '🥩',
-    '수산': '🐟',
-    '공산': '🛒', '공산품': '🛒',
-    '냉동': '❄️',
-    '유제품': '🥛',
-    '음료/주류': '🍺', '음료': '🥤', '주류': '🍺',
-    '생활용품': '🧴',
-    '베이커리': '🥖', '빵': '🥐',
-    '간식': '🍪',
-  };
-  return map[trimmed] || '🛒';
-}
+// ★ 2026-08-20 슈퍼버전업 2단계 — 이모지 폴백 폐기(13번 설계 §4-1).
+//   무이미지 폴백은 flyer-render-prep.ts의 categoryPictogram(단색 SVG)이 소유한다 —
+//   OS별 이모지 모양 상이 + 임시 화면 티 제거. 옛 categoryEmoji 함수는 삭제(소비처 전량 전환).
 
 // ============================================================
 // 다이나믹 섹션 (V3 보존 — 외부링크/공지/GIF 배너)
@@ -357,7 +347,7 @@ export function renderStoryEngine(d: FlyerRenderData, token: SeasonToken): strin
     aiCopy: it.aiCopy || '',
     imageUrl: toAbsUrl(it.imageUrl || '') || '',
     bg: categoryBg(it.category),
-    emoji: categoryEmoji(it.category),
+    emoji: categoryPictogram(it.category),
   }));
   const slideItemsJson = JSON.stringify(slideItems).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e');
 
@@ -952,7 +942,7 @@ export function renderMagazineEngine(d: FlyerRenderData, token: SeasonToken): st
       const disc = calcDisc(item.originalPrice, item.salePrice);
       const heroBlock = item.imageUrl
         ? `<img class="img" src="${esc(toAbsUrl(item.imageUrl) || '')}" alt="${esc(item.name)}" style="position:absolute;inset:-8% 0 -12% 0;width:100%;height:114%;object-fit:cover;will-change:transform">`
-        : `<div class="img"><div class="ph" style="background:${categoryBg(cat.name)};"><span class="ph-emoji" style="font-size:180px;line-height:1;filter:drop-shadow(0 12px 24px rgba(0,0,0,0.25));">${esc(categoryEmoji(cat.name))}</span></div></div>`;
+        : `<div class="img"><div class="ph" style="background:${categoryBg(cat.name)};"><span class="ph-emoji" style="font-size:180px;line-height:1;filter:drop-shadow(0 12px 24px rgba(0,0,0,0.25));">${esc(categoryPictogram(cat.name))}</span></div></div>`;
       const specParts: string[] = [];
       if (item.unit) specParts.push(`<span>${esc(item.unit)}</span>`);
       if (item.origin) specParts.push(`<span>${esc(item.origin)}</span>`);
@@ -1292,7 +1282,7 @@ export function renderDealFeedEngine(d: FlyerRenderData, token: SeasonToken): st
     endsAt: baseEndsAt,
     imageUrl: toAbsUrl(it.imageUrl || '') || '',
     bg: categoryBg(it.category),
-    emoji: categoryEmoji(it.category),
+    emoji: categoryPictogram(it.category),
   }));
   const dealsJson = JSON.stringify(deals).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e');
 
@@ -1730,7 +1720,10 @@ export function renderGridHeroEngine(d: FlyerRenderData, token: SeasonToken): st
       aiCopy: it.aiCopy || '',
       imageUrl: toAbsUrl(it.imageUrl || '') || '',
       bg: categoryBg(cat.name),
-      emoji: categoryEmoji(cat.name),
+      emoji: categoryPictogram(cat.name),
+      // ★ 2026-08-20 계급 판정은 서버(CT-F24) 한 곳 — 화면은 문자열 소비만(13번 설계 §4)
+      nmc: nameSizeClass(it.name),
+      prc: priceScaleClass(it.salePrice),
     })),
   }));
   const categoriesJson = JSON.stringify(categoriesData).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e');
@@ -1742,8 +1735,9 @@ export function renderGridHeroEngine(d: FlyerRenderData, token: SeasonToken): st
     unit: f.unit || '',
     imageUrl: toAbsUrl(f.imageUrl || '') || '',
     bg: categoryBg(f.category),
-    emoji: categoryEmoji(f.category),
+    emoji: categoryPictogram(f.category),
     slogan: f.slogan,
+    prc: priceScaleClass(f.salePrice),
   }));
   const featuredJson = JSON.stringify(featuredData).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e');
 
@@ -1847,6 +1841,17 @@ button { font-family: inherit; }
 .pinfo .orig { font-size: 11px; color: var(--color-text-weak); text-decoration: line-through; }
 .pinfo .meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
 .pinfo .meta .pill { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--color-soft); color: var(--color-text-weak); font-weight: 600; }
+/* ★ 2026-08-20 이름·가격 계급(13번 설계 §4-3·§4-4) */
+.pinfo .nm.nm-m { font-size: 13px; }
+.pinfo .nm.nm-l { font-size: 12px; letter-spacing: -0.02em; }
+.pinfo .sale.pr-m { font-size: 16px; }
+.pinfo .sale.pr-l { font-size: 15px; letter-spacing: -0.03em; }
+.hero .copy .priceline .sale.pr-l { font-size: 28px; }
+/* ★ 무이미지 스펙 조판 슬랩 */
+.pic .slab-ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.pic .slab-ph .slab-picto { font-size: 44px; line-height: 1; }
+.pic .slab-ph .slab-l1 { font-size: 15px; font-weight: 900; color: rgba(255,255,255,0.95); letter-spacing: -0.01em; }
+.pic .slab-ph .slab-l2 { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.72); }
 .pcard .addbtn { position: absolute; right: 6px; bottom: 90px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--color-text-strong); color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.18); cursor: pointer; z-index: 2; }
 .pcard .addbtn svg { width: 16px; height: 16px; }
 .pcard .addbtn.added { background: var(--color-primary); }
@@ -1993,7 +1998,14 @@ button { font-family: inherit; }
 
   function buildPic(it) {
     if (it.imageUrl) return '<img class="ph-img" src="' + escHtml(it.imageUrl) + '" alt="' + escHtml(it.name) + '">';
-    return '<div class="ph" style="background:' + it.bg + '"><span class="ph-emoji">' + it.emoji + '</span></div>';
+    // ★ 2026-08-20 무이미지 = 스펙 조판 슬랩(13번 설계 §4-1) — 폴백이 아니라 1급 비주얼
+    var l1 = it.origin || '';
+    var l2 = it.unit || '';
+    return '<div class="ph slab-ph" style="background:' + it.bg + '">' +
+      '<span class="slab-picto">' + it.emoji + '</span>' +
+      (l1 ? '<span class="slab-l1">' + escHtml(l1) + '</span>' : '') +
+      (l2 ? '<span class="slab-l2">' + escHtml(l2) + '</span>' : '') +
+    '</div>';
   }
 
   var catnav = document.getElementById('catnav');
@@ -2042,11 +2054,11 @@ button { font-family: inherit; }
         '</div>' +
         '<button class="addbtn" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
         '<div class="pinfo">' +
-          '<div class="nm">' + escHtml(it.name) + '</div>' +
+          '<div class="nm ' + (it.nmc || '') + '">' + escHtml(it.name) + '</div>' +
           (up ? '<div class="unitPrice">' + escHtml(up) + '</div>' : '') +
           '<div class="pricerow">' +
             (disc > 0 ? '<span class="off">' + disc + '%</span>' : '') +
-            '<span class="sale price-num">' + fmt(it.salePrice) + '<span class="won">원</span></span>' +
+            '<span class="sale price-num ' + (it.prc || '') + '">' + fmt(it.salePrice) + '<span class="won">원</span></span>' +
           '</div>' +
           origHtml +
           (metaHtml ? '<div class="meta">' + metaHtml + '</div>' : '') +
@@ -2088,7 +2100,9 @@ button { font-family: inherit; }
     document.getElementById('heroSlogan').innerHTML = f.slogan;
     document.getElementById('heroName').textContent = f.name + (f.unit ? ' · ' + f.unit : '');
     document.getElementById('heroOrig').textContent = f.originalPrice > 0 ? fmt(f.originalPrice) + '원' : '';
-    document.getElementById('heroSale').innerHTML = fmt(f.salePrice) + '<span class="won">원</span>';
+    var hs = document.getElementById('heroSale');
+    hs.className = 'sale ' + (f.prc || '');
+    hs.innerHTML = fmt(f.salePrice) + '<span class="won">원</span>';
     document.getElementById('heroIdx').textContent = (heroIdx + 1) + '/' + FEATURED.length;
     dotsEl.querySelectorAll('.d').forEach(function(d, j){ d.classList.toggle('active', j === heroIdx); });
     document.getElementById('heroCopy').style.opacity = '0';
@@ -2130,7 +2144,7 @@ button { font-family: inherit; }
     var em = document.createElement('span');
     em.className = 'ph-emoji';
     em.style.cssText = 'font-size:120px;line-height:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.2));';
-    em.textContent = it.emoji;
+    em.innerHTML = it.emoji; // ★ SVG 픽토그램 — textContent면 마크업이 글자로 노출
     mPh.appendChild(em);
     document.getElementById('mName').textContent = it.name;
     document.getElementById('mCopy').textContent = it.aiCopy || '';
@@ -2213,7 +2227,7 @@ export function renderCatalogSwipeEngine(d: FlyerRenderData, token: SeasonToken)
       aiCopy: it.aiCopy || '',
       imageUrl: toAbsUrl(it.imageUrl || '') || '',
       bg: categoryBg(cat.name),
-      emoji: categoryEmoji(cat.name),
+      emoji: categoryPictogram(cat.name),
     })),
   }));
   const categoriesJson = JSON.stringify(categoriesData).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e');
@@ -2522,9 +2536,14 @@ export function renderPosterPromoEngine(d: FlyerRenderData, token: SeasonToken):
       const isFeature = ci === 0 && ii === 0;
       const disc = calcDisc(it.originalPrice, it.salePrice);
       const numStr = String(slabNum).padStart(2, '0');
+      // ★ 2026-08-20 무이미지 = 스펙 조판 슬랩(13번 설계 §4-1) — 산지·등급·규격을 활자로 세운다(신선식품은 사진보다 강하다)
       const picHtml = it.imageUrl
         ? '<img src="' + esc(toAbsUrl(it.imageUrl) || '') + '" alt="' + esc(it.name) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
-        : '<div class="ph" style="background:' + categoryBg(cat.name) + ';display:grid;place-items:center;position:absolute;inset:0;"><span style="font-size:88px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.18))">' + categoryEmoji(cat.name) + '</span></div>';
+        : '<div class="ph slab-typo" style="background:' + categoryBg(cat.name) + '">' +
+            '<span class="tp-picto">' + categoryPictogram(cat.name) + '</span>' +
+            (it.origin ? '<span class="tp-origin">' + esc(it.origin) + '</span>' : '') +
+            (it.unit ? '<span class="tp-unit">' + esc(it.unit) + '</span>' : '') +
+          '</div>';
       const stampTxt = it.badge && it.badge.indexOf('한정') >= 0 ? it.badge : (disc > 0 ? disc + '% OFF' : '특가');
       const stampCls = it.badge && it.badge.indexOf('1+1') >= 0 ? 'stamp dark' : 'stamp';
       const specParts: string[] = [];
@@ -2550,11 +2569,11 @@ export function renderPosterPromoEngine(d: FlyerRenderData, token: SeasonToken):
           '<div class="body">' +
             '<div class="pic">' + picHtml + '<div class="' + stampCls + '">' + esc(stampTxt) + '</div></div>' +
             '<div class="info">' +
-              '<div class="name">' + esc(it.name) + '</div>' +
+              '<div class="name ' + nameSizeClass(it.name) + '">' + esc(it.name) + '</div>' +
               '<div class="spec">' + esc(specText || '이번 주 행사 상품') + '</div>' +
               '<div class="priceCol">' +
                 origHtml +
-                '<div class="saleRow"><span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span></div>' +
+                '<div class="saleRow"><span class="sale price-num ' + priceScaleClass(it.salePrice) + '">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span></div>' +
                 (it.aiCopy ? '<div class="unitp">' + esc(it.aiCopy) + '</div>' : '') +
               '</div>' +
             '</div>' +
@@ -2637,6 +2656,18 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .slab .pic { position: relative; aspect-ratio: 1/1; border: 2px solid var(--rule); background: var(--paper-deep); overflow: hidden; }
 .slab .pic .stamp { position: absolute; right: -8px; top: -8px; background: var(--discount); color: #fff; padding: 4px 8px; font-size: 11px; font-weight: 900; letter-spacing: 0.02em; transform: rotate(6deg); border: 2px solid var(--rule); z-index: 2; }
 .slab .pic .stamp.dark { background: var(--ink); }
+/* ★ 2026-08-20 무이미지 스펙 조판 슬랩(13번 설계 §4-1) */
+.slab .pic .slab-typo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.slab .pic .slab-typo .tp-picto { font-size: 40px; line-height: 1; }
+.slab .pic .slab-typo .tp-origin { font-size: 17px; font-weight: 900; color: rgba(255,255,255,0.96); letter-spacing: -0.01em; }
+.slab .pic .slab-typo .tp-unit { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.75); }
+/* ★ 이름·가격 계급(§4-3·§4-4) — 긴 이름·큰 자릿수 방어 */
+.slab .info .name.nm-m { font-size: 19px; }
+.slab .info .name.nm-l { font-size: 16px; letter-spacing: -0.03em; }
+.slab .priceCol .sale.pr-m { font-size: 42px; }
+.slab .priceCol .sale.pr-l { font-size: 34px; }
+.slab.feature .sale.pr-m { font-size: 62px; }
+.slab.feature .sale.pr-l { font-size: 50px; }
 .slab .info { display: flex; flex-direction: column; }
 .slab .name { font-size: 22px; font-weight: 900; letter-spacing: -0.025em; line-height: 1.05; }
 .slab .spec { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--ink-soft); letter-spacing: 0.02em; }
@@ -2830,7 +2861,7 @@ export function renderMagazineZineEngine(d: FlyerRenderData, token: SeasonToken)
       const halftoneStyle = (ii % 2 === 1) ? ' style="color: var(--color-accent);"' : '';
       const picHtml = it.imageUrl
         ? '<img src="' + esc(toAbsUrl(it.imageUrl) || '') + '" alt="' + esc(it.name) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
-        : '<div class="ph"><span class="glyph">' + categoryEmoji(cat.name) + '</span></div>';
+        : '<div class="ph"><span class="glyph">' + categoryPictogram(cat.name) + '</span></div>';
       const disc = calcDisc(it.originalPrice, it.salePrice);
       const origHtml = it.originalPrice > 0 ? '<div class="orig price-num mono">정가 ' + fmtPrice(it.originalPrice) + '원</div>' : '';
       const specs: string[] = [];
@@ -3163,7 +3194,7 @@ export function renderDealBentoEngine(d: FlyerRenderData, token: SeasonToken): s
     const it = items[0];
     const sold = 62; // 시뮬레이션 (실제 limit/sold 데이터 박힘 가능)
     tiles.push(
-      '<article class="tile hero span-hero" style="--em: \'' + categoryEmoji(it.category) + '\'; --sold: ' + sold + '%;"' + productDataAttr(it, it.category) + '>' +
+      '<article class="tile hero span-hero" style="--em: \'' + categoryPictogram(it.category) + '\'; --sold: ' + sold + '%;"' + productDataAttr(it, it.category) + '>' +
         '<span class="kicker"><span class="d"></span>WEEK PICK · NO.1</span>' +
         '<div class="pic"></div>' +
         '<div class="name">' + esc(it.name) + (it.unit ? '<br>' + esc(it.unit) : '') + '</div>' +
@@ -3225,7 +3256,7 @@ export function renderDealBentoEngine(d: FlyerRenderData, token: SeasonToken): s
     const nameSize = sizeCls === 'span-thin' ? ' style="font-size:14px;"' : '';
     const picHtml = it.imageUrl
       ? '<span class="productEmoji" style="background-image:url(\'' + esc(toAbsUrl(it.imageUrl) || '') + '\');background-size:cover;background-position:center;width:64px;height:64px;display:inline-block;border-radius:12px;align-self:flex-end;margin:-8px -8px 0 0;"></span>'
-      : '<span class="productEmoji"' + emojiSize + '>' + categoryEmoji(it.category) + '</span>';
+      : '<span class="productEmoji"' + emojiSize + '>' + categoryPictogram(it.category) + '</span>';
 
     tiles.push(
       '<article class="tile ' + colorCls + ' ' + sizeCls + largeCls + flashCls + '"' + productDataAttr(it, it.category) + '>' +
@@ -3508,7 +3539,7 @@ export function renderGridMujiEngine(d: FlyerRenderData, token: SeasonToken): st
       const tagOnly = it.badge && (it.badge.indexOf('한정') >= 0 || it.badge.indexOf('1+1') >= 0);
       const phStyle = it.imageUrl
         ? 'background:url(\'' + esc(toAbsUrl(it.imageUrl) || '') + '\') center/cover;'
-        : '--ph-bg:' + categoryBg(cat.name) + '; --ph-emoji:\'' + categoryEmoji(cat.name) + '\';';
+        : '--ph-bg:' + categoryBg(cat.name) + '; --ph-emoji:\'' + categoryPictogram(cat.name) + '\';';
       grid.push(
         '<article class="pcard"' + productDataAttr(it, cat.name) + '>' +
           '<div class="pic">' +
@@ -3702,7 +3733,7 @@ ${featured ? `
 <article class="featureCard"${productDataAttr(featured, featured.category || '')}>
   <div class="pic">
     <span class="id">NO.01 · FEATURE</span>
-    <div class="ph" style="${featured.imageUrl ? `background:url('${esc(toAbsUrl(featured.imageUrl) || '')}') center/cover;` : `--ph-bg:${categoryBg(featured.category || '')}; --ph-emoji:'${categoryEmoji(featured.category || '')}';`}"></div>
+    <div class="ph" style="${featured.imageUrl ? `background:url('${esc(toAbsUrl(featured.imageUrl) || '')}') center/cover;` : `--ph-bg:${categoryBg(featured.category || '')}; --ph-emoji:'${categoryPictogram(featured.category || '')}';`}"></div>
   </div>
   <div class="info">
     <div class="id2 mono">No. 01 · ${esc(featured.category || '')}${featured.unit ? ' · ' + esc(featured.unit) : ''}</div>
@@ -3827,7 +3858,7 @@ export function renderCatalogDarkEngine(d: FlyerRenderData, token: SeasonToken):
     const bgColor = DARK_ALBUM_BGS[idx % DARK_ALBUM_BGS.length];
     const albumStyle = it.imageUrl
       ? `background:url('${esc(toAbsUrl(it.imageUrl) || '')}') center/cover;`
-      : `--ph-bg:${bgColor}; --ph-emoji:'${categoryEmoji(it.category)}';`;
+      : `--ph-bg:${bgColor}; --ph-emoji:'${categoryPictogram(it.category)}';`;
     const duration = it.badge && it.badge.indexOf('오늘') >= 0 ? '오늘' : '7일';
     const playingCls = isFirst && allCount > 1 ? ' playing' : '';
     const offText = disc > 0 ? disc + '%' : (it.badge || '특가');
@@ -4020,7 +4051,7 @@ button { font-family: inherit; cursor: pointer; }
   <button class="btn" aria-label="더보기"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
 </header>
 ${featured ? `
-<section class="hero" style="--em: '${categoryEmoji(featured.category || '')}';"${productDataAttr(featured, featured.category || '')}>
+<section class="hero" style="--em: '${categoryPictogram(featured.category || '')}';"${productDataAttr(featured, featured.category || '')}>
   <div class="lbl">FEATURED · NO.1 THIS WEEK</div>
   <h1>${esc(featured.name)}${featured.unit ? '<br>' + esc(featured.unit) : ''}</h1>
   <div class="meta">
@@ -4197,7 +4228,7 @@ export function renderPosterPopEngine(d: FlyerRenderData, token: SeasonToken): s
     const stampB = stampPalette.getB(it, disc, saved);
     const phStyle = it.imageUrl
       ? `background:url('${esc(toAbsUrl(it.imageUrl) || '')}') center/cover;`
-      : `--ph-bg:${categoryBg(catName)}; --ph-emoji:'${categoryEmoji(catName)}';`;
+      : `--ph-bg:${categoryBg(catName)}; --ph-emoji:'${categoryPictogram(catName)}';`;
     const specs: string[] = [];
     if (it.unit) specs.push('<span class="' + POP_SPEC_COLS[0] + '">' + esc(it.unit.toUpperCase()) + '</span>');
     if (it.origin) specs.push('<span class="' + POP_SPEC_COLS[1] + '">' + esc(it.origin) + '</span>');
@@ -4461,25 +4492,43 @@ const RENDERERS: Record<string, (d: FlyerRenderData, token: SeasonToken) => stri
  * 2. 시즌 토큰 결정 (data.seasonToken 우선, 미지정 시 title+periodStart로 자동 매핑).
  * 3. 엔진 호출 + 후처리 (dynamic + qr + cart-script).
  */
-export function renderTemplate(templateCode: string, data: FlyerRenderData): string {
+export function renderTemplate(
+  templateCode: string,
+  data: FlyerRenderData,
+  opts?: { variant?: DesignVariant | null },
+): string {
   // 1. templateCode 정규화 (신규 6 → 그대로 / deprecated → 폴백 / 미존재 → 'grid_hero')
   const resolvedCode = RENDERERS[templateCode]
     ? templateCode
     : (DEPRECATED_FALLBACK_MAP[templateCode] || 'grid_hero');
 
+  // ★ 2026-08-20 2단계 — 렌더 준비(프로모 토큰 분리 → badge 승격·이름 단축). 원본 무변경.
+  const prepped = prepareFlyerData(data);
+
   // 2. 시즌 토큰 결정 (강제 지정 > 자동 매핑)
-  const seasonToken: SeasonToken = data.seasonToken
-    || resolveSeasonToken(data.title, data.periodStart);
+  const seasonToken: SeasonToken = prepped.seasonToken
+    || resolveSeasonToken(prepped.title, prepped.periodStart);
 
   // 3. 엔진 호출
   const renderer = RENDERERS[resolvedCode] || RENDERERS.grid_hero;
-  let html = renderer(data, seasonToken);
+  let html = renderer(prepped, seasonToken);
 
-  // 4. 후처리 (V3 보존): dynamic + qr + cart-script
-  const dynHtml = renderDynamicSection(data);
+  // ★ 2026-08-20 2단계 — 상품 수 밴드 3단(≤6/7~20/21+) 속성 + 밴드 CSS +
+  //   URL 매체 토큰(:root 변수 — 시즌 동일값이라 색 무변·text/shadow/scale 변수 추가만).
+  //   주입은 엔진 <style> 뒤(</head> 직전) — 매체 블록이 이긴다(13번 설계 §5 순서 계약).
+  const band = itemCountBand(countItems(prepped));
+  html = html.replace('<html lang="ko" data-season=', `<html lang="ko" data-band="${band}" data-season=`);
+  const headInject = `<style data-media-css>${generateMediaCssBlock('url', seasonToken)}</style>` + bandStyleBlock(band)
+    // ★ 2026-08-20 3단계 — 디자인 변형 주입(죽어 있던 claude-design-renderer 배선 — 13번 설계 §2-④).
+    //   맨 뒤 주입 = 변형 팔레트가 최종 우선(재열람 재현성은 저장 스냅샷이 보장).
+    + (opts?.variant ? `<style data-variant-css>${variantToStyleBlock(opts.variant)}</style>` : '');
+  html = html.replace('</head>', headInject + '</head>');
+
+  // 4. 후처리 (V3 보존): dynamic + qr + cart-script — prepped 기준(표시 파생 일관)
+  const dynHtml = renderDynamicSection(prepped);
   if (dynHtml) html = html.replace('</body>', dynHtml + '</body>');
-  if (data.qrCodeDataUrl) html = html.replace('</body>', renderQrSection(data) + '</body>');
-  if (data.trackingPhone && data.flyerId) html = html.replace('</body>', renderCartScript(data) + '</body>');
+  if (prepped.qrCodeDataUrl) html = html.replace('</body>', renderQrSection(prepped) + '</body>');
+  if (prepped.trackingPhone && prepped.flyerId) html = html.replace('</body>', renderCartScript(prepped) + '</body>');
 
   return html;
 }
@@ -4526,7 +4575,7 @@ export function renderOgImageHtml(d: FlyerRenderData, token: SeasonToken): strin
   const heroBlock = hero
     ? (hero.imageUrl
         ? `<img class="hero-img" src="${esc(toAbsUrl(hero.imageUrl) || '')}" alt="${esc(hero.name)}">`
-        : `<div class="hero-ph" style="background:${categoryBg(hero.category)}"><span class="hero-emoji">${categoryEmoji(hero.category)}</span></div>`)
+        : `<div class="hero-ph" style="background:${categoryBg(hero.category)}"><span class="hero-emoji">${categoryPictogram(hero.category)}</span></div>`)
     : '';
   const heroInfoBlock = hero
     ? `<div class="hero-info">

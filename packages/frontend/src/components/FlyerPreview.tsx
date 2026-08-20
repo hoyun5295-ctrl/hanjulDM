@@ -40,6 +40,8 @@ interface Props {
   periodEnd: string;
   categories: FlyerCategory[];
   template: string;
+  /** ★ 2026-08-20 디자인 변형(auto-build 결과) — 미리보기 = 발행 동일 주입 경로(13번 설계 §1-3) */
+  designVariant?: any;
 }
 
 function fmtDate(d: string): string {
@@ -48,7 +50,7 @@ function fmtDate(d: string): string {
   return `${dt.getMonth() + 1}/${dt.getDate()}`;
 }
 
-export default function FlyerPreview({ title, storeName, periodStart, periodEnd, categories, template }: Props) {
+export default function FlyerPreview({ title, storeName, periodStart, periodEnd, categories, template, designVariant = null }: Props) {
   const [blobUrl, setBlobUrl] = useState<string>('');
   const [hasContent, setHasContent] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -100,6 +102,7 @@ export default function FlyerPreview({ title, storeName, periodStart, periodEnd,
             period_end: periodEnd || null,
             categories: cleanCats,
             template,
+            design_variant: designVariant || undefined,
           }),
         });
         if (cancelled) return;
@@ -123,7 +126,7 @@ export default function FlyerPreview({ title, storeName, periodStart, periodEnd,
       clearTimeout(debounce);
       if (prevBlobUrl) URL.revokeObjectURL(prevBlobUrl);
     };
-  }, [title, storeName, periodStart, periodEnd, JSON.stringify(categories), template]);
+  }, [title, storeName, periodStart, periodEnd, JSON.stringify(categories), template, JSON.stringify(designVariant)]);
 
   // iframe 안 viewport = 393px 모바일. 컨테이너 width 자동 측정 후 scale로 fit.
   const iframeHeight = containerSize.height / scale;

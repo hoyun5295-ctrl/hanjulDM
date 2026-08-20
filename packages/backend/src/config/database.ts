@@ -33,7 +33,9 @@ export const query = (text: string, params?: any[]) => {
 };
 
 // ★ 보안: MySQL 비밀번호 미설정 시 서버 기동 차단 (fail-fast)
-if (!process.env.MYSQL_PASSWORD) {
+// ★ 2026-08-20 VITEST 가드 — 계약 테스트는 DB 연결 없이 순수 모듈만 쓴다.
+//   운영 서버는 VITEST 미설정이라 fail-fast 동작 불변(본진 targetup에서 검증된 패턴 재구현).
+if (!process.env.MYSQL_PASSWORD && !process.env.VITEST) {
   console.error('❌ [FATAL] MYSQL_PASSWORD 환경변수가 설정되지 않았습니다. 서버를 시작할 수 없습니다.');
   process.exit(1);
 }

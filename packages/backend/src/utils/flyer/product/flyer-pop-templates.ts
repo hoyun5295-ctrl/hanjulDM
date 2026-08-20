@@ -15,6 +15,8 @@
 
 // ★ D154 PHASE 0: 6매체 통합 디자인 토큰
 import { generateMediaCssBlock, generateAllSeasonsCssBlock } from './design-tokens';
+// ★ 2026-08-20 슈퍼버전업 2단계 — POP 시즌 토큰 실배선(13번 설계 §4-5·§5)
+import { SEASON_TOKENS, type SeasonToken } from './season-resolver';
 
 // ============================================================
 // 타입
@@ -88,10 +90,15 @@ function getPaperSize(opts: PopOptions): { w: number; h: number } {
   return base;
 }
 
-function pageCss(paper: { w: number; h: number }): string {
+/** 외부 입력(req.body.season 등) → 실존 토큰만 통과(fail-closed → default) */
+export function normalizePopSeason(v: unknown): SeasonToken {
+  return typeof v === 'string' && v in SEASON_TOKENS ? (v as SeasonToken) : 'default';
+}
+
+function pageCss(paper: { w: number; h: number }, season: SeasonToken = 'default'): string {
   // ★ D154 PHASE 0 §1-3: 6매체 통합 디자인 토큰 prepend (URL/A3/MMS와 동일 시즌 컬러 정합)
   const tokenCss =
-    generateMediaCssBlock('pop', 'default') +
+    generateMediaCssBlock('pop', season) + // ★ 2026-08-20 실제 시즌 토큰 주입('default' 고정 폐기 — 13번 설계 §5)
     generateAllSeasonsCssBlock('pop');
   return tokenCss + `@page{size:${paper.w}mm ${paper.h}mm;margin:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}*{margin:0;padding:0;box-sizing:border-box}`;
 }
@@ -113,24 +120,24 @@ function renderHotPop(item: PopItem, opts: PopOptions): string {
   const hasImage = !!item.imageUrl;
 
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">${FONTS}<style>
-${pageCss(paper)}
+${pageCss(paper, normalizePopSeason(opts.seasonToken))}
 body{${bodyBase(paper)};background:#fff}
 .banner{background:linear-gradient(135deg,#1a1a1a,#333);padding:5mm 10mm;text-align:center}
 .banner h1{font-size:22pt;font-weight:900;color:#fff;letter-spacing:2px}
-.banner span{color:#dc2626;font-style:italic}
+.banner span{color:var(--color-primary);font-style:italic}
 .img-zone{flex:0 0 auto;height:155mm;background:#f5f5f5;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .img-zone img{width:100%;height:100%;object-fit:cover}
-.disc{position:absolute;top:6mm;right:6mm;background:#dc2626;color:#fff;width:36mm;height:36mm;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.3)}
+.disc{position:absolute;top:6mm;right:6mm;background:var(--color-primary);color:var(--color-on-primary);width:36mm;height:36mm;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.3)}
 .disc b{font-size:42pt;font-weight:900;line-height:1}.disc small{font-size:12pt;font-weight:800}
 .info{background:#fff;padding:5mm 12mm 3mm;display:flex;justify-content:space-between;align-items:flex-end}
 .info-left .name{font-size:28pt;font-weight:900;color:#1a1a1a;line-height:1.1}
 .info-left .meta{font-size:10pt;color:#999;font-weight:600;margin-top:1mm}
 .info-right{text-align:right}
 .info-right .orig{font-size:14pt;color:#bbb;text-decoration:line-through}
-.price-bar{background:#dc2626;padding:6mm 12mm;display:flex;align-items:baseline;justify-content:flex-end;gap:2mm;flex:1}
+.price-bar{background:var(--color-primary);padding:6mm 12mm;display:flex;align-items:baseline;justify-content:flex-end;gap:2mm;flex:1}
 .price{font-size:84pt;font-weight:900;color:#fff;line-height:1;letter-spacing:-2px}
 .won{font-size:28pt;font-weight:800;color:#fff}
-.saved-tag{position:absolute;bottom:3mm;left:12mm;font-size:12pt;font-weight:700;color:#facc15}
+.saved-tag{position:absolute;bottom:3mm;left:12mm;font-size:12pt;font-weight:700;color:var(--color-accent)}
 </style></head><body>
 <div class="banner"><h1><span>HOT</span> 프라이스</h1></div>
 ${hasImage ? `<div class="img-zone"><img src="${esc(item.imageUrl!)}" alt="" />${disc > 0 ? `<div class="disc"><b>${disc}</b><small>%</small></div>` : ''}</div>` : `<div class="img-zone" style="height:100mm;background:#eee"></div>`}
@@ -163,26 +170,26 @@ function renderClassicPop(item: PopItem, opts: PopOptions): string {
   const hasImage = !!item.imageUrl;
 
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">${FONTS}<style>
-${pageCss(paper)}
+${pageCss(paper, normalizePopSeason(opts.seasonToken))}
 body{${bodyBase(paper)};background:#fff}
-.hdr{background:#dc2626;color:#fff;padding:4mm 10mm;display:flex;justify-content:space-between;align-items:center}
+.hdr{background:var(--color-primary);color:var(--color-on-primary);padding:4mm 10mm;display:flex;justify-content:space-between;align-items:center}
 .hdr b{font-size:16pt;font-weight:900}
 .hdr span{font-size:13pt;font-weight:900;background:rgba(255,255,255,.2);padding:2mm 6mm;border-radius:4mm}
 .img-zone{flex:0 0 auto;height:160mm;background:#f5f5f5;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .img-zone img{width:100%;height:100%;object-fit:cover}
-.disc{position:absolute;top:6mm;right:6mm;background:#facc15;color:#1a1a1a;width:38mm;height:38mm;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.2)}
+.disc{position:absolute;top:6mm;right:6mm;background:var(--color-accent);color:var(--color-on-primary);width:38mm;height:38mm;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.2)}
 .disc b{font-size:44pt;font-weight:900;line-height:1}.disc small{font-size:13pt;font-weight:800}
 .name-bar{padding:4mm 12mm 2mm;background:#fff}
 .name{font-size:34pt;font-weight:900;color:#1a1a1a}
 .meta{font-size:10pt;color:#999;font-weight:600;margin-top:1mm}
-.price-bar{background:#dc2626;flex:1;padding:4mm 12mm;display:flex;flex-direction:column;justify-content:center}
+.price-bar{background:var(--color-primary);flex:1;padding:4mm 12mm;display:flex;flex-direction:column;justify-content:center}
 .orig-line{display:flex;align-items:center;gap:3mm}
 .orig{font-size:15pt;color:rgba(255,255,255,.55);text-decoration:line-through}
-.saved{font-size:12pt;font-weight:700;color:#facc15;background:rgba(255,255,255,.12);padding:1mm 4mm;border-radius:3mm}
+.saved{font-size:12pt;font-weight:700;color:var(--color-accent);background:rgba(255,255,255,.12);padding:1mm 4mm;border-radius:3mm}
 .price-row{display:flex;align-items:baseline;justify-content:flex-end;gap:2mm}
 .price{font-size:86pt;font-weight:900;color:#fff;line-height:1;letter-spacing:-3px}
 .won{font-size:28pt;font-weight:800;color:#fff}
-.ftr{background:#dc2626;border-top:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:2.5mm 10mm;display:flex;justify-content:space-between;font-size:8pt;font-weight:600}
+.ftr{background:var(--color-primary);border-top:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:2.5mm 10mm;display:flex;justify-content:space-between;font-size:8pt;font-weight:600}
 </style></head><body>
 <div class="hdr"><b>${esc(opts.storeName || '')}</b>${item.badge ? `<span>${esc(item.badge)}</span>` : ''}</div>
 ${hasImage ? `<div class="img-zone"><img src="${esc(item.imageUrl!)}" alt="" />${disc > 0 ? `<div class="disc"><b>${disc}</b><small>%</small></div>` : ''}</div>` : `<div class="img-zone" style="height:80mm"></div>`}
@@ -208,7 +215,7 @@ function renderSimplePop(item: PopItem, opts: PopOptions): string {
   const hasImage = !!item.imageUrl;
 
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">${FONTS}<style>
-${pageCss(paper)}
+${pageCss(paper, normalizePopSeason(opts.seasonToken))}
 body{${bodyBase(paper)};background:#fff;padding:10mm}
 .card{flex:1;border:1px solid #e5e7eb;border-radius:6mm;overflow:hidden;display:flex;flex-direction:column}
 .img-zone{flex:0 0 auto;height:155mm;background:#fafafa;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -261,7 +268,7 @@ function renderDarkPop(item: PopItem, opts: PopOptions): string {
   const hasImage = !!item.imageUrl;
 
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">${FONTS}<style>
-${pageCss(paper)}
+${pageCss(paper, normalizePopSeason(opts.seasonToken))}
 body{${bodyBase(paper)};background:#0a0a0a}
 .hdr{background:linear-gradient(135deg,#1a1a1a,#111);padding:5mm 12mm;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333}
 .hdr b{font-size:14pt;font-weight:900;color:#d4a853;letter-spacing:1px}
@@ -305,13 +312,13 @@ function renderJumboPop(item: PopItem, opts: PopOptions): string {
   const hasImage = !!item.imageUrl;
 
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">${FONTS}<style>
-${pageCss(paper)}
-body{${bodyBase(paper)};background:#dc2626}
+${pageCss(paper, normalizePopSeason(opts.seasonToken))}
+body{${bodyBase(paper)};background:var(--color-primary)}
 .top{padding:6mm 12mm;display:flex;justify-content:space-between;align-items:flex-start}
 .top-left .name{font-size:28pt;font-weight:900;color:#fff;line-height:1.1}
 .top-left .meta{font-size:10pt;color:rgba(255,255,255,.6);margin-top:1mm}
 .top-right{display:flex;align-items:center;gap:3mm}
-${disc > 0 ? `.disc{background:#facc15;color:#1a1a1a;width:28mm;height:28mm;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}.disc b{font-size:30pt;font-weight:900;line-height:1}.disc small{font-size:10pt;font-weight:800}` : ''}
+${disc > 0 ? `.disc{background:var(--color-accent);color:var(--color-on-primary);width:28mm;height:28mm;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}.disc b{font-size:30pt;font-weight:900;line-height:1}.disc small{font-size:10pt;font-weight:800}` : ''}
 .badge{background:rgba(255,255,255,.2);color:#fff;padding:2mm 5mm;border-radius:3mm;font-size:11pt;font-weight:800}
 .img-strip{height:${hasImage ? '70mm' : '20mm'};background:rgba(0,0,0,.1);overflow:hidden;display:flex;align-items:center;justify-content:center}
 .img-strip img{height:100%;object-fit:contain}
@@ -390,17 +397,17 @@ export function renderMultiPop(items: PopItem[], splits: number, options: PopOpt
   }).join('');
 
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">${FONTS}<style>
-${pageCss(paper)}
+${pageCss(paper, normalizePopSeason(options.seasonToken))}
 body{font-family:'Noto Sans KR',sans-serif;width:${paper.w}mm;height:${paper.h}mm;overflow:hidden;display:flex;flex-direction:column}
-.hdr{background:#dc2626;color:#fff;padding:2mm 6mm;font-size:${isTiny ? '8pt' : '12pt'};font-weight:900;height:${hdrH}mm;display:flex;align-items:center}
+.hdr{background:var(--color-primary);color:var(--color-on-primary);padding:2mm 6mm;font-size:${isTiny ? '8pt' : '12pt'};font-weight:900;height:${hdrH}mm;display:flex;align-items:center}
 .grid{display:flex;flex-wrap:wrap;width:${paper.w}mm;height:${gridH}mm;overflow:hidden}
 .cell{width:${cellWmm}mm;height:${cellHmm}mm;border:0.5px solid #ddd;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:${isTiny ? '0.5mm' : '1.5mm'};position:relative;background:#fff;overflow:hidden}
 .cimg{width:${isTiny ? '70%' : '80%'};height:${imgH};overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:${isTiny ? '0' : '1mm'}}
 .cimg img{max-width:100%;max-height:100%;object-fit:contain}
-.disc{position:absolute;top:2mm;right:2mm;background:#dc2626;color:#fff;padding:1mm 3mm;border-radius:3mm;font-size:${dSize};font-weight:900}
+.disc{position:absolute;top:2mm;right:2mm;background:var(--color-primary);color:var(--color-on-primary);padding:1mm 3mm;border-radius:3mm;font-size:${dSize};font-weight:900}
 .cname{font-size:${nSize};font-weight:800;color:#1a1a1a;text-align:center;line-height:1.2;margin-bottom:1mm}
 .corig{font-size:${splits <= 4 ? '9pt' : '7pt'};color:#bbb;text-decoration:line-through}
-.cprice{font-size:${pSize};font-weight:900;color:#dc2626;line-height:1}
+.cprice{font-size:${pSize};font-weight:900;color:var(--color-primary);line-height:1}
 .cprice span{font-size:${splits <= 4 ? '14pt' : '10pt'};font-weight:700}
 .cbadge{background:#fef3c7;color:#92400e;padding:0.5mm 3mm;border-radius:2mm;font-size:${splits <= 4 ? '8pt' : '6pt'};font-weight:700;margin-top:1mm}
 </style></head><body>
@@ -426,26 +433,71 @@ export function renderPromoPop(category: string, items: PopItem[], options: PopO
   }).join('');
 
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">${FONTS}<style>
-${pageCss(paper)}
+${pageCss(paper, normalizePopSeason(options.seasonToken))}
 body{font-family:'Noto Sans KR',sans-serif;width:${paper.w}mm;height:${paper.h}mm;overflow:hidden;display:flex;flex-direction:column}
-.hdr{background:#dc2626;color:#fff;padding:10mm 12mm;text-align:center}
+.hdr{background:var(--color-primary);color:var(--color-on-primary);padding:10mm 12mm;text-align:center}
 .hdr h1{font-size:40pt;font-weight:900;letter-spacing:2px}
 .hdr p{font-size:13pt;font-weight:600;margin-top:2mm;opacity:.8}
-.store{font-size:11pt;font-weight:700;padding:3mm 12mm;background:#dc262610;color:#1a1a1a;text-align:right;border-bottom:2px solid #dc2626}
+.store{font-size:11pt;font-weight:700;padding:3mm 12mm;background:#f7f7f7;background:color-mix(in srgb, var(--color-primary) 7%, white);color:#1a1a1a;text-align:right;border-bottom:2px solid var(--color-primary)}
 table{width:100%;border-collapse:collapse;flex:1}
-th{background:#dc262612;color:#1a1a1a;font-size:12pt;font-weight:700;padding:3mm 5mm;text-align:left;border-bottom:2px solid #dc2626}
+th{background:#f2f2f2;background:color-mix(in srgb, var(--color-primary) 9%, white);color:#1a1a1a;font-size:12pt;font-weight:700;padding:3mm 5mm;text-align:left;border-bottom:2px solid var(--color-primary)}
 td{padding:3.5mm 5mm;font-size:13pt;border-bottom:1px solid #eee;color:#1a1a1a}
-.rank{width:10mm;text-align:center;font-weight:900;font-size:15pt;color:#dc2626}
+.rank{width:10mm;text-align:center;font-weight:900;font-size:15pt;color:var(--color-primary)}
 .pname{font-weight:700;font-size:13pt}
-.badge{display:inline-block;background:#dc2626;color:#fff;font-size:8pt;font-weight:700;padding:0.5mm 3mm;border-radius:2mm}
+.badge{display:inline-block;background:var(--color-primary);color:var(--color-on-primary);font-size:8pt;font-weight:700;padding:0.5mm 3mm;border-radius:2mm}
 .origin{font-size:10pt;color:#888;width:22mm}
-.price{text-align:right;font-weight:900;color:#dc2626;font-size:15pt;white-space:nowrap}
-.disc{font-size:9pt;color:#dc2626;font-weight:800;background:#fef3c7;padding:0.5mm 2mm;border-radius:2mm}
-.foot{background:#dc2626;color:#fff;padding:3mm 12mm;display:flex;justify-content:space-between;font-size:9pt;font-weight:600}
+.price{text-align:right;font-weight:900;color:var(--color-primary);font-size:15pt;white-space:nowrap}
+.disc{font-size:9pt;color:var(--color-primary);font-weight:800;background:#fef3c7;padding:0.5mm 2mm;border-radius:2mm}
+.foot{background:var(--color-primary);color:var(--color-on-primary);padding:3mm 12mm;display:flex;justify-content:space-between;font-size:9pt;font-weight:600}
 </style></head><body>
 <div class="hdr"><h1>${esc(category)}</h1><p>오늘의 추천 상품</p></div>
 <div class="store">${esc(options.storeName || '')}</div>
 <table><tr><th></th><th>상품명</th><th>원산지</th><th style="text-align:right">가격</th></tr>${rows}</table>
 <div class="foot"><span>${esc(options.storeName || '')}</span><span>hanjul-flyer.kr</span></div>
 </body></html>`;
+}
+
+// ============================================================
+// ★ 2026-08-20 슈퍼버전업 — ⑥ 매대 띄지 (13번 설계 §4 1차 신규 1종)
+//   A4 세로 1장 = 60mm 띄 4줄(절취선) — 매대 모서리에 붙이는 가로 롤형.
+//   상품 1개 = 띄 1줄. 시즌 토큰 var(--color-*) 소비(하드코딩 0).
+// ============================================================
+export function renderStripPop(items: PopItem[], options: PopOptions = {}): string {
+  const paper = PAPER_SIZES.A4;
+  const season = normalizePopSeason(options.seasonToken);
+  const perPage = 4;
+  const pages: string[] = [];
+  for (let p = 0; p < items.length; p += perPage) {
+    const chunk = items.slice(p, p + perPage);
+    const strips = chunk.map(item => {
+      const disc = calcDisc(item.originalPrice, item.salePrice);
+      const meta = [item.origin, item.unit].filter(Boolean).join(' · ');
+      return `<div class="strip">
+        <div class="s-left">
+          <div class="s-name">${esc(item.name)}${item.badge ? ` <span class="s-badge">${esc(item.badge)}</span>` : ''}</div>
+          ${meta ? `<div class="s-meta">${esc(meta)}</div>` : ''}
+        </div>
+        ${disc > 0 ? `<div class="s-disc">${disc}<small>%</small></div>` : ''}
+        <div class="s-price">${fmtPrice(item.salePrice)}<span class="s-won">원</span></div>
+      </div>`;
+    }).join('');
+    pages.push(`<div class="sheet">${strips}</div>`);
+  }
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">${FONTS}<style>
+${pageCss(paper, season)}
+body{font-family:'Noto Sans KR',sans-serif}
+.sheet{width:${paper.w}mm;height:${paper.h}mm;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;page-break-after:always}
+.strip{width:210mm;height:60mm;border-bottom:1px dashed #bbb;display:flex;align-items:center;gap:6mm;padding:0 10mm;box-sizing:border-box;background:var(--color-primary);color:var(--color-on-primary)}
+.strip:nth-child(even){background:#ffffff;color:#171717;border:2mm solid var(--color-primary);border-bottom:1px dashed #bbb}
+.strip:nth-child(even) .s-price{color:var(--color-primary)}
+.strip:nth-child(even) .s-badge{background:var(--color-primary);color:var(--color-on-primary)}
+.s-left{flex:1;min-width:0}
+.s-name{font-size:26pt;font-weight:900;letter-spacing:-0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-badge{display:inline-block;vertical-align:middle;background:#ffffff;color:#171717;font-size:11pt;font-weight:900;padding:1mm 4mm;border-radius:3mm;margin-left:3mm}
+.s-meta{font-size:12pt;font-weight:700;opacity:.75;margin-top:1mm}
+.s-disc{font-size:30pt;font-weight:900;opacity:.95}
+.s-disc small{font-size:14pt}
+.s-price{font-size:54pt;font-weight:900;letter-spacing:-2px;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.s-won{font-size:20pt;font-weight:800;margin-left:1mm}
+</style></head><body>${pages.join('')}</body></html>`;
 }

@@ -153,12 +153,16 @@ async function generateAutoFlyerForCompany(companyId: string, promoItems: any[])
   }, null as string | null);
 
   // flyers 테이블에 auto_draft로 INSERT
+  // ★ 2026-08-20 슈퍼버전업 0단계(13번 설계 §2) — 컬럼·템플릿 정정.
+  //   그전에는 `created_by`(다른 전 INSERT 경로는 user_id — flyers.ts 3곳)와 폐기된 옛 템플릿 코드
+  //   'mart_fresh'(현행 렌더러 목록에 없음)로 넣어, 아래 try/catch가 삼키는 무성 실패 의심 지점이었다.
+  //   검증된 경로(flyers.ts POST)와 같은 컬럼 집합으로 정렬한다.
   const title = `${storeName} 특가 행사`;
   const flyerResult = await query(
     `INSERT INTO flyers
-       (company_id, created_by, title, store_name, template, categories,
+       (company_id, user_id, title, store_name, template, categories,
         period_start, period_end, status, created_at)
-     VALUES ($1, $2, $3, $4, 'mart_fresh', $5, $6, $7, 'auto_draft', NOW())
+     VALUES ($1, $2, $3, $4, 'grid_hero', $5, $6, $7, 'auto_draft', NOW())
      RETURNING id`,
     [
       companyId,

@@ -11,6 +11,8 @@
 import express, { Request, Response, Router } from 'express';
 import { query } from '../../config/database';
 import { renderTemplate, type FlyerRenderData } from '../../utils/flyer/product/flyer-templates';
+// ★ 2026-08-20 3단계 — 디자인 변형 스냅샷 재현(13번 설계 §2-⑤)
+import { coerceDesignVariant } from '../../utils/flyer/product/claude-design-renderer';
 import { flyerAuthenticate } from '../../middlewares/flyer-auth';
 
 const router = Router();
@@ -60,7 +62,8 @@ router.post('/preview-html', previewParser, flyerAuthenticate, async (req: Reque
     };
 
     const templateCode = body.template || 'grid_hero';
-    const html = renderTemplate(templateCode, data);
+    // ★ 2026-08-20 미리보기 = 발행과 같은 변형 주입 경로(형태 검증 미달은 무변형 렌더)
+    const html = renderTemplate(templateCode, data, { variant: coerceDesignVariant(body.design_variant) });
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store'); // 실시간 미리보기는 캐싱 X
@@ -297,6 +300,11 @@ export async function renderFlyerPage(flyer: any, trackingPhone?: string | null,
     }
   }
 
+  // ★ 2026-08-20 재열람 재현성 — 발행 스냅샷(design_variant JSONB)을 그대로 주입.
+  //   컬럼 미존재(마이그레이션 전) 행은 undefined → null → 무변형 렌더(기존 동작 불변).
+  const storedVariant = coerceDesignVariant(
+    typeof flyer.design_variant === 'string' ? (() => { try { return JSON.parse(flyer.design_variant); } catch { return null; } })() : flyer.design_variant,
+  );
   return renderTemplate(flyer.template || 'grid_hero', {
     storeName, title, period, categories, qrCodeDataUrl, qrCouponText,
     externalLinks: extraData.externalLinks,
@@ -310,7 +318,7 @@ export async function renderFlyerPage(flyer: any, trackingPhone?: string | null,
     periodEnd: flyer.period_end || null,
     // ★ D154 PHASE 0: og:image 동적 라우트 URL 생성용 (/api/flyer/og/{shortCode}.png)
     shortCode: shortCode || null,
-  });
+  }, { variant: storedVariant });
 }
 
 function formatDate(d: string | Date): string {

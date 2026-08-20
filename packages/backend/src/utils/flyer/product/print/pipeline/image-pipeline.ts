@@ -3,20 +3,21 @@
  *
  * 역할: 상품 리스트의 imageUrl을 인쇄 가능한 품질로 변환
  *
- * 이미지 소싱 순서 (전부 기존 컨트롤타워 재사용):
- *   1. product-images.ts getProductDisplay() — PRODUCT_MAP(한국 마트 상품 60개 키워드) 매칭
- *   2. flyer-naver-search.ts searchNaverShopping() — 네이버 쇼핑 API (한국 실사 판매상품)
- *   (외국 API 사용 금지 — 한국 마트 상품 매칭 정확도 낮음)
+ * ★ 2026-08-20 슈퍼버전업 1단계 개정 (13번 설계 §0-3·§3-5)
+ *   - 인쇄물에는 **로컬 확보분만** 들어간다. 네이버 검색 소싱은 인쇄 경로에서 제거(제3자 저작물 인쇄 배포 차단).
+ *   - 외부 http(s) URL은 다운로드 성공분만 data URL로 인라인하고, 실패하면 **이미지 없음**으로 내린다
+ *     (외부 URL을 렌더에 직주입하던 옛 동작 폐기 — 핫링크 차단·타임아웃이 인쇄 PDF 빈 칸이 되는 사고 계열).
+ *
+ * 이미지 소싱 순서:
+ *   1. product-images.ts getProductDisplay() — PRODUCT_MAP(로컬 서빙 자산) 매칭
+ *   (네이버는 후보 제시 전용 — 확정분은 카탈로그에 로컬 저장돼 imageUrl로 들어온다)
  *
  * 배경제거: 기존 flyer-rembg.ts removeBackground() 재사용
  *   - 결과는 data:image/png;base64 data URL 인라인 (Puppeteer 네트워크 의존 제거)
- *
- * 실패 정책: 각 단계 실패 시 원본 유지 (기간계 안정성)
  */
 
 import { removeBackground } from '../../flyer-rembg';
 import { getProductDisplay } from '../../../../product-images';
-import { searchNaverShopping } from '../../flyer-naver-search';
 
 // ============================================================
 // 타입
@@ -80,19 +81,11 @@ async function processOne(
 ): Promise<PipelineProduct> {
   let imageUrl = product.imageUrl || '';
 
-  // 1. 이미지 없으면 기존 자산에서 찾기
+  // 1. 이미지 없으면 로컬 자산에서만 찾기 (네이버 소싱 제거 — 13번 설계 §0-3)
   if (!imageUrl && opts.autoMatchImage) {
-    // 1-1. PRODUCT_MAP (한국 마트 상품 60개 키워드 매핑, 로컬 서빙)
     const display = getProductDisplay(product.productName || '');
     if (display.imageUrl) {
       imageUrl = display.imageUrl;
-    } else {
-      // 1-2. 네이버 쇼핑 API (실제 판매상품 실사진)
-      try {
-        const shopResult = await searchNaverShopping(product.productName || '', 1);
-        const first = (shopResult as any)?.items?.[0] || (Array.isArray(shopResult) ? shopResult[0] : null);
-        if (first?.image) imageUrl = first.image;
-      } catch { /* 네이버 실패 시 imageUrl 빈 상태로 유지 */ }
     }
   }
 
@@ -106,8 +99,22 @@ async function processOne(
           imageUrl = bufferToDataUrl(removed, 'image/png');
         }
       } catch {
-        // rembg 실패 시 원본 유지
+        // rembg 실패 시 원본 유지 (아래 3에서 외부 URL이면 인라인·차단 판정을 다시 받는다)
       }
+    }
+  }
+
+  // 3. ★ 외부 URL 차단 — 인쇄 렌더에는 로컬(상대 경로)·data URL만 들어간다.
+  //    외부 http(s)는 지금 다운로드해 인라인하고, 실패하면 이미지 없음으로 내린다(빈 칸·깨진 아이콘 금지 —
+  //    무이미지 폴백은 렌더러의 스펙 슬랩이 받는다).
+  if (imageUrl && /^https?:/i.test(imageUrl)) {
+    const buffer = await fetchImageBuffer(imageUrl);
+    if (buffer && buffer.length > 0) {
+      const mime = imageUrl.toLowerCase().includes('.png') ? 'image/png' : 'image/jpeg';
+      imageUrl = bufferToDataUrl(buffer, mime);
+    } else {
+      console.warn(`[image-pipeline] 외부 이미지 확보 실패 — 무이미지로 강등: ${product.productName}`);
+      imageUrl = '';
     }
   }
 

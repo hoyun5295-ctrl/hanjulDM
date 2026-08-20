@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import './index.css';
 import LoginPage from './pages/LoginPage';
-import FlyerPage from './pages/FlyerPage';
+// ★ 2026-08-20 슈퍼버전업 4단계 — 제작 화면 1개(FlyerComposerPage)가 옛 FlyerPage(목록+폼)를 대체(13번 설계 §1)
+import FlyerComposerPage from './pages/FlyerComposerPage';
 import SendPage from './pages/SendPage';
 import ResultsPage from './pages/ResultsPage';
 import BalancePage from './pages/BalancePage';
@@ -164,7 +165,7 @@ function App() {
 
       {/* ── 페이지 ── */}
       <main className="max-w-6xl mx-auto px-6 py-6">
-        {currentPage === 'flyer' && <FlyerPage token={token} businessType={user?.businessType || 'mart'} />}
+        {currentPage === 'flyer' && <FlyerComposerPage token={token} businessType={user?.businessType || 'mart'} />}
         {currentPage === 'pop' && <PopPage token={token} />}
         {currentPage === 'send' && <SendPage token={token} />}
         {currentPage === 'customers' && <CustomerPage token={token} />}

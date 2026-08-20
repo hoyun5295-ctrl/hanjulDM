@@ -68,6 +68,19 @@ const jsonHeaders = { 'Content-Type': 'application/json' };
 
 export default function PopPage({ token: _token }: { token: string }) {
   const [items, setItems] = useState<PopItem[]>([]);
+  // ★ 2026-08-20 native prompt 3회 폐기(커스텀 입력 팝오버) — 금칙 규율
+  const [bulkPop, setBulkPop] = useState<{ kind: 'badge' | 'origin' | 'pct'; value: string } | null>(null);
+  const applyBulk = () => {
+    if (!bulkPop) return;
+    const v = bulkPop.value.trim();
+    if (bulkPop.kind === 'badge') setItems(items.map(it => it.selected ? { ...it, badge: v } : it));
+    else if (bulkPop.kind === 'origin') setItems(items.map(it => it.selected ? { ...it, origin: v } : it));
+    else if (Number(v) > 0) {
+      const rate = 1 - Number(v) / 100;
+      setItems(items.map(it => it.selected && it.originalPrice > 0 ? { ...it, salePrice: Math.round(it.originalPrice * rate) } : it));
+    }
+    setBulkPop(null);
+  };
   const [storeName, setStoreName] = useState('');
   const [splits, setSplits] = useState<SplitOption>(1);
   const [colorTheme, setColorTheme] = useState<ColorTheme>('red');
@@ -460,23 +473,9 @@ export default function PopPage({ token: _token }: { token: string }) {
             {/* 일괄 변경/스타일 복사 */}
             <div className="flex items-center gap-2 pt-3 pb-1 border-t border-border">
               <span className="text-[10px] text-text-muted font-medium">일괄:</span>
-              <button onClick={() => {
-                const badge = prompt('뱃지 일괄 변경 (예: 초특가)');
-                if (badge !== null) setItems(items.map(it => it.selected ? { ...it, badge } : it));
-              }} className="text-[10px] px-2 py-1 rounded bg-bg text-text-secondary hover:bg-border/50 font-medium">뱃지 변경</button>
-              <button onClick={() => {
-                const origin = prompt('원산지 일괄 변경 (예: 국내산)');
-                if (origin !== null) setItems(items.map(it => it.selected ? { ...it, origin } : it));
-              }} className="text-[10px] px-2 py-1 rounded bg-bg text-text-secondary hover:bg-border/50 font-medium">원산지 변경</button>
-              <button onClick={() => {
-                const pct = prompt('할인율 일괄 적용 (예: 20)');
-                if (pct && Number(pct) > 0) {
-                  const rate = 1 - Number(pct) / 100;
-                  setItems(items.map(it => it.selected && it.originalPrice > 0
-                    ? { ...it, salePrice: Math.round(it.originalPrice * rate) }
-                    : it));
-                }
-              }} className="text-[10px] px-2 py-1 rounded bg-bg text-text-secondary hover:bg-border/50 font-medium">할인율 적용</button>
+              <button onClick={() => setBulkPop({ kind: 'badge', value: '' })} className="text-[10px] px-2 py-1 rounded bg-bg text-text-secondary hover:bg-border/50 font-medium">뱃지 변경</button>
+              <button onClick={() => setBulkPop({ kind: 'origin', value: '' })} className="text-[10px] px-2 py-1 rounded bg-bg text-text-secondary hover:bg-border/50 font-medium">원산지 변경</button>
+              <button onClick={() => setBulkPop({ kind: 'pct', value: '' })} className="text-[10px] px-2 py-1 rounded bg-bg text-text-secondary hover:bg-border/50 font-medium">할인율 적용</button>
               {items.length > 1 && (
                 <button onClick={() => {
                   const first = items.find(it => it.selected);
@@ -485,6 +484,26 @@ export default function PopPage({ token: _token }: { token: string }) {
                 }} className="text-[10px] px-2 py-1 rounded bg-primary-50 text-primary-600 hover:bg-primary-100 font-medium">스타일 복사</button>
               )}
             </div>
+
+            {bulkPop && (
+              <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setBulkPop(null); }}>
+                <div className="bg-surface rounded-2xl border border-border p-5 w-[300px] space-y-3">
+                  <p className="text-sm font-bold text-white">
+                    {bulkPop.kind === 'badge' ? '뱃지 일괄 변경' : bulkPop.kind === 'origin' ? '원산지 일괄 변경' : '할인율 일괄 적용'}
+                  </p>
+                  <input autoFocus value={bulkPop.value}
+                    onChange={e => setBulkPop({ ...bulkPop, value: e.target.value })}
+                    onKeyDown={e => { if (e.key === 'Enter') applyBulk(); }}
+                    placeholder={bulkPop.kind === 'badge' ? '예: 초특가' : bulkPop.kind === 'origin' ? '예: 국내산' : '예: 20'}
+                    inputMode={bulkPop.kind === 'pct' ? 'numeric' : 'text'}
+                    className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-primary-500" />
+                  <div className="flex gap-2">
+                    <button onClick={() => setBulkPop(null)} className="flex-1 py-2 rounded-lg bg-surface-secondary text-white/70 text-sm">취소</button>
+                    <button onClick={applyBulk} className="flex-1 py-2 rounded-lg bg-primary-600 text-white text-sm font-bold">적용</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 하단 */}
             <div className="flex justify-between items-center pt-2">

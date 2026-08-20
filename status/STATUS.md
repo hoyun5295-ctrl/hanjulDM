@@ -1,6 +1,27 @@
 # hanjulDM 프로젝트 현황
 
-> **업데이트:** 2026-05-14 (D159 후반)
+> **업데이트:** 2026-08-20 (슈퍼버전업 W3 구현) — 그 아래 D159 절은 당시 기록 원문 보존
+
+## ★ 2026-08-20 슈퍼버전업 — W3 전단·POP 제작 축 구현 완료(배포 대기)
+
+**SoT = `status/hanjul-flyer-revamp/13_w3_tool_super_versionup_design.md`** (5역할 브레인스토밍 수렴 · Harold 승인).
+검수 = 11(W4 알림톡 — 착수 후순위) · 12(W3) 문서. 실사용 0 실측(회사 2·캠페인 0) = 하위호환 제약 없음.
+
+**구현된 것(전부 코드 완료 · tsc 0 · 게이트 테스트 29건 통과):**
+- 0단계 잔재 제거: DALL-E 생성 폐기(라우트 410 차단) · 죽은 미러 333줄 삭제 · pos-auto INSERT 컴럼/템플릿 코드 정정
+- 이미지 정책(§3): 네이버 = 후보 제시 전용(자동 확정 금지) · 자동 채움 = 카탈로그→로컬 2단 · 인쇄 로컬만(핫링크 차단) · 쿼리 정규화 + 신뢰도 게이트 + 429 표면화 · enrichCategoriesWithImages 삭제
+- 렌더 품질(§4): CT-F24 신설(프로모 badge 분리·밴드 3단·이름/가격 계급·SVG 픽토그램 15종) · grid_hero/poster_promo 수술(무이미지 스펙 슬랩) · POP 시즌 토큰 실배선 · 매대 띄지 1종 신규
+- 파이프라인(§2): POST /auto-build 신설(분류→엔진 자동 선정→변형) · renderTemplate variant 주입 · 발행 스냅샷(ALTER 4컴럼 + 503 안전망) · /copy 기간 갱신+변형 승계 · 인쇄 seasonToken 전달
+- 화면(§1): FlyerComposerPage 신설(화면 1개 · 3카드 프리셋 · 소스 4칩 · 손질 4종 · 발행 1버튼 · POP 뽑기 · 인쇄 관문) — 옛 FlyerPage(1,310줄) 삭제 · PopPage/PrintFlyerPage native dialog 0건 정리
+- 게이트(§8): vitest 신설(devDep · 빌드 제외 exclude) · `super-versionup-gates.test.ts` 29건 = 소비처 검증(미배선 재발 차단) + 재현성 + 실렌더 스모크 120조합 + 미러 부활 차단 + 이미지 정책
+
+**배포 순서:** hdm-push → 서버 build:safe → pm2 reload → **DDL(flyers ALTER 4컴럼 — 배포 뒤)** → 실측(13번 §7 6단계).
+**실측 대기:** POS 이미지 보유율(실매장 확보 시) · rembg 컨테이너 미가동(보조 축) · 전수 실렌더 육안 검수.
+**범위 밖 기록:** SenderRegistrationPage confirm() 1건(W3 밖) · W2 결제 축 = PAY 답 대기 · W4 알림톡 = 11번 문서 대기.
+
+---
+
+> **아래는 2026-05-14 (D159 후반) 시점 기록이다.**
 > **상태:** ★ D159 = (1) POS Agent V2 100% 박힘 + (2) OKPOS → 투게더스(MS-SQL) 정정 + (3) **인쇄 전단 5종 박음 진행 중 (1종 80% 박힘, 4종 + 정합 정정 다음 세션)**. 다음 세션 = 09번 인계 .md 정독 + Step A-F 박음 (인쇄 5종 마무리) → 그 후 투게더스 매장 캡처 + PHASE 1 무기 4.
 
 ## D159 후반 인쇄 전단 5종 박음 진행 (2026-05-14 후반)

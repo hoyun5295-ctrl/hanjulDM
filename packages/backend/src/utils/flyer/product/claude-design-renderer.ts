@@ -230,6 +230,30 @@ export function variantToStyleBlock(variant: DesignVariant): string {
  * decorIntensity → 시각 강도 클래스명 (HTML <body> data-decor 속성 활용).
  * subtle/standard/bold 3단계로 데코(그라데이션·텍스처·sticker) 강약 조절.
  */
+/**
+ * ★ 2026-08-20 3단계 — 외부 입력(저장 JSONB·프론트 body) → DesignVariant 형태 검증.
+ * 미달 = null(무변형 렌더 — fail-closed로 깨진 변형을 주입하지 않는다).
+ */
+export function coerceDesignVariant(v: unknown): DesignVariant | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as any;
+  const hex = /^#[0-9a-fA-F]{6}$/;
+  if (!o.palette || typeof o.palette !== 'object') return null;
+  if (!hex.test(String(o.palette.primary || '')) || !hex.test(String(o.palette.accent || '')) || !hex.test(String(o.palette.onPrimary || ''))) return null;
+  const typeScale = Number(o.typeScale);
+  if (!Number.isFinite(typeScale) || typeScale < 0.8 || typeScale > 1.3) return null;
+  const decor = o.decorIntensity === 'subtle' || o.decorIntensity === 'standard' || o.decorIntensity === 'bold' ? o.decorIntensity : 'standard';
+  return {
+    templateCode: String(o.templateCode || 'grid_hero'),
+    seasonToken: (o.seasonToken || 'default') as DesignVariant['seasonToken'],
+    palette: { primary: o.palette.primary, accent: o.palette.accent, onPrimary: o.palette.onPrimary },
+    typeScale,
+    decorIntensity: decor,
+    variantSeed: Number(o.variantSeed) || 0,
+    variantLabel: String(o.variantLabel || ''),
+  };
+}
+
 export function variantToDecorClass(variant: DesignVariant): string {
   return variant.decorIntensity;
 }

@@ -90,22 +90,25 @@ router.get('/find-image', async (req: Request, res: Response) => {
 // ★ 네이버 쇼핑 이미지 검색 API (CT-F17)
 // ============================================================
 
-/** POST /search-image — 상품명으로 이미지 후보 검색 */
+/** POST /search-image — 상품명으로 이미지 후보 검색 (★사람이 보고 고르는 수동 UI라 이미지 검색 병합 허용 — §3-2) */
 router.post('/search-image', async (req: Request, res: Response) => {
   try {
     const { product_name } = req.body;
     if (!product_name) return res.status(400).json({ error: 'product_name 필수' });
 
-    const result = await searchNaverShopping(product_name, 5);
+    const result = await searchNaverShopping(product_name, 8, { includeImageSearch: true });
     return res.json({
       query: result.query,
       total: result.total,
+      api_error: result.api_error,
       items: result.items.map(item => ({
         title: item.title,
         image: item.image,
         lprice: item.lprice,
         brand: item.brand,
         maker: item.maker,
+        match_score: item.match_score,
+        source: item.source,
       })),
     });
   } catch (error: any) {

@@ -16,10 +16,11 @@
  */
 
 import type { FlyerRenderData, FlyerRenderItem } from './flyer-templates';
+import { categoryPictogram } from './flyer-render-prep';
 import {
   esc, fmtPrice, calcDisc, toAbsUrl,
   storeInitial, flattenItems,
-  categoryBg, categoryEmoji,
+  categoryBg,
 } from './flyer-templates';
 import { SEASON_TOKENS, type SeasonToken } from './season-resolver';
 import { generateMediaCssBlock, generateAllSeasonsCssBlock } from './design-tokens';
@@ -43,7 +44,7 @@ function renderHeroBlock(hero: FlyerRenderItem & { category: string }, emojiSize
   if (hero.imageUrl) {
     return `<img class="hero-img" src="${esc(toAbsUrl(hero.imageUrl) || '')}" alt="${esc(hero.name)}">`;
   }
-  return `<div class="hero-ph" style="background:${categoryBg(hero.category)}"><span class="hero-emoji" style="font-size:${emojiSize}px">${categoryEmoji(hero.category)}</span></div>`;
+  return `<div class="hero-ph" style="background:${categoryBg(hero.category)}"><span class="hero-emoji" style="font-size:${emojiSize}px">${categoryPictogram(hero.category)}</span></div>`;
 }
 
 // ============================================================

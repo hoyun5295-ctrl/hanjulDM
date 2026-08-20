@@ -15,7 +15,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { query } from '../../config/database';
 import { flyerAuthenticate } from '../../middlewares/flyer-auth';
 // ★ D112: getStoreScope 제거. 전단AI는 store_code 없이 company_id 단위 격리.
-import { generateProductImage, generateFlyerImages, getGeneratedImageUrl } from '../../utils/product-images';
+// ★ 2026-08-20 생성형 이미지 폐기 — generateProductImage·generateFlyerImages import 제거(라우트 410 차단).
+import { getGeneratedImageUrl } from '../../utils/product-images';
 import { LIMITS } from '../../config/defaults';
 import { generatePdfFromHtml } from '../../utils/flyer/product/flyer-pdf';
 import { renderPrintFlyer, getAvailableThemes, getThemeByName, PrintProduct } from '../../utils/flyer/product/flyer-print-renderer';
@@ -25,10 +26,16 @@ import { listTemplates } from '../../utils/flyer/product/print/renderer/template
 import { processProductImages } from '../../utils/flyer/product/print/pipeline/image-pipeline';
 import { mapFlyerExcelHeaders, applyFlyerMapping, getFlyerMappingFields } from '../../utils/flyer/product/flyer-excel-mapper';
 import { renderFlyerPage } from './short-urls';
-import { renderPricePop, renderMultiPop, renderPromoPop } from '../../utils/flyer/product/flyer-pop-templates';
+import { renderPricePop, renderMultiPop, renderPromoPop, renderStripPop, normalizePopSeason } from '../../utils/flyer/product/flyer-pop-templates';
 // ★ D155: 발행/수정 시 AI 카피 자동 enrich (사장님 수동 일괄문구 보존)
 import { enrichCategoriesWithAiCopy } from '../../utils/flyer/product/flyer-ai-copy';
 import { classifyProducts } from '../../utils/flyer/product/flyer-category-classifier';
+// ★ 2026-08-20 3단계 — 자동 구성 배선(13번 설계 §2): 죽어 있던 추천기·변형 렌더러 소비 시작
+import { recommendTemplateAndSeason } from '../../utils/flyer/product/template-recommender';
+import { recommendDesign, coerceDesignVariant } from '../../utils/flyer/product/claude-design-renderer';
+import type { FlyerRenderData } from '../../utils/flyer/product/flyer-templates';
+import { handleDbMigrationError, isDbMigrationError } from '../../utils/flyer/db-migration-error';
+import { resolveSeasonToken } from '../../utils/flyer/product/season-resolver';
 import { resolveProductImageUrl } from '../../utils/product-images';
 
 /**
@@ -49,6 +56,48 @@ async function fillMissingImages(items: any[], companyId: string): Promise<void>
     // 2순위: Pixabay 기본 이미지 (product-images PRODUCT_MAP)
     const pixabayUrl = resolveProductImageUrl(item.name);
     if (pixabayUrl) item.imageUrl = pixabayUrl;
+  }
+}
+
+/**
+ * ★ 2026-08-20 3단계 — 발행 시점 디자인 스냅샷 확정(13번 설계 §2-1).
+ * 초안이 변형 없이 만들어졌으면 여기서 계산해 굳힌다 — 재열람이 항상 같은 모습(재현성).
+ * 마이그레이션 전(42703)이면 발행 자체는 막지 않고 pending_migration으로 표면화만 한다
+ * (발행 = 기간계 핵심 경로 — 조용한 실패도, 전면 차단도 아닌 정직한 중간).
+ */
+async function ensureDesignSnapshotForPublish(flyerId: string): Promise<'ok' | 'pending_migration'> {
+  try {
+    const r = await query(
+      `SELECT design_variant, template, title, store_name, period_start, categories FROM flyers WHERE id = $1`,
+      [flyerId],
+    );
+    const row = r.rows[0];
+    if (!row) return 'ok';
+    if (row.design_variant) return 'ok';
+    const categories = typeof row.categories === 'string' ? JSON.parse(row.categories || '[]') : (row.categories || []);
+    const data: FlyerRenderData = {
+      storeName: row.store_name || '',
+      title: row.title || '',
+      period: '',
+      categories,
+      periodStart: row.period_start || null,
+      periodEnd: null,
+    };
+    const variant = recommendDesign(data, resolveSeasonToken(data.title, data.periodStart), {
+      fixedTemplateCode: row.template || 'grid_hero',
+    });
+    await query(
+      `UPDATE flyers SET design_variant = $1::jsonb, render_schema_version = COALESCE(render_schema_version, 1) WHERE id = $2`,
+      [JSON.stringify(variant), flyerId],
+    );
+    return 'ok';
+  } catch (e: any) {
+    if (isDbMigrationError(e)) {
+      console.error('[전단AI][DB_MIGRATION_PENDING] 발행 스냅샷 보류(flyers 4컴럼 ALTER 필요):', e?.message);
+      return 'pending_migration';
+    }
+    console.error('[전단AI] 발행 스냅샷 실패(발행은 계속):', e?.message || e);
+    return 'pending_migration';
   }
 }
 
@@ -362,13 +411,31 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '행사명(title)은 필수입니다.' });
     }
 
-    const result = await query(
-      `INSERT INTO flyers (company_id, user_id, store_code, title, store_name, period_start, period_end, categories, template, logo_url, extra_data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING *`,
-      [companyId, userId, store_code || null, title, store_name || null, period_start || null, period_end || null,
-       JSON.stringify(categories || []), template || 'grid_hero', logo_url || null, JSON.stringify(extra_data || {})]
-    );
+    // ★ 2026-08-20 3단계 — 디자인 스냅샷 컴럼(13번 설계 §2-1). 이중 경로:
+    //   신규 화면이 변형을 주면 스냅샷 컴럼까지 INSERT(DDL 전이면 42703 → 503 안전망),
+    //   안 주면(구 화면) 옛 INSERT 그대로 — 마이그레이션 전에도 생성이 안 멈춘다.
+    const bodyVariant = coerceDesignVariant((req.body || {}).design_variant);
+    const bodyRec = (req.body || {}).recommended_engine;
+    const recJson = bodyRec && typeof bodyRec === 'object'
+      ? JSON.stringify({ templateCode: String((bodyRec as any).templateCode || ''), reasons: Array.isArray((bodyRec as any).reasons) ? (bodyRec as any).reasons.slice(0, 10).map(String) : [] })
+      : null;
+    const result = bodyVariant
+      ? await query(
+          `INSERT INTO flyers (company_id, user_id, store_code, title, store_name, period_start, period_end, categories, template, logo_url, extra_data,
+                               design_variant, recommended_engine, render_schema_version)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, 1)
+           RETURNING *`,
+          [companyId, userId, store_code || null, title, store_name || null, period_start || null, period_end || null,
+           JSON.stringify(categories || []), template || 'grid_hero', logo_url || null, JSON.stringify(extra_data || {}),
+           JSON.stringify(bodyVariant), recJson]
+        )
+      : await query(
+          `INSERT INTO flyers (company_id, user_id, store_code, title, store_name, period_start, period_end, categories, template, logo_url, extra_data)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           RETURNING *`,
+          [companyId, userId, store_code || null, title, store_name || null, period_start || null, period_end || null,
+           JSON.stringify(categories || []), template || 'grid_hero', logo_url || null, JSON.stringify(extra_data || {})]
+        );
 
     // ★ D155 fix: AI 카피 자동 enrich를 비동기 백그라운드로 (사장님 저장 응답 즉시 + 발행 후 ~5초 자동 채워짐)
     // 사장님 수동 일괄문구 보존(skipExisting:true). 실패 시 빈 채 유지(예외 throw X). 사장님 응답에 영향 0.
@@ -389,6 +456,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
+    if (handleDbMigrationError(err, res, 'flyers 신규 4컴럼(design_variant 등)')) return;
     console.error('[전단AI] 전단지 생성 실패:', err.message);
     res.status(500).json({ error: '전단지 생성에 실패했습니다.' });
   }
@@ -468,66 +536,18 @@ router.get('/print-flyers', async (req: Request, res: Response) => {
 });
 
 // ============================================================
-// POST /generate-images — 전단지 상품 이미지 일괄 생성 (DALL-E 3)
-// ⚠️ /:id 라우트보다 앞에 위치해야 Express가 올바르게 매칭
+// ★ 2026-08-20 슈퍼버전업 0단계 — 생성형 상품 이미지(DALL-E) 정책 폐기 (13번 설계 §0-2·§1-6).
+//   상품 이미지 = 카탈로그·POS 보유분 자동 + 네이버 후보 제시(사람 확정)뿐이다.
+//   화면 호출만 끊으면 우회 직접 호출이 남으므로 라우트를 410으로 차단한다(효과가 생기는 곳에서 차단).
+//   기존 생성분 서빙(product-images/:filename)·상태 조회(getGeneratedImageUrl)는 유지 — 자산 열람은 무해.
+//   ⚠️ /:id 라우트보다 앞 위치 유지(Express 매칭 순서).
 // ============================================================
-router.post('/generate-images', async (req: Request, res: Response) => {
-  try {
-    const companyId = requireCompanyId(req, res);
-    if (!companyId) return;
-
-    const { categories } = req.body;
-    if (!categories || !Array.isArray(categories)) {
-      return res.status(400).json({ error: '카테고리 정보가 필요합니다.' });
-    }
-
-    // 즉시 응답 (백그라운드 생성)
-    res.json({ status: 'generating', message: '이미지 생성이 시작되었습니다. 잠시 후 자동으로 반영됩니다.' });
-
-    // 백그라운드에서 이미지 생성
-    generateFlyerImages(categories).then(results => {
-      const count = Object.keys(results).length;
-      console.log(`[전단AI] 이미지 일괄 생성 완료: ${count}개 상품`);
-    }).catch(err => {
-      console.error('[전단AI] 이미지 일괄 생성 실패:', err.message);
-    });
-  } catch (err: any) {
-    console.error('[전단AI] 이미지 생성 요청 실패:', err.message);
-    res.status(500).json({ error: '이미지 생성에 실패했습니다.' });
-  }
+router.post('/generate-images', async (_req: Request, res: Response) => {
+  return res.status(410).json({ error: '상품 이미지 자동 생성 기능은 종료되었습니다. 상품 이미지는 카탈로그와 이미지 검색에서 골라 주세요.' });
 });
 
-// ============================================================
-// POST /generate-image — 단일 상품 이미지 생성 (DALL-E 3)
-// ============================================================
-router.post('/generate-image', async (req: Request, res: Response) => {
-  try {
-    const companyId = requireCompanyId(req, res);
-    if (!companyId) return;
-
-    const { productName } = req.body;
-    if (!productName) {
-      return res.status(400).json({ error: '상품명이 필요합니다.' });
-    }
-
-    // 이미 생성된 이미지가 있으면 즉시 반환
-    const existing = getGeneratedImageUrl(productName);
-    if (existing) {
-      return res.json({ imageUrl: existing, cached: true });
-    }
-
-    // DALL-E 생성
-    const filePath = await generateProductImage(productName);
-    if (filePath) {
-      const imageUrl = `/api/flyer/flyers/product-images/${encodeURIComponent(productName)}.png`;
-      return res.json({ imageUrl, cached: false });
-    }
-
-    res.json({ imageUrl: null, error: '이미지 생성에 실패했습니다.' });
-  } catch (err: any) {
-    console.error('[전단AI] 단일 이미지 생성 실패:', err.message);
-    res.status(500).json({ error: '이미지 생성에 실패했습니다.' });
-  }
+router.post('/generate-image', async (_req: Request, res: Response) => {
+  return res.status(410).json({ error: '상품 이미지 자동 생성 기능은 종료되었습니다. 상품 이미지는 카탈로그와 이미지 검색에서 골라 주세요.' });
 });
 
 // (product-images 서빙은 authenticate 위로 이동됨 — 공개 접근 필요)
@@ -722,10 +742,12 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
     // 이미 단축URL이 있으면 반환
     const existingUrl = await query('SELECT code FROM short_urls WHERE flyer_id = $1', [id]);
     if (existingUrl.rows.length > 0) {
+      const snap1 = await ensureDesignSnapshotForPublish(id);
       await query("UPDATE flyers SET status = 'published', updated_at = now() WHERE id = $1", [id]);
       return res.json({
         short_code: existingUrl.rows[0].code,
-        short_url: `https://hanjul-flyer.kr/${existingUrl.rows[0].code}`
+        short_url: `https://hanjul-flyer.kr/${existingUrl.rows[0].code}`,
+        design_snapshot: snap1
       });
     }
 
@@ -750,11 +772,13 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
       [code, id, companyId]
     );
 
+    const snap2 = await ensureDesignSnapshotForPublish(id);
     await query("UPDATE flyers SET status = 'published', updated_at = now() WHERE id = $1", [id]);
 
     res.json({
       short_code: code,
-      short_url: `https://hanjul-flyer.kr/${code}`
+      short_url: `https://hanjul-flyer.kr/${code}`,
+      design_snapshot: snap2
     });
   } catch (err: any) {
     console.error('[전단AI] 전단지 발행 실패:', err.message);
@@ -851,6 +875,80 @@ router.post('/:id/pdf', async (req: Request, res: Response) => {
 });
 
 // ══════════════════════════════════════════
+// ★ 2026-08-20 3단계 — POST /auto-build : 상품만 주면 완성 구성(13번 설계 §2)
+//   정규화 → 이미지 자사 2단 채움 → 카테고리 분류 → 엔진 자동 선정 → 디자인 변형.
+//   저장 0(구성 계산 전용) — 화면은 이 결과로 preview-html을 부른다(미리보기=발행 SSOT).
+//   「다른 느낌」 = body.seed 증가 전달(재현 가능 재추첨).
+// ══════════════════════════════════════════
+router.post('/auto-build', async (req: Request, res: Response) => {
+  try {
+    const companyId = requireCompanyId(req, res);
+    if (!companyId) return;
+    const body = req.body || {};
+    const rawProducts = body.products;
+    if (!Array.isArray(rawProducts) || rawProducts.length === 0) {
+      return res.status(400).json({ error: '상품 목록(products)이 필요합니다.' });
+    }
+    if (rawProducts.length > 100) {
+      return res.status(400).json({ error: '상품은 한 번에 최대 100개까지 담을 수 있습니다.' });
+    }
+
+    // ① 입력 정규화 — 4소스(POS·엑셀·카탈로그·복제)가 전부 이 공통 스키마로 수렴
+    const items = rawProducts.map((p: any) => ({
+      name: String(p?.name || '').trim(),
+      originalPrice: Math.max(0, Number(p?.originalPrice) || 0),
+      salePrice: Math.max(0, Number(p?.salePrice) || 0),
+      badge: p?.badge ? String(p.badge) : undefined,
+      unit: p?.unit ? String(p.unit) : undefined,
+      origin: p?.origin ? String(p.origin) : undefined,
+      cardDiscount: p?.cardDiscount ? String(p.cardDiscount) : undefined,
+      aiCopy: p?.aiCopy ? String(p.aiCopy) : undefined,
+      imageUrl: p?.imageUrl ? String(p.imageUrl) : undefined,
+    })).filter((i: any) => i.name);
+    if (items.length === 0) return res.status(400).json({ error: '상품명이 있는 항목이 없습니다.' });
+
+    // ② 이미지 자동 채움 — 자사 소유물 2단만. 네이버는 후보 제시 전용(§3 — 자동 확정 금지)
+    await fillMissingImages(items, companyId);
+
+    // ③ 카테고리 자동 분류(키워드→카탈로그→AI)
+    const classified = await classifyProducts(
+      items.map((i: any) => ({ name: i.name })), String(body.business_type || 'mart'), companyId,
+    );
+    const byName = new Map(items.map((i: any) => [i.name, i]));
+    const categories = Object.entries(classified)
+      .map(([name, names]) => ({ name, items: (names as string[]).map(n => byName.get(n)).filter(Boolean) }))
+      .filter(c => c.items.length > 0);
+
+    // ④ 엔진 자동 선정 + 시즌 + 디자인 변형
+    const renderData: FlyerRenderData = {
+      storeName: String(body.store_name || ''),
+      title: String(body.title || ''),
+      period: '',
+      categories: categories as any,
+      periodStart: body.period_start || null,
+      periodEnd: body.period_end || null,
+    };
+    const rec = recommendTemplateAndSeason(renderData);
+    const seedNum = Number(body.seed);
+    const variant = recommendDesign(renderData, rec.seasonToken, {
+      fixedTemplateCode: rec.templateCode,
+      ...(Number.isFinite(seedNum) ? { fixedSeed: Math.abs(Math.floor(seedNum)) } : {}),
+    });
+
+    return res.json({
+      template: rec.templateCode,
+      season_token: rec.seasonToken,
+      reasons: rec.reasons,
+      design_variant: variant,
+      categories,
+    });
+  } catch (err: any) {
+    console.error('[전단AI] auto-build 실패:', err?.message || err);
+    return res.status(500).json({ error: '자동 구성에 실패했습니다.' });
+  }
+});
+
+// ══════════════════════════════════════════
 // POST /classify-products — 상품 자동 카테고리 분류
 // ══════════════════════════════════════════
 router.post('/classify-products', async (req: Request, res: Response) => {
@@ -894,7 +992,7 @@ router.post('/pop-pdf', async (req: Request, res: Response) => {
     const paperSize = req.body.paperSize || 'A4';
     const landscape = req.body.landscape || false;
 
-    const html = renderPricePop(item, { storeName, colorTheme, popTemplate, paperSize, landscape });
+    const html = renderPricePop(item, { storeName, colorTheme, popTemplate, paperSize, landscape, seasonToken: normalizePopSeason((req.body || {}).season) });
     const pdfBuffer = await generatePdfFromHtml(html, { format: paperSize, landscape });
 
     const safeName = (item.name || 'pop').replace(/[^가-힣a-zA-Z0-9_-]/g, '_').slice(0, 30);
@@ -911,6 +1009,29 @@ router.post('/pop-pdf', async (req: Request, res: Response) => {
 // ══════════════════════════════════════════
 // POST /multi-pop — 다분할 POP PDF
 // ══════════════════════════════════════════
+// ═════════════════════
+// ★ 2026-08-20 POST /strip-pop — 매대 띄지 PDF(13번 설계 §4 1차 신규)
+// ═════════════════════
+router.post('/strip-pop', async (req: Request, res: Response) => {
+  try {
+    const companyId = requireCompanyId(req, res);
+    if (!companyId) return;
+    const { items, storeName } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: '상품 목록이 필요합니다.' });
+    }
+    const html = renderStripPop(items, { storeName, seasonToken: normalizePopSeason((req.body || {}).season) });
+    const pdfBuffer = await generatePdfFromHtml(html, { format: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="strip_pop.pdf"');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (err: any) {
+    console.error('[전단AI] 띄지 POP 생성 실패:', err.message);
+    res.status(500).json({ error: '띄지 POP 생성에 실패했습니다.' });
+  }
+});
+
 router.post('/multi-pop', async (req: Request, res: Response) => {
   try {
     const companyId = requireCompanyId(req, res);
@@ -926,7 +1047,7 @@ router.post('/multi-pop', async (req: Request, res: Response) => {
     const landscape = req.body.landscape || false;
 
     await fillMissingImages(items, companyId);
-    const html = renderMultiPop(items, validSplits, { storeName, colorTheme, paperSize, landscape });
+    const html = renderMultiPop(items, validSplits, { storeName, colorTheme, paperSize, landscape, seasonToken: normalizePopSeason((req.body || {}).season) });
     const pdfBuffer = await generatePdfFromHtml(html, { format: paperSize, landscape });
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -952,7 +1073,7 @@ router.post('/promo-pop', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '카테고리명과 상품 목록이 필요합니다.' });
     }
 
-    const html = renderPromoPop(category, items, { storeName, storeAddress, colorTheme });
+    const html = renderPromoPop(category, items, { storeName, storeAddress, colorTheme, seasonToken: normalizePopSeason((req.body || {}).season) });
     const pdfBuffer = await generatePdfFromHtml(html, { format: 'A4' });
 
     const safeCat = category.replace(/[^가-힣a-zA-Z0-9_-]/g, '_').slice(0, 20);
@@ -1001,7 +1122,7 @@ router.post('/:id/pop-all', async (req: Request, res: Response) => {
     // 8개 이하면 다분할 POP 1장, 아니면 개별 POP 연결
     if (allItems.length <= 8) {
       const splits = allItems.length <= 2 ? 2 : allItems.length <= 4 ? 4 : 8;
-      const html = renderMultiPop(allItems, splits as 2 | 4 | 8, { storeName: sName, colorTheme });
+      const html = renderMultiPop(allItems, splits as 2 | 4 | 8, { storeName: sName, colorTheme, seasonToken: normalizePopSeason((req.body || {}).season) });
       const pdfBuffer = await generatePdfFromHtml(html, { format: 'A4' });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="all_pop.pdf"');
@@ -1014,7 +1135,7 @@ router.post('/:id/pop-all', async (req: Request, res: Response) => {
     for (let i = 0; i < allItems.length; i += 8) {
       const chunk = allItems.slice(i, i + 8);
       const splits = chunk.length <= 2 ? 2 : chunk.length <= 4 ? 4 : 8;
-      pages.push(renderMultiPop(chunk, splits as 2 | 4 | 8, { storeName: sName, colorTheme }));
+      pages.push(renderMultiPop(chunk, splits as 2 | 4 | 8, { storeName: sName, colorTheme, seasonToken: normalizePopSeason((req.body || {}).season) }));
     }
     // 첫 페이지만 PDF로 (다중 페이지 puppeteer 제한)
     const pdfBuffer = await generatePdfFromHtml(pages[0], { format: 'A4' });
@@ -1037,20 +1158,40 @@ router.post('/:id/copy', async (req: Request, res: Response) => {
     if (!companyId) return;
     const { userId } = req.flyerUser!;
 
+    // ★ 2026-08-20 3단계 — SELECT *(신규 컴럼 미존재 서버에서도 안전) + 기간 갱신 + 변형 승계(13번 설계 §2-⑥).
+    //   복제 = 매주 반복 일감의 실체 — 지난 전단 그대로, 기간만 새로(body가 주면).
     const orig = await query(
-      `SELECT title, store_name, categories, template, logo_url, extra_data FROM flyers WHERE id = $1 AND company_id = $2`,
+      `SELECT * FROM flyers WHERE id = $1 AND company_id = $2`,
       [req.params.id, companyId]
     );
     if (orig.rows.length === 0) return res.status(404).json({ error: '원본 전단지를 찾을 수 없습니다.' });
 
     const o = orig.rows[0];
-    const result = await query(
-      `INSERT INTO flyers (company_id, user_id, title, store_name, categories, template, logo_url, extra_data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [companyId, userId, `${o.title} (복사)`, o.store_name, JSON.stringify(o.categories || []),
-       o.template || 'grid_hero', o.logo_url, JSON.stringify(o.extra_data || {})]
+    const nb = req.body || {};
+    const newStart = nb.period_start || null;
+    const newEnd = nb.period_end || null;
+    const inheritVariant = coerceDesignVariant(
+      typeof o.design_variant === 'string' ? (() => { try { return JSON.parse(o.design_variant); } catch { return null; } })() : o.design_variant,
     );
+    const result = inheritVariant
+      ? await query(
+          `INSERT INTO flyers (company_id, user_id, title, store_name, categories, template, logo_url, extra_data,
+                               period_start, period_end, design_variant, recommended_engine, render_schema_version)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13)
+           RETURNING *`,
+          [companyId, userId, `${o.title} (복사)`, o.store_name, JSON.stringify(o.categories || []),
+           o.template || 'grid_hero', o.logo_url, JSON.stringify(o.extra_data || {}),
+           newStart, newEnd, JSON.stringify(inheritVariant),
+           o.recommended_engine ? JSON.stringify(o.recommended_engine) : null,
+           o.render_schema_version || 1]
+        )
+      : await query(
+          `INSERT INTO flyers (company_id, user_id, title, store_name, categories, template, logo_url, extra_data, period_start, period_end)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           RETURNING *`,
+          [companyId, userId, `${o.title} (복사)`, o.store_name, JSON.stringify(o.categories || []),
+           o.template || 'grid_hero', o.logo_url, JSON.stringify(o.extra_data || {}), newStart, newEnd]
+        );
 
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
@@ -1139,6 +1280,8 @@ router.post('/print-flyer', async (req: Request, res: Response) => {
       },
       timeoutMs: 90000,
       format,
+      // ★ 2026-08-20 §5 — 인쇄도 같은 시즌 토큰(호출자 미전달로 항상 default였던 것 정정)
+      seasonToken: resolveSeasonToken(String(title || ''), (req.body || {}).period_start || null),
     });
     // paperSize는 manifest가 용지(2절/A3/B4 등) 결정 → 호환성 위해 파라미터 유지만 함
     void paperSize;
