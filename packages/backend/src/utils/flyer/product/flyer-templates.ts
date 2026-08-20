@@ -4538,14 +4538,14 @@ h1{font-family:'Black Han Sans',sans-serif;font-size:clamp(34px,10vw,52px);line-
 .row{display:flex;align-items:flex-end;gap:8px;padding:11px 0;border-bottom:1px dashed rgba(26,22,20,.28)}
 .nm{min-width:0;flex-shrink:1}
 .nm .t{display:block;font-weight:700;font-size:17px;line-height:1.25;word-break:keep-all}
-.nm .t.long{font-size:15px}.nm .t.xlong{font-size:13.5px}
+.nm .t.nm-m{font-size:15px}.nm .t.nm-l{font-size:13.5px}
 .nm .bdg{display:inline-block;margin-top:5px;padding:2px 7px;background:var(--color-primary);color:#fff;font-size:11px;font-weight:900;border-radius:3px}
 .nm .mt{display:block;margin-top:4px;font-size:11px;color:rgba(26,22,20,.55)}
 .dots{flex:1;min-width:14px;height:0;border-bottom:2px dotted rgba(26,22,20,.35);margin-bottom:9px}
 .pr{text-align:right;white-space:nowrap;flex-shrink:0}
 .pr .was{display:block;font-size:12px;color:rgba(26,22,20,.45);text-decoration:line-through}
 .pr .now{font-family:'Black Han Sans',sans-serif;font-size:34px;line-height:1;color:var(--ink)}
-.pr .now.p-lg{font-size:30px}.pr .now.p-xl{font-size:26px}
+.pr .now.pr-m{font-size:30px}.pr .now.pr-l{font-size:26px}
 .pr .now i{font-style:normal;font-size:15px;margin-left:2px}
 .pr .off{display:inline-block;margin-left:6px;padding:2px 6px;background:var(--ink);color:var(--paper);font-size:12px;font-weight:900;border-radius:3px}
 .foot{margin-top:34px;padding-top:16px;border-top:3px double var(--ink);text-align:center}
@@ -4666,7 +4666,7 @@ body{background:#fff;color:var(--ink);font-family:'Noto Sans KR',sans-serif;-web
 .hero .body{padding:16px 18px 18px}
 .tag{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:11px;font-weight:900}
 .hero h2{font-size:23px;font-weight:900;line-height:1.25;margin-top:9px;word-break:keep-all}
-.hero h2.long{font-size:20px}.hero h2.xlong{font-size:18px}
+.hero h2.nm-m{font-size:20px}.hero h2.nm-l{font-size:18px}
 .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
 .ch{padding:3px 8px;border-radius:6px;background:#F3F4F6;font-size:11px;font-weight:700;color:#4B5563}
 .ch.org{background:#DCFCE7;color:#166534}
@@ -4674,7 +4674,7 @@ body{background:#fff;color:var(--ink);font-family:'Noto Sans KR',sans-serif;-web
 .prc{display:flex;align-items:baseline;gap:8px;margin-top:12px;flex-wrap:wrap}
 .prc .was{font-size:13px;color:#9CA3AF;text-decoration:line-through}
 .prc strong{font-family:'Black Han Sans',sans-serif;font-size:36px;line-height:1;color:var(--ink)}
-.prc strong.p-lg{font-size:31px}.prc strong.p-xl{font-size:27px}
+.prc strong.pr-m{font-size:31px}.prc strong.pr-l{font-size:27px}
 .prc strong i{font-style:normal;font-size:16px;margin-left:1px}
 .prc .off{font-size:13px;font-weight:900;color:var(--color-primary)}
 .sec{margin-top:28px;padding:0 16px}
@@ -4687,10 +4687,10 @@ body{background:#fff;color:var(--ink);font-family:'Noto Sans KR',sans-serif;-web
 .card .ph img{width:100%;height:100%;object-fit:cover;display:block}
 .card .body{padding:10px 11px 12px}
 .card h3{font-size:14px;font-weight:700;line-height:1.3;word-break:keep-all}
-.card h3.long{font-size:13px}.card h3.xlong{font-size:12px}
+.card h3.nm-m{font-size:13px}.card h3.nm-l{font-size:12px}
 .card .prc{margin-top:8px;gap:6px}
 .card .prc strong{font-size:22px}
-.card .prc strong.p-lg{font-size:20px}.card .prc strong.p-xl{font-size:18px}
+.card .prc strong.pr-m{font-size:20px}.card .prc strong.pr-l{font-size:18px}
 .card .prc strong i{font-size:12px}
 .foot{margin-top:34px;padding:20px 16px 0;text-align:center;border-top:1px solid var(--line)}
 .foot p{font-size:11px;color:#9CA3AF;line-height:1.6}

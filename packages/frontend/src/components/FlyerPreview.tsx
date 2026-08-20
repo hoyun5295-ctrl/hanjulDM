@@ -65,7 +65,10 @@ export default function FlyerPreview({ title, storeName, periodStart, periodEnd,
         const w = entry.contentRect.width;
         const h = entry.contentRect.height;
         if (w > 0) {
-          setScale(w / TARGET_VIEWPORT_WIDTH);
+          // ★ 0820: 확대 금지. 엔진 HTML은 393px 모바일 기준이라 1배를 넘기면
+          //   글자·카드가 부풀어 서로 겹치고 잘린다(넓은 컬럼에서 미리보기가 깨지던 원인).
+          //   좁으면 줄여 맞추고, 넓으면 1배로 두고 가운데 세운다.
+          setScale(Math.min(1, w / TARGET_VIEWPORT_WIDTH));
           setContainerSize({ width: w, height: h });
         }
       }
@@ -151,6 +154,8 @@ export default function FlyerPreview({ title, storeName, periodStart, periodEnd,
             display: 'block',
             transform: 'scale(' + scale + ')',
             transformOrigin: 'top left',
+            // 1배로 설 만큼 넓으면 가운데로 — 왼쪽에 붙어 뜨지 않게
+            marginLeft: Math.max(0, (containerSize.width - TARGET_VIEWPORT_WIDTH * scale) / 2) + 'px',
           }}
           title="전단지 미리보기"
           sandbox="allow-same-origin allow-scripts"

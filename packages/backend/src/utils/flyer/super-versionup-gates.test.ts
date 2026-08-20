@@ -231,3 +231,43 @@ describe('렌더 준비 CT — 계급·밴드·토큰 분리', () => {
     }
   });
 });
+
+// ────────────────────────────────────────────────────
+// 5. 제작 화면 경계 계약 (2026-08-20 실사고 2건 고정)
+// ────────────────────────────────────────────────────
+describe('게이트 5 — 제작 화면 경계 계약', () => {
+  const FE = (rel: string) => fs.readFileSync(path.resolve(FRONTEND_SRC, rel), 'utf-8');
+
+  it('엑셀 담기 — 모달이 주는 상품명 필드(productName)를 읽는다', () => {
+    // name 으로 읽으면 전 행이 걸러져 조용히 0건이 된다(0820 "엑셀 추가해도 변화 없음")
+    const page = FE('pages/FlyerComposerPage.tsx');
+    const modal = FE('components/ExcelUploadModal.tsx');
+    expect(modal).toContain('productName: string;');
+    expect(page).toContain('p.productName');
+  });
+
+  it('엑셀 담기 — 0건이면 조용히 넘어가지 않는다', () => {
+    const page = FE('pages/FlyerComposerPage.tsx');
+    expect(page).toContain('담긴 상품이 없습니다');
+  });
+
+  it('미리보기 — 1배를 넘겨 확대하지 않는다(넓은 컬럼에서 겹침·잘림)', () => {
+    const prev = FE('components/FlyerPreview.tsx');
+    expect(prev).toContain('Math.min(1, w / TARGET_VIEWPORT_WIDTH)');
+  });
+
+  it('미리보기 — blob iframe 상대경로 해소용 base 주입', () => {
+    const route = fs.readFileSync(path.resolve(BACKEND_SRC, 'routes/flyer/short-urls.ts'), 'utf-8');
+    expect(route).toContain('<base href=');
+  });
+
+  it('신규 엔진 2종 — 계급 클래스는 CT가 실제로 돌려주는 이름을 쓴다', () => {
+    const tpl = fs.readFileSync(path.resolve(BACKEND_SRC, 'utils/flyer/product/flyer-templates.ts'), 'utf-8');
+    const marketBoard = tpl.slice(tpl.indexOf('renderMarketBoardEngine'), tpl.indexOf('renderFreshDailyEngine'));
+    for (const ghost of ['.long{', '.xlong{', '.p-lg{', '.p-xl{']) {
+      expect(marketBoard.includes(ghost), `유령 클래스 ${ghost}`).toBe(false);
+    }
+    expect(marketBoard).toContain('nm-m');
+    expect(marketBoard).toContain('pr-m');
+  });
+});

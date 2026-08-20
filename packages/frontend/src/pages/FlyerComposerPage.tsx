@@ -267,22 +267,39 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   };
 
   const addFromExcel = (products: MappedProduct[]) => {
+    // ⚠ 이 모달이 주는 상품명 필드는 productName 이다(POP·인쇄 화면도 같은 이름을 읽는다).
+    //   name 으로 읽으면 전 행이 "이름 없음"으로 걸러져 조용히 0건이 된다 — 0820 실사고.
     const next = [...items];
+    let added = 0, skipped = 0;
     for (const p of products) {
-      const nm = String((p as any).name || '').trim();
-      if (!nm || next.some(x => x.name === nm)) continue;
+      const nm = String(p.productName || (p as any).name || '').trim();
+      if (!nm) { skipped++; continue; }
+      if (next.some(x => x.name === nm)) { skipped++; continue; }
+      const img = String(p.imageUrl || '').trim();
       next.push({
         name: nm,
-        originalPrice: Number((p as any).originalPrice) || 0,
-        salePrice: Number((p as any).salePrice) || 0,
-        sourcePrice: Number((p as any).salePrice) || 0,
-        unit: (p as any).unit || undefined,
-        origin: (p as any).origin || undefined,
-        badge: (p as any).badge || undefined,
-        imageSource: '없음',
+        originalPrice: Number(p.originalPrice) || 0,
+        salePrice: Number(p.salePrice) || 0,
+        sourcePrice: Number(p.salePrice) || 0,
+        unit: p.unit || undefined,
+        origin: p.origin || undefined,
+        imageUrl: img || undefined,
+        imageSource: img ? '카탈로그' : '없음',
       });
+      added++;
     }
-    setSheet(null); setItemsAndBuild(next);
+    setSheet(null);
+    // 아무것도 안 담겼으면 조용히 넘어가지 않는다 — "변하는 게 없다"의 재발 차단
+    if (added === 0) {
+      setAlert({
+        show: true, title: '담긴 상품이 없습니다', type: 'error',
+        message: products.length === 0
+          ? '엑셀에서 읽어온 상품이 없습니다. 상품명 열이 매핑됐는지 확인해 주세요.'
+          : `${products.length}개 중 담을 수 있는 상품이 없었습니다. (이미 담긴 상품이거나 상품명이 비어 있음 — 건너뜀 ${skipped}건)`,
+      });
+      return;
+    }
+    setItemsAndBuild(next);
   };
 
   // ── 손질 4종 ──
@@ -700,9 +717,9 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
             ) : null}
           </div>
 
-          {/* 종이 */}
-          <div className="rounded-b-2xl border border-border bg-surface p-4">
-            <div className="relative h-[560px] rounded-xl overflow-hidden bg-bg border border-border shadow-inner">
+          {/* 종이 — 전단은 모바일 393px 기준이라 그 폭 그대로 세우고 바닥을 깐다 */}
+          <div className="rounded-b-2xl border border-border bg-bg p-4 paper">
+            <div className="relative h-[560px] w-full max-w-[393px] mx-auto rounded-xl overflow-hidden bg-surface border border-border shadow-elevated">
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center gap-3 px-6 text-center">
                   <div className="w-16 h-20 rounded-lg border-2 border-dashed border-border-strong flex items-center justify-center">

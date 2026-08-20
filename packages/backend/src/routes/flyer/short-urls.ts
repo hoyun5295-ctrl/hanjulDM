@@ -63,7 +63,13 @@ router.post('/preview-html', previewParser, flyerAuthenticate, async (req: Reque
 
     const templateCode = body.template || 'grid_hero';
     // ★ 2026-08-20 미리보기 = 발행과 같은 변형 주입 경로(형태 검증 미달은 무변형 렌더)
-    const html = renderTemplate(templateCode, data, { variant: coerceDesignVariant(body.design_variant) });
+    let html = renderTemplate(templateCode, data, { variant: coerceDesignVariant(body.design_variant) });
+
+    // ★ 0820: 미리보기는 blob: URL iframe 안에서 뜬다. 상대경로 이미지(/api/flyer/...)는
+    //   blob 출처 기준으로 풀려 전부 깨진다(발행 페이지는 실제 도메인이라 멀쩡했다).
+    //   요청 출처를 <base>로 박아 상대경로를 서버 기준으로 되돌린다.
+    const previewOrigin = `${req.protocol}://${req.get('host')}`;
+    html = html.replace('<head>', `<head><base href="${previewOrigin}/">`);
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store'); // 실시간 미리보기는 캐싱 X
