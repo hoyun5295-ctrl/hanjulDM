@@ -61,7 +61,6 @@ function thisWeekRange(): { start: string; end: string } {
 export default function FlyerComposerPage({ token: _token, businessType = 'mart' }: { token: string; businessType?: string }) {
   // ── 상태머신 ──
   const [view, setView] = useState<'home' | 'compose'>('home');
-  const [preset, setPreset] = useState<Preset>('weekly');
   const [items, setItems] = useState<NormItem[]>([]);
   const [build, setBuild] = useState<AutoBuild | null>(null);
   const [building, setBuilding] = useState(false);
@@ -156,7 +155,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   // ── 프리셋 카드 → compose 초기 상태 ──
   const startPreset = async (p: Preset) => {
     const wk = thisWeekRange();
-    setPreset(p); setPublished(null); setEditingId(null); setSeed(null); setBuild(null);
+    setPublished(null); setEditingId(null); setSeed(null); setBuild(null);
     setPeriodStart(wk.start); setPeriodEnd(wk.end);
     if (p === 'weekly') {
       setTitle('이번 주 행사');
@@ -420,7 +419,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const copyUrl = (code: string) => { navigator.clipboard.writeText(`https://hanjul-flyer.kr/${code}`); setCopyToast(true); setTimeout(() => setCopyToast(false), 2000); };
   const openAsBase = (f: RecentFlyer) => {
     const wk = thisWeekRange();
-    setPreset('weekly'); setTitle(f.title || '이번 주 행사'); setPeriodStart(wk.start); setPeriodEnd(wk.end);
+    setTitle(f.title || '이번 주 행사'); setPeriodStart(wk.start); setPeriodEnd(wk.end);
     setEditingId(f.status === 'published' ? null : f.id); // 발행본은 복제(새 장), 초안은 이어 만들기
     setPublished(null); setSeed(null);
     const flat = flattenCats(parseCats(f.categories));
@@ -530,6 +529,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
         <div className="space-y-3">
           <div className="bg-surface rounded-2xl border border-border p-4 space-y-2">
             <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="행사 이름 (예: 이번 주 행사)" />
+            <Input value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="매장 이름 (전단에 표시)" />
             <div className="grid grid-cols-2 gap-2">
               <Input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} />
               <Input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} />
