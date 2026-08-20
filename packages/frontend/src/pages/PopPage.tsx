@@ -488,7 +488,7 @@ export default function PopPage({ token: _token }: { token: string }) {
             {bulkPop && (
               <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setBulkPop(null); }}>
                 <div className="bg-surface rounded-2xl border border-border p-5 w-[300px] space-y-3">
-                  <p className="text-sm font-bold text-white">
+                  <p className="text-sm font-bold text-text">
                     {bulkPop.kind === 'badge' ? '뱃지 일괄 변경' : bulkPop.kind === 'origin' ? '원산지 일괄 변경' : '할인율 일괄 적용'}
                   </p>
                   <input autoFocus value={bulkPop.value}
@@ -496,9 +496,9 @@ export default function PopPage({ token: _token }: { token: string }) {
                     onKeyDown={e => { if (e.key === 'Enter') applyBulk(); }}
                     placeholder={bulkPop.kind === 'badge' ? '예: 초특가' : bulkPop.kind === 'origin' ? '예: 국내산' : '예: 20'}
                     inputMode={bulkPop.kind === 'pct' ? 'numeric' : 'text'}
-                    className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-primary-500" />
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-primary-500" />
                   <div className="flex gap-2">
-                    <button onClick={() => setBulkPop(null)} className="flex-1 py-2 rounded-lg bg-surface-secondary text-white/70 text-sm">취소</button>
+                    <button onClick={() => setBulkPop(null)} className="flex-1 py-2 rounded-lg bg-bg border border-border text-text-secondary text-sm">취소</button>
                     <button onClick={applyBulk} className="flex-1 py-2 rounded-lg bg-primary-600 text-white text-sm font-bold">적용</button>
                   </div>
                 </div>

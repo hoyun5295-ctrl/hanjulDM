@@ -860,14 +860,14 @@ export default function PrintFlyerPage({ token: _token }: { token: string }) {
       {catPop && (
         <div className="fixed inset-0 z-[2000] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setCatPop(null); }}>
           <div className="bg-surface rounded-2xl border border-border p-5 w-[300px] space-y-3">
-            <p className="text-sm font-bold text-white">{catPop.mode === 'add' ? '카테고리 추가' : '카테고리 이름 변경'}</p>
+            <p className="text-sm font-bold text-text">{catPop.mode === 'add' ? '카테고리 추가' : '카테고리 이름 변경'}</p>
             <input autoFocus value={catPop.value}
               onChange={e => setCatPop({ ...catPop, value: e.target.value })}
               onKeyDown={e => { if (e.key === 'Enter') applyCatPop(); }}
               placeholder="카테고리 이름"
-              className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-2 text-sm text-white outline-none" />
+              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-primary-500" />
             <div className="flex gap-2">
-              <button onClick={() => setCatPop(null)} className="flex-1 py-2 rounded-lg bg-surface-secondary text-white/70 text-sm">취소</button>
+              <button onClick={() => setCatPop(null)} className="flex-1 py-2 rounded-lg bg-bg border border-border text-text-secondary text-sm">취소</button>
               <button onClick={applyCatPop} className="flex-1 py-2 rounded-lg bg-primary-600 text-white text-sm font-bold">확인</button>
             </div>
           </div>
@@ -876,10 +876,10 @@ export default function PrintFlyerPage({ token: _token }: { token: string }) {
       {catDelete && (
         <div className="fixed inset-0 z-[2000] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setCatDelete(null); }}>
           <div className="bg-surface rounded-2xl border border-border p-5 w-[300px] space-y-3">
-            <p className="text-sm font-bold text-white">카테고리 삭제</p>
-            <p className="text-xs text-text-tertiary">이 카테고리와 안의 상품이 목록에서 빠집니다.</p>
+            <p className="text-sm font-bold text-text">카테고리 삭제</p>
+            <p className="text-xs text-text-muted">이 카테고리와 안의 상품이 목록에서 빠집니다.</p>
             <div className="flex gap-2">
-              <button onClick={() => setCatDelete(null)} className="flex-1 py-2 rounded-lg bg-surface-secondary text-white/70 text-sm">취소</button>
+              <button onClick={() => setCatDelete(null)} className="flex-1 py-2 rounded-lg bg-bg border border-border text-text-secondary text-sm">취소</button>
               <button onClick={() => { setCategories(prev => prev.filter(c => c.id !== catDelete)); setCatDelete(null); }} className="flex-1 py-2 rounded-lg bg-rose-600 text-white text-sm font-bold">삭제</button>
             </div>
           </div>
