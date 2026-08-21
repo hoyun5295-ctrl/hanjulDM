@@ -139,9 +139,9 @@ export {
 export { renderTemplate } from './product/flyer-templates';
 export type { FlyerRenderData, FlyerRenderItem } from './product/flyer-templates';
 
-// CT-F17: 네이버 쇼핑 이미지 검색
+// CT-F17: 네이버 이미지 후보 검색 (쇼핑 API 2026-07-31 종료 — 이미지 검색 단일 소스)
 export {
-  searchNaverShopping,
+  searchNaverImageCandidates,
   downloadAndSaveImage,
   autoMatchImage,
   batchAutoMatchImages,

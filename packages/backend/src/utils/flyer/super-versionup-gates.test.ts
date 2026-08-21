@@ -185,14 +185,23 @@ describe('게이트 4 — 이미지 정책', () => {
     expect(r.imageUrl).toBeNull();
   });
 
-  // ★ 2026-08-20 정책 변경(Harold 지시) — 웹 전단 한정으로 1클릭 자동 부착을 연다.
-  //   막았던 이유가 "인쇄물로 나가는 구조"였으므로, 그 조건 3개를 코드에 남긴 채로만 연다.
-  it('자동 부착 경로(/auto-images)는 게이트 통과분만 붙이고 받아서 저장한다', () => {
+  // ★ 2026-08-21 개정 — 네이버 쇼핑 검색 API가 2026-07-31 서비스 종료(404 실측·공식 공지).
+  //   무인 자동 부착(/auto-images)은 폐지됐고, 부착은 후보 제시 + 사람 탭 1회 확정 구조만 남는다.
+  it('무인 자동 부착 경로가 없다 — /auto-images 폐지 + 죽은 쇼핑 API 호출 0', () => {
     const route = fs.readFileSync(path.join(BACKEND_SRC, 'routes', 'flyer', 'flyers.ts'), 'utf-8');
-    const block = route.slice(route.indexOf("router.post('/auto-images'"), route.indexOf("router.post('/classify-products'"));
-    expect(block).toContain('passesMatchGate(imageMatchConfidence');  // 오매칭 차단
-    expect(block).toContain('downloadAndSaveImage');                  // 핫링크 금지
-    expect(block).toContain("source: 'naver'");                       // 출처 표기
+    expect(route).not.toContain("router.post('/auto-images'");
+    const ct = fs.readFileSync(path.join(BACKEND_SRC, 'utils', 'flyer', 'product', 'flyer-naver-search.ts'), 'utf-8');
+    expect(ct).not.toContain('const SHOP_API_URL');                   // 종료된 API 엔드포인트 상수 부활 금지
+    expect(ct).not.toContain('async function searchShopApi');         // 죽은 호출 경로 부활 금지
+  });
+
+  it('후보와 확정이 분리되어 있다 — 검색은 저장하지 않고, 확정만 받아서 저장한다', () => {
+    const catalog = fs.readFileSync(path.join(BACKEND_SRC, 'routes', 'flyer', 'catalog.ts'), 'utf-8');
+    const searchBlock = catalog.slice(catalog.indexOf("router.post('/search-image'"), catalog.indexOf("router.post('/select-image'"));
+    expect(searchBlock).not.toContain('downloadAndSaveImage');        // 후보 단계 저장 0(자동 확정 금지)
+    expect(searchBlock).toContain('api_error');                       // 실패 표면화(빈 결과 위장 금지)
+    const selectBlock = catalog.slice(catalog.indexOf("router.post('/select-image'"), catalog.indexOf("router.post('/auto-match'"));
+    expect(selectBlock).toContain('downloadAndSaveImage');            // 사람 확정 → 핫링크 금지 저장
   });
 
   it('자동 부착분은 화면에서 출처가 네이버로 남아 인쇄 동의 게이트에 걸린다', () => {
@@ -205,7 +214,7 @@ describe('게이트 4 — 이미지 정책', () => {
   it('인쇄 이미지 파이프라인에 네이버 소싱이 없다(제3자 저작물 인쇄 차단 — §0-3)', () => {
     const pipeline = fs.readFileSync(
       path.join(BACKEND_SRC, 'utils', 'flyer', 'product', 'print', 'pipeline', 'image-pipeline.ts'), 'utf-8');
-    expect(pipeline).not.toContain('searchNaverShopping');
+    expect(pipeline).not.toContain('searchNaverImageCandidates');
     expect(pipeline).not.toContain('flyer-naver-search');
   });
 

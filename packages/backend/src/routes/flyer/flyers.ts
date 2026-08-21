@@ -33,9 +33,6 @@ import { classifyProducts } from '../../utils/flyer/product/flyer-category-class
 // ★ 2026-08-20 3단계 — 자동 구성 배선(13번 설계 §2): 죽어 있던 추천기·변형 렌더러 소비 시작
 import { recommendTemplateAndSeason } from '../../utils/flyer/product/template-recommender';
 import { TEMPLATE_REGISTRY } from '../../utils/flyer/config/flyer-business-types';
-import {
-  searchNaverShopping, downloadAndSaveImage, imageMatchConfidence, passesMatchGate,
-} from '../../utils/flyer/product/flyer-naver-search';
 import { recommendDesign, coerceDesignVariant } from '../../utils/flyer/product/claude-design-renderer';
 import type { FlyerRenderData } from '../../utils/flyer/product/flyer-templates';
 import { handleDbMigrationError, isDbMigrationError } from '../../utils/flyer/db-migration-error';
@@ -963,66 +960,11 @@ router.post('/auto-build', async (req: Request, res: Response) => {
 });
 
 // ══════════════════════════════════════════
-// ★ 2026-08-20 POST /auto-images — 상품 이미지 한 번에 채우기
+// POST /auto-images는 2026-08-21 폐지 — 소스였던 네이버 쇼핑 검색 API가 2026-07-31 서비스 종료(대체 없음).
+// 무인 자동 부착 축은 복구 불가. 이미지 부착은 후보 제시 + 사람 탭 1회 확정 구조로 전환 —
+// 화면(FlyerComposerPage 사진 고르기)이 catalog/search-image(후보) + catalog/select-image(확정)를 쓴다.
+// 경위·이관 기한(2027-06-30 API HUB) = 15번 문서 §8 · CT-F17 헤더.
 // ══════════════════════════════════════════
-/**
- * 사장님이 버튼 하나로 이미지 없는 상품에 네이버 쇼핑 이미지를 붙인다.
- *
- * 자동 확정을 여는 대신 세 가지를 지킨다(W3 §3에서 이 축을 막았던 이유가 인쇄물 유출이었다).
- *   ① 신뢰도 게이트 통과분만 — 정제 토큰이 상품명에 전부 있는 후보만 붙인다(오매칭 차단).
- *   ② 외부 CDN 핫링크 0 — 받아서 우리 저장소에 저장한 URL만 돌려준다.
- *   ③ 출처를 'naver'로 표기해 돌려준다 — 인쇄 발주 관문이 이 출처를 걸러낼 수 있어야 한다.
- * 429(일일 쿼터 소진)는 빈 결과로 위장하지 않고 그대로 표면화한다.
- */
-router.post('/auto-images', async (req: Request, res: Response) => {
-  try {
-    const companyId = requireCompanyId(req, res);
-    if (!companyId) return;
-
-    const raw = Array.isArray(req.body?.products) ? req.body.products : [];
-    if (raw.length === 0) return res.status(400).json({ error: '상품 목록(products)이 필요합니다.' });
-    if (raw.length > 60) return res.status(400).json({ error: '이미지 채우기는 한 번에 최대 60개까지입니다.' });
-
-    const targets = raw
-      .map((p: any, i: number) => ({ index: Number.isFinite(Number(p?.index)) ? Number(p.index) : i, name: String(p?.name || '').trim() }))
-      .filter((p: { name: string }) => p.name);
-    if (targets.length === 0) return res.status(400).json({ error: '상품명이 있는 항목이 없습니다.' });
-
-    const filled: Array<{ index: number; name: string; imageUrl: string; matchedTitle: string }> = [];
-    const missed: Array<{ index: number; name: string; reason: string }> = [];
-    let quotaExhausted = false;
-
-    for (const t of targets) {
-      if (quotaExhausted) { missed.push({ index: t.index, name: t.name, reason: 'quota' }); continue; }
-
-      const result = await searchNaverShopping(t.name, 5);
-      if (result.api_error === 429) {
-        quotaExhausted = true;
-        missed.push({ index: t.index, name: t.name, reason: 'quota' });
-        continue;
-      }
-      // ① 게이트 통과 후보 중 첫 번째만
-      const best = result.items.find(it => passesMatchGate(imageMatchConfidence(t.name, it.title)));
-      if (!best?.image) { missed.push({ index: t.index, name: t.name, reason: 'no_match' }); continue; }
-
-      // ② 받아서 저장 — 핫링크 금지
-      const saved = await downloadAndSaveImage(best.image, companyId);
-      if (!saved) { missed.push({ index: t.index, name: t.name, reason: 'download_failed' }); continue; }
-
-      filled.push({ index: t.index, name: t.name, imageUrl: saved, matchedTitle: best.title });
-    }
-
-    return res.json({
-      filled,
-      missed,
-      quota_exhausted: quotaExhausted,
-      source: 'naver', // ③ 출처 표기 — 인쇄 관문이 이 값으로 걸러낸다
-    });
-  } catch (err: any) {
-    console.error('[전단AI] auto-images 실패:', err?.message || err);
-    return res.status(500).json({ error: '상품 이미지 채우기에 실패했습니다.' });
-  }
-});
 
 // ══════════════════════════════════════════
 // POST /classify-products — 상품 자동 카테고리 분류

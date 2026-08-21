@@ -126,6 +126,19 @@ W3 §3에서 **네이버 자동 확정 금지**로 막았던 축을 **웹 전단
 
 **크롬 v2 (0821 2차 — Harold "버튼·디자인이 안 모던하다" 재접수)**: 화면의 강조 액션 색이 두 갈래(하단 발행 = 공용 Button 인디고 / 상단 = 잉크)로 갈라져 있던 것이 뿌리. index.css에 `.btn-ink`·`.btn-quiet`·`.field-quiet` 신설(잉크 단일 액센트 — radius는 호출부 유틸리티 소유: **비레이어 CSS가 Tailwind 유틸리티를 이기므로** 커스텀 클래스에 radius를 두면 rounded-full이 죽는다), 제작 화면의 공용 `Button` 사용 전량을 로컬 버튼으로 교체(공용 컴포넌트 무변경 — 호출부에서 막는다). 입력은 `.field-quiet` 랩으로 면 구분+포커스 잉크 링. 아이콘 체계 = 인라인 스트로크 SVG 단일(유니코드 ✕·× 및 🗑️ 이모지 제거). 히어로 장식 블러 2개·격자 제거(격자는 미리보기 종이 바닥만), 체크박스 `accent-slate-900`, 쿠폰 토글 잉크, 텍스트 선택·focus-visible 링도 잉크. 검출기 잔여 = 삼항 분기 오탐 1(gray-on-color)·미리보기 격자 의도 유지 1.
 
+**모달 겹침 정정(0821 — Harold 접수)**: 편집 시트에서 이미지 자동 찾기 실패 시 AlertModal이 시트 위에 겹쳐 떴다. 시트 안 인라인 안내(`editNotice` — 앰버 박스)로 교체, 시트 여닫이·재시도 때 초기화. **모달 위 모달 금지**가 이 화면의 규칙이다. 대량 채우기(시트 밖)는 기존 AlertModal 유지.
+
+**★0821 네이버 쇼핑 API 사망 확정 (실측: 서버 로그 404 전건 + curl 프로브 + 공식 이관 공지)**
+- **쇼핑 검색 API(`/v1/search/shop.json`) = 2026-07-31 완전 종료. 공식 대체 없음.** 자동 부착 축(auto-images)의 유일 소스가 죽었다 — 키(.env 확인 1)·게이트 문제가 아니다. W3 개발(8/20)보다 종료(7/31)가 먼저였고, 게이트 실렌더는 실 API를 호출하지 않아 못 잡았다.
+- 함께 드러난 결함: auto-images 라우트가 **429만** 표면화하고 401·404는 no_match("일치하는 이미지 없음")로 위장 — 사용자에게 거짓 사유가 나갔다.
+- **이미지 검색 API는 생존** — NAVER API HUB로 이관되며 기존 openapi.naver.com + 기존 키로 **2027-06-30까지** 동작. 이후 네이버클라우드 새 키·도메인(`naverapihub.apigw.ntruss.com`)·헤더(X-NCP-*) 교체 필요. ⛔ **기한: 2027-06-30 전 API HUB 이관.**
+- **처방 이행 완료(0821 Harold 승인 "제대로 구현해서 마무리")**:
+  ① CT-F17 2차 개정 — 죽은 쇼핑 API 호출 전면 제거(`searchShopApi`·`SHOP_API_URL` 삭제), 후보 검색 = 이미지 검색 단일 소스로 `searchNaverImageCandidates` 개명(쇼핑이라는 거짓 이름 제거 — 소비처 catalog.ts·barrel·게이트 전수 갱신). 헤더에 종료 사실·2027-06-30 이관 기한 명문화.
+  ② `/flyers/auto-images` 라우트 폐지(무인 자동 부착 축 종결 — 폐지 사유 주석으로 고정).
+  ③ 화면 = **사진 고르기** 전환: 신규 endpoint 0 — 기존 `catalog/search-image`(후보·api_error 표면화)+`catalog/select-image`(사람 탭 1회 확정·로컬 저장) 재사용. 편집 시트 단건 + 담긴 상품 대량(건너뛰기·진행 N/M 순회) 모두 후보 격자에서 탭 1회. "이름 일치" 뱃지 = match_score 1.0. 429/401/기타 오류 문구 구분 표면화. 출처 '네이버' 표기·인쇄 동의 관문 불변(게이트 198 유지).
+  ④ 게이트 개정: auto-images 부재 + 죽은 API 부활 금지 + 후보(저장 0)/확정(downloadAndSaveImage) 분리 단정 — **100/100 통과** · backend tsc 0 · frontend build 통과.
+  잔여 실측(Harold): 서버 배포 후 사진 고르기에서 후보 노출 + 탭 1회 부착 + 인쇄 관문 동의 체크 1건.
+
 **범위 밖 기록(미착수)**: POP·인쇄 렌더러의 Noto Sans KR → Pretendard 통일 / admin-frontend 서체 / 폐기 엔진 2종(magazine_zine·catalog_swipe — 옛 발행 URL 전용이라 미변경).
 
 ## §7 ⛔

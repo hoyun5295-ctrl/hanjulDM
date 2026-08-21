@@ -1,17 +1,18 @@
 /**
- * ★ CT-F17 — 전단AI 네이버 이미지 후보 검색 (2026-08-20 슈퍼버전업 1단계 전면 개정 — 13번 설계 §3)
+ * ★ CT-F17 — 전단AI 네이버 이미지 후보 검색 (2026-08-21 2차 개정 — 쇼핑 API 서비스 종료 반영)
  *
- * ⛔ 정책 (13번 설계 §0-2·§3 — 어길 수 없는 것)
+ * ⛔ 정책 (13번 설계 §0-2·§3 + 15번 문서 §8 — 어길 수 없는 것)
  *   1. 네이버 유래 이미지는 **자동 확정 금지** — 이 모듈은 후보만 반환한다. 확정은 언제나 사람 탭 1회
- *      (카탈로그 select-image → downloadAndSaveImage 경로가 유일한 확정 통로).
- *   2. 자동(무인) 경로에서 부를 수 있는 것은 **쇼핑 API 후보 검색뿐**. 이미지 검색 API(블로그·기사 등
- *      제3자 저작물 혼입)는 사장님이 눈으로 보고 고르는 수동 선택 UI에서만 쓴다(opts.includeImageSearch).
+ *      (select-image 계열 라우트 → downloadAndSaveImage가 유일한 확정 통로).
+ *   2. **쇼핑 검색 API(/v1/search/shop.json)는 2026-07-31 네이버가 완전 종료**(대체 API 없음 —
+ *      운영 404 전건 실측 + 공식 이관 공지). 무인 자동 부착 축은 이날 함께 죽었다.
+ *      후보 소스는 **이미지 검색 API 하나**다. 제3자 저작물이 섞이므로 후보는 반드시
+ *      사장님이 눈으로 보고 고르는 화면에만 노출한다(전 소비 경로 = 후보 제시 → 사람 확정).
  *   3. 인쇄물 경로는 이 모듈을 부르지 않는다(로컬 파일만 — image-pipeline이 차단).
  *
- * 개정 전 결함(12번 검수·회의론자 실측): items[0] 무검증 확정 · 이미지 검색 상시 선호출 ·
- * ' 식품' 강제 접미 · 429/401을 빈 결과로 삼킴 · process.cwd() 저장 경로.
- *
- * API: https://openapi.naver.com/v1/search/shop.json (무료: 일 25,000건 — 키는 전 매장 공유)
+ * ⏰ 이관 기한: 기존 openapi.naver.com + 기존 키는 **2027-06-30까지**. 이후 NAVER API HUB로 이관
+ *    (도메인 naverapihub.apigw.ntruss.com · 경로 /search/v1/image · 헤더 X-NCP-APIGW-API-KEY-ID/-KEY ·
+ *    네이버클라우드 신규 키 발급 필요) — 15번 문서 §8이 기한을 소유한다.
  */
 
 import fs from 'fs';
@@ -20,7 +21,7 @@ import crypto from 'crypto';
 
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || '';
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || '';
-const SHOP_API_URL = 'https://openapi.naver.com/v1/search/shop.json';
+// SHOP_API_URL은 2026-08-21 삭제 — 쇼핑 검색 API 자체가 2026-07-31 종료(404). 되살리지 말 것.
 const IMAGE_API_URL = 'https://openapi.naver.com/v1/search/image';
 
 // 이미지 저장 경로 — flyers.ts의 업로드 경로 패턴과 같은 기준(env 우선 + path.resolve).
@@ -106,60 +107,13 @@ function recordApiError(status: number, api: string) {
   console.error(`[naver-search] ${api} API 오류: ${status}${status === 429 ? ' (일일 쿼터 소진 가능 — 키 전 매장 공유)' : status === 401 ? ' (키 인증 실패)' : ''}`);
 }
 
-/**
- * ★ 쇼핑 API 검색 — 자동(무인) 경로가 부를 수 있는 유일한 검색.
- * 실패(429/401 등)는 api_error로 표면화한다 — 빈 결과로 위장하지 않는다.
- */
-async function searchShopApi(rawQuery: string, display: number): Promise<{ items: NaverShopItem[]; apiError: number | null }> {
-  if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) return { items: [], apiError: null };
-  const cleanQuery = cleanProductName(rawQuery);
-  try {
-    const params = new URLSearchParams({
-      query: cleanQuery,
-      display: String(Math.min(display, 100)),
-      sort: 'sim',
-    });
-    const res = await fetch(`${SHOP_API_URL}?${params}`, {
-      headers: { 'X-Naver-Client-Id': NAVER_CLIENT_ID, 'X-Naver-Client-Secret': NAVER_CLIENT_SECRET },
-    });
-    if (!res.ok) {
-      recordApiError(res.status, 'shop');
-      return { items: [], apiError: res.status };
-    }
-    const data = await res.json() as any;
-    const items = (data.items || [])
-      .filter((item: any) => {
-        const img = item.image || '';
-        return img && !img.includes('noimage') && !img.includes('no_img');
-      })
-      .map((item: any) => {
-        const title = stripHtml(item.title || '');
-        return {
-          title,
-          link: item.link || '',
-          image: item.image || '',
-          lprice: item.lprice || '0',
-          hprice: item.hprice || '0',
-          mallName: item.mallName || '',
-          maker: item.maker || '',
-          brand: item.brand || '',
-          category1: item.category1 || '',
-          category2: item.category2 || '',
-          category3: item.category3 || '',
-          match_score: imageMatchConfidence(rawQuery, title),
-          source: 'shop' as const,
-        };
-      });
-    return { items, apiError: null };
-  } catch (err: any) {
-    console.error('[naver-search] shop 검색 실패:', err?.message || err);
-    return { items: [], apiError: null };
-  }
-}
+// searchShopApi는 2026-08-21 삭제 — 쇼핑 검색 API 종료(정책 2). 죽은 API를 매 검색마다 호출하며
+// 404 로그를 쌓고 지연을 만들던 경로다. 후보 검색은 아래 searchImageApi 하나가 소유한다.
 
 /**
- * ★ 이미지 검색 API — **수동 선택 UI 전용**(사장님이 눈으로 보고 고른다).
- * 결과에 블로그·기사 등 제3자 저작물이 섞이므로 자동 경로 호출 금지·인쇄 매체 진입 금지.
+ * ★ 이미지 검색 API — 유일한 후보 소스(정책 2).
+ * 결과에 블로그·기사 등 제3자 저작물이 섞이므로 후보는 반드시 사람이 보고 고르는 화면에만 노출하고,
+ * 확정은 select-image 계열(downloadAndSaveImage)로만 한다. 인쇄 매체 진입 금지.
  */
 async function searchImageApi(rawQuery: string, display: number): Promise<{ items: NaverShopItem[]; apiError: number | null }> {
   if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) return { items: [], apiError: null };
@@ -203,38 +157,22 @@ async function searchImageApi(rawQuery: string, display: number): Promise<{ item
 }
 
 /**
- * ★ 후보 검색 — 기본은 쇼핑 API만. 이미지 검색 병합은 수동 UI가 명시 요청할 때만.
+ * ★ 후보 검색 — 이미지 검색 API 단일 소스(쇼핑 API 종료 — 정책 2).
  * 반환 후보는 match_score 내림차순 — 프론트는 그대로 상위부터 보여주면 된다.
+ * 이름 개정: searchNaverShopping → searchNaverImageCandidates (쇼핑이라는 거짓 이름 제거).
  */
-export async function searchNaverShopping(
+export async function searchNaverImageCandidates(
   query: string,
   display: number = 5,
-  opts?: { includeImageSearch?: boolean },
 ): Promise<ImageSearchResult> {
   if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) {
     console.warn('[naver-search] NAVER_CLIENT_ID/SECRET 미설정');
     return { query, items: [], total: 0, api_error: null };
   }
 
-  const shop = await searchShopApi(query, display);
-  let merged: NaverShopItem[] = [...shop.items];
-  let apiError = shop.apiError;
-
-  if (opts?.includeImageSearch === true && merged.length < display) {
-    const img = await searchImageApi(query, display);
-    apiError = apiError ?? img.apiError;
-    const seen = new Set(merged.map(i => i.image));
-    for (const item of img.items) {
-      if (seen.has(item.image)) continue;
-      seen.add(item.image);
-      merged.push(item);
-    }
-  }
-
-  merged.sort((a, b) => b.match_score - a.match_score);
-  merged = merged.slice(0, display);
-
-  return { query, items: merged, total: merged.length, api_error: apiError };
+  const img = await searchImageApi(query, display);
+  const items = [...img.items].sort((a, b) => b.match_score - a.match_score).slice(0, display);
+  return { query, items, total: items.length, api_error: img.apiError };
 }
 
 /**
@@ -276,7 +214,7 @@ export async function downloadAndSaveImage(
  * ★ 상품명 → 후보 목록 (2026-08-20 의미 변경 — 자동 확정 폐지).
  *
  * 옛 동작: 1순위를 무검증 다운로드·확정(imageUrl 반환). → 상시 오매칭 + 제3자 저작물 유입 구조라 폐기.
- * 새 동작: 쇼핑 API 후보 + 신뢰도 점수만 반환한다. imageUrl은 항상 null —
+ * 새 동작: 이미지 검색 후보 + 신뢰도 점수만 반환한다(쇼핑 API 종료 — 정책 2). imageUrl은 항상 null —
  *          확정은 화면에서 사람이 고른 뒤 select-image(downloadAndSaveImage)로만.
  * 응답 형태(imageUrl·source·candidates)는 유지 — 기존 화면은 "자동 매칭 없음 + 후보 표시"로 동작한다.
  */
@@ -284,7 +222,7 @@ export async function autoMatchImage(
   productName: string,
   _companyId: string
 ): Promise<{ imageUrl: null; source: 'candidates' | 'none'; candidates: NaverShopItem[]; api_error: number | null }> {
-  const result = await searchNaverShopping(productName, 5);
+  const result = await searchNaverImageCandidates(productName, 5);
   if (result.items.length === 0) {
     return { imageUrl: null, source: 'none', candidates: [], api_error: result.api_error };
   }

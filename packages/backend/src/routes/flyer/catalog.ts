@@ -9,7 +9,7 @@ import { query } from '../../config/database';
 import { flyerAuthenticate, requireFlyerAdmin } from '../../middlewares/flyer-auth';
 import { getCatalogItems, upsertCatalogItem, touchCatalogUsage } from '../../utils/flyer';
 import {
-  searchNaverShopping,
+  searchNaverImageCandidates,
   downloadAndSaveImage,
   autoMatchImage,
   batchAutoMatchImages,
@@ -90,13 +90,13 @@ router.get('/find-image', async (req: Request, res: Response) => {
 // ★ 네이버 쇼핑 이미지 검색 API (CT-F17)
 // ============================================================
 
-/** POST /search-image — 상품명으로 이미지 후보 검색 (★사람이 보고 고르는 수동 UI라 이미지 검색 병합 허용 — §3-2) */
+/** POST /search-image — 상품명으로 이미지 후보 검색 (후보만 — 확정은 아래 select-image에서 사람 탭 1회) */
 router.post('/search-image', async (req: Request, res: Response) => {
   try {
     const { product_name } = req.body;
     if (!product_name) return res.status(400).json({ error: 'product_name 필수' });
 
-    const result = await searchNaverShopping(product_name, 8, { includeImageSearch: true });
+    const result = await searchNaverImageCandidates(product_name, 8);
     return res.json({
       query: result.query,
       total: result.total,

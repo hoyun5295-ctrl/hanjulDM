@@ -46,6 +46,8 @@ interface AutoBuild {
 }
 /** 템플릿 레지스트리(backend TEMPLATE_REGISTRY) — label/desc/color 그대로 화면 카드가 된다 */
 interface TemplateInfo { value: string; label: string; desc: string; color: string; }
+/** 사진 후보(catalog/search-image 응답) — 확정은 select-image에서 사람 탭 1회 */
+interface PickCand { title: string; image: string; match_score: number; }
 interface RecentFlyer {
   id: string; title: string; status: string; short_code: string | null;
   period_start: string | null; period_end: string | null;
@@ -98,11 +100,15 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [pickedTemplate, setPickedTemplate] = useState<string | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [imageFilling, setImageFilling] = useState(false);
 
   // 손질 — 상품 편집 시트 하나로(이름·판매가·원가·단위·원산지·뱃지·이미지)
   const [editPop, setEditPop] = useState<{ idx: number; draft: NormItem } | null>(null);
-  const [editImageBusy, setEditImageBusy] = useState(false);
+
+  // 사진 고르기 — 후보 제시 + 사람 탭 1회 확정(무인 자동 부착은 네이버 쇼핑 API 종료로 폐지 — 15번 §8)
+  const [picker, setPicker] = useState<{ queue: number[]; pos: number; fromSheet: boolean } | null>(null);
+  const [pickerCands, setPickerCands] = useState<PickCand[] | null>(null); // null = 불러오는 중
+  const [pickerNotice, setPickerNotice] = useState<string | null>(null);
+  const [pickerBusy, setPickerBusy] = useState(false);
 
   // 인쇄 관문
   const [printAgree, setPrintAgree] = useState(false);
@@ -304,46 +310,73 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
     setItemsAndBuild(next);
   };
 
-  // ── 상품 이미지 한 번에 채우기 (네이버 쇼핑 · 게이트 통과분만 · 로컬 저장본) ──
-  const fillImages = async () => {
-    const targets = items.map((it, i) => ({ index: i, name: it.name })).filter((t, i) => !items[i].imageUrl && t.name);
-    if (targets.length === 0) return;
-    setImageFilling(true);
+  // ── 사진 고르기 — catalog/search-image(후보) + catalog/select-image(사람 확정·로컬 저장) 재사용 ──
+  const pickerApiNotice = (apiError: number | null | undefined, count: number): string | null => {
+    if (apiError === 429) return '오늘 이미지 검색 한도를 다 썼습니다. 내일 다시 시도해 주세요.';
+    if (apiError === 401) return '이미지 검색 인증에 문제가 있습니다. 관리자에게 알려 주세요.';
+    if (apiError) return '이미지 검색 연결에 문제가 있습니다. 잠시 후 다시 시도해 주세요.';
+    if (count === 0) return '후보를 찾지 못했습니다. 상품명을 조금 단순하게 고치면 잘 나옵니다.';
+    return null;
+  };
+
+  const loadPickerCands = async (idx: number, fromSheet: boolean) => {
+    setPickerCands(null); setPickerNotice(null);
+    const nm = (fromSheet ? editPop?.draft.name : items[idx]?.name)?.trim();
+    if (!nm) { setPickerCands([]); setPickerNotice('상품명이 비어 있습니다.'); return; }
     try {
-      const res = await apiFetch(`${API_BASE}/api/flyer/flyers/auto-images`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products: targets }),
+      const res = await apiFetch(`${API_BASE}/api/flyer/catalog/search-image`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_name: nm }),
       });
       const d = await res.json();
-      if (!res.ok) {
-        setAlert({ show: true, title: '이미지 채우기 실패', message: d.error || '잠시 후 다시 시도해 주세요.', type: 'error' });
+      const list: PickCand[] = res.ok ? (d.items || []) : [];
+      setPickerCands(list);
+      setPickerNotice(res.ok ? pickerApiNotice(d.api_error, list.length) : (d.error || '이미지 검색에 실패했습니다.'));
+    } catch {
+      setPickerCands([]); setPickerNotice('네트워크 오류가 있었습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  };
+
+  const openPicker = (indices: number[], fromSheet: boolean) => {
+    if (indices.length === 0) return;
+    setPicker({ queue: indices, pos: 0, fromSheet });
+    loadPickerCands(indices[0], fromSheet);
+  };
+
+  const advancePicker = () => {
+    if (!picker) return;
+    const nextPos = picker.pos + 1;
+    if (nextPos >= picker.queue.length) { setPicker(null); return; }
+    setPicker({ ...picker, pos: nextPos });
+    loadPickerCands(picker.queue[nextPos], picker.fromSheet);
+  };
+
+  const pickCandidate = async (c: PickCand) => {
+    if (!picker || pickerBusy) return;
+    setPickerBusy(true); setPickerNotice(null);
+    try {
+      // 확정 = 사람 탭 1회 → 서버가 받아서 자체 저장(핫링크 0)한 URL만 쓴다
+      const res = await apiFetch(`${API_BASE}/api/flyer/catalog/select-image`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: c.image }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.image_url) {
+        setPickerNotice(d?.error || '이미지 저장에 실패했습니다. 다른 사진으로 시도해 주세요.');
         return;
       }
-      const next = [...items];
-      for (const f of (d.filled || [])) {
-        // 출처를 '네이버'로 남긴다 — 인쇄 관문의 자동 이미지 동의 체크가 이 값으로 걸린다
-        if (next[f.index]) next[f.index] = { ...next[f.index], imageUrl: f.imageUrl, imageSource: '네이버' };
+      const idx = picker.queue[picker.pos];
+      if (picker.fromSheet) {
+        // 편집 시트 계약 유지 — 반영은 시트의 저장 버튼이 확정한다
+        setDraft({ imageUrl: d.image_url, imageSource: '네이버' });
+        setPicker(null);
+      } else {
+        setItemsAndBuild(items.map((it, i) => (i === idx ? { ...it, imageUrl: d.image_url, imageSource: '네이버' } : it)));
+        advancePicker();
       }
-      setItemsAndBuild(next);
-
-      const filledN = (d.filled || []).length;
-      const quota = d.quota_exhausted;
-      setAlert({
-        show: true,
-        title: filledN > 0 ? `이미지 ${filledN}건 채웠습니다` : '채운 이미지가 없습니다',
-        type: filledN > 0 ? 'success' : 'error',
-        message: [
-          filledN > 0 ? `상품 ${targets.length}개 중 ${filledN}개에 이미지를 붙였습니다.` : `상품 ${targets.length}개에서 확실한 이미지를 찾지 못했습니다.`,
-          (d.missed || []).length > 0 && !quota ? '못 찾은 상품은 이름이 짧거나 규격이 특이한 경우입니다. 카탈로그에 직접 올리면 다음부터 자동으로 붙습니다.' : '',
-          quota ? '오늘 이미지 검색 한도를 다 써서 나머지는 건너뛰었습니다. 내일 다시 시도해 주세요.' : '',
-        ].filter(Boolean).join('\n'),
-      });
     } catch {
-      setAlert({ show: true, title: '오류', message: '네트워크 오류', type: 'error' });
-    } finally {
-      setImageFilling(false);
-    }
+      setPickerNotice('네트워크 오류가 있었습니다. 잠시 후 다시 시도해 주세요.');
+    } finally { setPickerBusy(false); }
   };
 
   // ── 손질: 빼기 + 상품 편집 시트 ──
@@ -367,33 +400,6 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       badge: (d.badge || '').trim() || undefined,
     } : it));
     setEditPop(null); setItemsAndBuild(next);
-  };
-  // 편집 시트 안 단건 이미지 찾기 — auto-images 재사용(신뢰도 게이트·로컬 저장·네이버 출처 표기 그대로)
-  const findOneImage = async () => {
-    if (!editPop || editImageBusy) return;
-    const nm = editPop.draft.name.trim();
-    if (!nm) return;
-    setEditImageBusy(true);
-    try {
-      const res = await apiFetch(`${API_BASE}/api/flyer/flyers/auto-images`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products: [{ index: 0, name: nm }] }),
-      });
-      const d = await res.json();
-      const hit = res.ok ? (d.filled || [])[0] : null;
-      if (hit) {
-        setDraft({ imageUrl: hit.imageUrl, imageSource: '네이버' });
-      } else {
-        setAlert({
-          show: true, title: '이미지를 찾지 못했습니다', type: 'error',
-          message: d?.quota_exhausted
-            ? '오늘 이미지 검색 한도를 다 썼습니다. 내일 다시 시도해 주세요.'
-            : '확실히 일치하는 이미지가 없습니다. 카탈로그에 직접 올리면 다음부터 자동으로 붙습니다.',
-        });
-      }
-    } catch {
-      setAlert({ show: true, title: '오류', message: '네트워크 오류', type: 'error' });
-    } finally { setEditImageBusy(false); }
   };
   const reroll = () => {
     const nextSeed = (seed ?? (build?.design_variant?.variantSeed ?? 0)) + 1;
@@ -729,7 +735,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const previewCategories = build?.categories?.length ? build.categories : (items.length ? [{ name: '상품', items }] : []);
   const templateLabel = (code?: string) =>
     templates.find(t => t.value === code)?.label || code || '자동';
-  const noImageCount = items.filter(it => !it.imageUrl).length;
+  const noImageIdxs = items.map((it, i) => (!it.imageUrl ? i : -1)).filter(i => i >= 0);
   const applyTemplate = (code: string | null) => {
     setPickedTemplate(code);
     setGalleryOpen(false);
@@ -844,10 +850,10 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           <div className="bg-surface rounded-2xl border border-border p-4">
             <div className="flex items-center justify-between mb-2 gap-2">
               <p className="text-[13px] font-bold text-text">담긴 상품 <span className="font-semibold text-text-muted">{items.length}</span></p>
-              {noImageCount > 0 && (
-                <button onClick={fillImages} disabled={imageFilling} className="h-8 px-3 rounded-full btn-ink text-[11px] shrink-0">
+              {noImageIdxs.length > 0 && (
+                <button onClick={() => openPicker(noImageIdxs, false)} className="h-8 px-3 rounded-full btn-ink text-[11px] shrink-0">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
-                  {imageFilling ? '이미지 찾는 중...' : `이미지 채우기 (${noImageCount})`}
+                  사진 고르기 ({noImageIdxs.length})
                 </button>
               )}
             </div>
@@ -1168,14 +1174,14 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 </div>
                 <div className="flex-1 space-y-1.5">
                   <div className="flex gap-1.5">
-                    <button onClick={findOneImage} disabled={editImageBusy}
-                      className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 disabled:opacity-60 transition-colors">
-                      {editImageBusy ? '찾는 중...' : '이미지 자동 찾기'}
+                    <button onClick={() => openPicker([editPop.idx], true)}
+                      className="h-8 px-3 rounded-lg btn-ink text-[11px]">
+                      사진 고르기
                     </button>
                     {editPop.draft.imageUrl && (
                       <button onClick={() => setDraft({ imageUrl: undefined, imageSource: '없음' })}
-                        className="px-3 py-1.5 rounded-lg bg-surface border border-border text-[11px] font-semibold text-text-secondary hover:text-rose-500">
-                        이미지 빼기
+                        className="h-8 px-3 rounded-lg btn-quiet text-[11px] !text-text-secondary hover:!text-rose-500">
+                        사진 빼기
                       </button>
                     )}
                   </div>
@@ -1238,6 +1244,66 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           </div>
         </div>
       )}
+
+      {/* ── 사진 고르기 시트 — 후보 제시 + 사람 탭 1회 확정(자동 부착 아님) ── */}
+      {picker && (() => {
+        const curIdx = picker.queue[picker.pos];
+        const curName = picker.fromSheet ? (editPop?.draft.name || '') : (items[curIdx]?.name || '');
+        return (
+          <div className="fixed inset-0 z-[70] bg-black/60 flex items-end sm:items-center justify-center"
+            onMouseDown={e => { if (e.target === e.currentTarget && !pickerBusy) setPicker(null); }}>
+            <div className="bg-surface w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-border max-h-[85vh] flex flex-col">
+              <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-base font-bold text-text truncate">사진 고르기 — {curName}</p>
+                  <p className="text-[11px] text-text-muted mt-0.5">
+                    마음에 드는 사진을 누르면 바로 붙습니다{picker.queue.length > 1 ? ` · ${picker.pos + 1}/${picker.queue.length}` : ''}
+                  </p>
+                </div>
+                <button onClick={() => setPicker(null)} disabled={pickerBusy}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:text-text hover:bg-bg transition-colors shrink-0" aria-label="닫기">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 py-4">
+                {pickerNotice && (
+                  <p className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5 leading-relaxed kr mb-3">{pickerNotice}</p>
+                )}
+                {pickerCands === null ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {Array.from({ length: 6 }).map((_, i) => <div key={i} className="aspect-square rounded-xl bg-bg sheen" />)}
+                  </div>
+                ) : pickerCands.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {pickerCands.map((c, i) => (
+                      <button key={i} onClick={() => pickCandidate(c)} disabled={pickerBusy} title={c.title}
+                        className="relative aspect-square rounded-xl overflow-hidden border border-border hover:border-slate-900 transition-colors disabled:opacity-60 bg-bg">
+                        <img src={c.image} alt={c.title} className="w-full h-full object-cover" loading="lazy" />
+                        {c.match_score >= 1 && (
+                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-slate-900/85 text-white text-[9px] font-bold">이름 일치</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-text-muted text-center py-8">보여드릴 후보가 없습니다.</p>
+                )}
+                {pickerBusy && <p className="text-xs text-text-secondary text-center mt-3">사진을 붙이는 중...</p>}
+              </div>
+
+              {picker.queue.length > 1 && (
+                <div className="px-4 py-3 border-t border-border flex items-center justify-between">
+                  <span className="text-[11px] text-text-muted">마음에 드는 게 없으면 넘어가세요</span>
+                  <button onClick={advancePicker} disabled={pickerBusy} className="h-10 px-4 rounded-xl btn-quiet text-sm">
+                    {picker.pos + 1 >= picker.queue.length ? '끝내기' : '건너뛰기'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       <Toast show={copyToast} message="URL이 복사되었습니다" />
       <AlertModal alert={alert} onClose={() => setAlert({ ...alert, show: false })} />
