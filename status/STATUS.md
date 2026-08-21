@@ -2,28 +2,28 @@
 
 > **업데이트:** 2026-08-20 (결제 상태·잔액 축 정정 / 슈퍼버전업 W3 구현) — 그 아래 D159 절은 당시 기록 원문 보존
 
-## ★ 2026-08-20 모바일 전단 베스트 10 재탄생 — **M1~M5 구현 완료 · 배포 대기**
+## ★ 2026-08-20 모바일 전단 베스트 10 재탄생 — **배포완료** (`aad46fb`)
 
 **SoT = `status/hanjul-flyer-revamp/16_mobile_template_best10_redesign.md`** (설계·이행 현황·⛔ 소유).
 한 줄 요약 = 12종을 **통합 2(zine→magazine · swipe→catalog_dark)로 베스트 10** 재편 + 골격 계약 게이트(총 135건) 신설.
 게이트가 기존 실결함 4건을 잡았다(행사명 무시 3엔진 · 죽은 판매 게이지 · 픽토그램 투명 · 폴백 이중 홉) — 전부 정정.
-잔여 = 배포 후 갤러리 10종 육안 순회(Harold).
+잔여 = 갤러리 10종 육안 순회(Harold). ⛔ 배포 교훈 = `build:safe`는 pm2를 재기동하지 않는다(16번 §6-2).
 
-## ★ 2026-08-20 제작 화면 재설계 + 템플릿 갤러리 복원 — **코드 완료 · 배포 대기**
+## ★ 2026-08-20 제작 화면 재설계 + 템플릿 갤러리 복원 — **배포완료**
 
 **SoT = `status/hanjul-flyer-revamp/15_composer_design_and_template_gallery.md`**.
 한 줄 요약 = **템플릿 10종은 엔진에 그대로 살아 있었고 W3이 고르는 UI만 지운 것**이었다. 갤러리로 되살리고 2종을 더해 **12종**.
 제작 화면은 인쇄소 톤(Black Han Sans 헤드·종이 질감·한글 keep-all)으로 다시 짰다.
 검증 = tsc 0 · 양쪽 build · vitest 65건(실렌더 스모크 72조합).
 
-## ★ 2026-08-20 결제 상태·잔액 축 정정 — **코드 완료 · DDL·배포 대기**
+## ★ 2026-08-20 결제 상태·잔액 축 정정 — **DDL·배포 완료**
 
 **SoT = `status/hanjul-flyer-revamp/14_payment_status_balance_axis.md`** (접수·실측·설계·구현·잔여·⛔ 전부 그 문서가 소유).
 값 축 코드 SoT = `utils/flyer/billing/flyer-payment-status.ts`(CT-F26) · 잔액 이동 = `flyer-balance-ledger.ts`(CT-F27).
 
 한 줄 요약 = **같은 뜻의 결제 상태를 화면마다 다른 값으로 불러 매장이 잠겼고, 잔액은 기록 없이 움직이고 있었다.**
 검증 = backend tsc 0 · 양쪽 frontend build 성공 · vitest 56건(기존 29 + 신규 27).
-**다음 = 14번 문서 §6 DDL 실행 → 배포 → §7 실측.** 배포 후 현재 `suspended` 인 총판·매장을 화면에서 되돌려야 잠금이 풀린다.
+**DDL 실측 확인 완료(0820)** — `flyer_balance_transactions` 12컬럼 + `operation_id` + UNIQUE(user_id, operation_id) + CHECK 3종(매장·총판·청구) 전량 적용. **다음 = 14번 §7 실측**(충전 → 거래내역 표시 → 이용료 결제 → 이용중 전환 → 발송 차감 원장 기록).
 
 ## ★ 2026-08-20 슈퍼버전업 — W3 전단·POP 제작 축 전면 개편 **배포완료**
 

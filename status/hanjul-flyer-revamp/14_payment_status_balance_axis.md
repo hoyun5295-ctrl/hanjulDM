@@ -162,11 +162,28 @@ CHECK 3개는 값 축 밖 저장을 DB가 직접 거부하게 만드는 이중 �
 
 수용 근거 = 전부 이번 변경이 만든(또는 이번 변경이 악화시킨) 결함. 게이트 테스트 65건으로 고정.
 
+## §6-2 DDL 적용 실측 (2026-08-20 확인)
+
+`information_schema` + `pg_constraint` 조회로 전량 확인.
+
+| 항목 | 결과 |
+|---|---|
+| `flyer_balance_transactions` | 12컬럼 — `operation_id` text NOT NULL 포함 |
+| 멱등 방어 | `flyer_balance_tx_op_unique UNIQUE (user_id, operation_id)` 적용 |
+| type CHECK | admin_charge/deposit_charge/subscribe/deduct/refund 5종 |
+| payment_status CHECK | 매장(pending/active/suspended)·총판(active/expired/suspended)·청구(pending/paid/failed) 3종 전부 |
+
+배포된 코드와 스키마가 일치한다. 코드보다 DDL을 먼저 넣는 순서(§6)를 지켜 503 창은 발생하지 않았다.
+
 ## §7 잔여
 
-- DDL 실행 + 배포
-- 실측: 관리자 충전 1건 → 매장 거래 내역 표시 → 이용료 결제 → 이용중 전환 → 발송 차감 1건이 원장에 남는지
-- **현재 매장/총판이 `suspended`** — 배포 후 슈퍼관리자 화면에서 이용중(총판은 active)으로 되돌려야 잠금이 풀린다
+DDL·배포는 완료(§6-2). 남은 것은 실측뿐이다.
+
+1. 슈퍼관리자에서 총판 `이용중`(active) · 매장 `이용중`(만료일 2026-12-30 이미 있음)으로 되돌려 잠금 해제
+2. 관리자 충전 1건 → 매장 「충전관리」에 거래 내역 1줄 표시 확인(원장 배선 실증)
+3. 이용료 결제 1건 → 잔액 차감 + `active` 전환 + 만료일 30일 확인
+4. 발송 1건 → 차감이 원장에 `deduct`로 남는지 확인
+5. 같은 결제 버튼 연타 → **두 번 빠지지 않는지**(멱등 키 실증 — 이번 축 최대 리스크)
 
 ---
 

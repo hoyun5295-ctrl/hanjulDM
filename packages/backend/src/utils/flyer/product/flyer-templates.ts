@@ -28,7 +28,7 @@ import { resolveSeasonToken, SEASON_TOKENS, type SeasonToken } from './season-re
 import { DEPRECATED_FALLBACK_MAP } from '../config/flyer-business-types';
 import { renderQrSection, renderCartScript } from './flyer-page-injections';
 // ★ 2026-08-20 슈퍼버전업 2단계 — 렌더 준비 CT(프로모 분리·밴드·픽토그램) + URL 매체 토큰(13번 설계 §4·§5)
-import { prepareFlyerData, itemCountBand, countItems, bandStyleBlock, categoryPictogram, nameSizeClass, priceScaleClass } from './flyer-render-prep';
+import { prepareFlyerData, itemCountBand, countItems, bandStyleBlock, categoryPictogram, nameSizeClass, priceScaleClass, priceStyleBlock } from './flyer-render-prep';
 import { generateMediaCssBlock } from './design-tokens';
 import { variantToStyleBlock, type DesignVariant } from './claude-design-renderer';
 
@@ -1099,11 +1099,9 @@ export function renderDealFeedEngine(d: FlyerRenderData, token: SeasonToken): st
 <meta property="og:description" content="${esc(ogDesc)}">
 <meta property="og:image" content="${esc(ogImage)}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gasoek+One&display=swap" rel="stylesheet">
 <style>
-.topbar h1 span:first-child{font-family:'Gasoek One','Noto Sans KR',sans-serif;letter-spacing:-0.01em}
-.topbar h1 .count{font-family:'Gasoek One',monospace}
+.topbar h1 span:first-child{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.03em}
+.topbar h1 .count{font-family:'Pretendard Variable',monospace;font-weight:900;font-variant-numeric:tabular-nums}
 :root {
   --color-primary: #F97316;
   --color-accent: #EF4444;
@@ -1859,11 +1857,11 @@ button { font-family: inherit; }
         '<div class="pinfo">' +
           '<div class="nm ' + (it.nmc || '') + '">' + escHtml(it.name) + '</div>' +
           (up ? '<div class="unitPrice">' + escHtml(up) + '</div>' : '') +
+          origHtml +
           '<div class="pricerow">' +
             (disc > 0 ? '<span class="off">' + disc + '%</span>' : '') +
             '<span class="sale price-num ' + (it.prc || '') + '">' + fmt(it.salePrice) + '<span class="won">원</span></span>' +
           '</div>' +
-          origHtml +
           (metaHtml ? '<div class="meta">' + metaHtml + '</div>' : '') +
         '</div>';
 
@@ -3067,11 +3065,11 @@ export function renderDealBentoEngine(d: FlyerRenderData, token: SeasonToken): s
         picHtml +
         '<div class="name"' + nameSize + '>' + esc(it.name) + (it.unit ? '<br>' + esc(it.unit) : '') + '</div>' +
         (it.origin || it.unit ? '<div class="spec">' + esc(it.origin || it.unit || '') + '</div>' : '') +
+        (it.originalPrice > 0 ? '<div class="orig price-num">' + fmtPrice(it.originalPrice) + '원</div>' : '') +
         '<div class="priceLine">' +
           (offText !== '특가' ? '<span class="off">' + esc(offText) + '</span>' : '') +
           '<span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span>' +
         '</div>' +
-        (it.originalPrice > 0 ? '<div class="orig price-num">' + fmtPrice(it.originalPrice) + '원</div>' : '') +
       '</article>'
     );
 
@@ -3946,7 +3944,7 @@ export function renderPosterPopEngine(d: FlyerRenderData, token: SeasonToken): s
 <meta property="og:image" content="${esc(ogImage)}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Black+Han+Sans&family=Gaegu:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Gaegu:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <style>
 :root {
@@ -3967,7 +3965,7 @@ ${seasonStyleBlock()}
 html, body { background: var(--paper); color: var(--ink); }
 body { font-family: 'Pretendard Variable', sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; padding-bottom: 32px; }
 .price-num { font-variant-numeric: tabular-nums; }
-.han { font-family: 'Black Han Sans', sans-serif; font-weight: 400; }
+.han { font-family: 'Pretendard Variable', sans-serif; font-weight: 900; letter-spacing: -0.03em; }
 .fat { font-family: 'Bagel Fat One', cursive; font-weight: 400; }
 .geu { font-family: 'Gaegu', cursive; }
 body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200; opacity: 0.42; mix-blend-mode: multiply; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
@@ -3988,11 +3986,11 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .hero .info { position: relative; z-index: 2; margin-top: 60px; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
 .hero .info .store { display: flex; flex-direction: column; }
 .hero .info .store .by { font-family: 'Gaegu', cursive; font-size: 18px; color: var(--ink); line-height: 1; }
-.hero .info .store .nm { margin-top: 6px; font-family: 'Black Han Sans', sans-serif; font-size: 26px; line-height: 1; color: var(--ink); }
+.hero .info .store .nm { margin-top: 6px; font-family: 'Pretendard Variable', sans-serif; font-weight: 900; letter-spacing: -0.03em; font-size: 26px; line-height: 1; color: var(--ink); }
 .hero .info .period { background: var(--ink); color: var(--paper); padding: 6px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; transform: rotate(2deg); }
 .secmark { margin: 36px 22px 14px; display: flex; align-items: center; gap: 10px; }
 .secmark .blob { width: 36px; height: 36px; border-radius: 50%; background: var(--pop-mint); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); display: grid; place-items: center; font-family: 'Bagel Fat One', cursive; font-size: 16px; color: var(--ink); }
-.secmark .tt { font-family: 'Black Han Sans', sans-serif; font-size: 26px; letter-spacing: -0.025em; color: var(--ink); }
+.secmark .tt { font-family: 'Pretendard Variable', sans-serif; font-weight: 900; font-size: 26px; letter-spacing: -0.03em; color: var(--ink); }
 .secmark .ll { flex: 1; height: 3px; background: var(--ink); }
 .secmark.alt .blob { background: var(--color-accent); }
 .secmark.b .blob { background: var(--pop-pink); }
@@ -4013,7 +4011,7 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .pic .stamp .b { font-size: 28px; }
 .slab .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
 .slab .id { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; background: var(--ink); color: var(--paper); padding: 3px 8px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; }
-.slab h3 { font-family: 'Black Han Sans', sans-serif; font-size: 26px; letter-spacing: -0.025em; color: var(--ink); line-height: 1.05; }
+.slab h3 { font-family: 'Pretendard Variable', sans-serif; font-weight: 900; font-size: 26px; letter-spacing: -0.03em; color: var(--ink); line-height: 1.05; }
 .slab .specs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .slab .specs span { font-size: 11px; font-weight: 700; padding: 3px 8px; background: var(--paper); border: 1.5px solid var(--ink); }
 .slab .specs .col-y { background: var(--color-accent); }
@@ -4048,7 +4046,7 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .foot { margin: 24px 22px 0; padding: 18px; background: var(--ink); color: var(--paper); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--color-primary); position: relative; }
 .foot .ribbon { position: absolute; top: -14px; left: 14px; background: var(--color-accent); color: var(--ink); padding: 3px 10px; border: 2px solid var(--ink); font-size: 10px; font-weight: 800; letter-spacing: 0.1em; }
 .foot .nameRow { display: flex; align-items: baseline; justify-content: space-between; margin-top: 4px; }
-.foot .nameRow .h { font-family: 'Black Han Sans', sans-serif; font-size: 26px; letter-spacing: -0.02em; }
+.foot .nameRow .h { font-family: 'Pretendard Variable', sans-serif; font-weight: 900; font-size: 26px; letter-spacing: -0.03em; }
 .foot .nameRow .vol { font-family: 'Bagel Fat One', cursive; color: var(--color-accent); font-size: 18px; }
 .foot .lines { margin-top: 12px; display: grid; gap: 6px; font-size: 13px; }
 .foot .lines .ln { display: grid; grid-template-columns: 60px 1fr; gap: 10px; align-items: baseline; }
@@ -4183,24 +4181,23 @@ export function renderMarketBoardEngine(d: FlyerRenderData, token: SeasonToken):
 <title>${esc(ogTitle)}</title>
 <meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(ogDesc)}">
 <meta property="og:image" content="${esc(ogImage)}"><meta property="og:type" content="website">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <style>
 :root{--color-primary:#C0392B;--color-accent:#E67E22;--color-on-primary:#fff;--paper:#FBF6EA;--ink:#1A1614;}
 ${seasonStyleBlock()}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:'Noto Sans KR',sans-serif;
+body{background:var(--paper);color:var(--ink);font-family:'Pretendard Variable',sans-serif;
   background-image:radial-gradient(rgba(26,22,20,.055) 1px,transparent 1px);background-size:14px 14px;}
 .wrap{max-width:520px;margin:0 auto;padding:0 18px 64px}
 .head{position:relative;padding:30px 0 18px;text-align:center;border-bottom:3px double var(--ink)}
 .seal{position:absolute;top:22px;right:2px;width:58px;height:58px;border:3px solid var(--color-primary);border-radius:6px;
   display:flex;align-items:center;justify-content:center;transform:rotate(9deg);opacity:.9}
-.seal b{font-family:'Black Han Sans',sans-serif;color:var(--color-primary);font-size:13px;line-height:1.05;text-align:center}
+.seal b{font-family:'Pretendard Variable',sans-serif;font-weight:900;color:var(--color-primary);font-size:13px;line-height:1.05;text-align:center}
 .store{display:inline-block;font-size:12px;letter-spacing:.32em;color:var(--color-primary);font-weight:700;margin-bottom:10px}
-h1{font-family:'Black Han Sans',sans-serif;font-size:clamp(34px,10vw,52px);line-height:1.04;word-break:keep-all}
+h1{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.035em;font-size:clamp(34px,10vw,52px);line-height:1.04;word-break:keep-all}
 .per{margin-top:10px;display:inline-block;padding:4px 14px;border:1.5px solid var(--ink);border-radius:999px;font-size:12px;font-weight:700}
 .blk{margin-top:26px}
-.cat{display:flex;align-items:center;gap:8px;font-family:'Black Han Sans',sans-serif;font-size:19px;color:var(--color-primary)}
+.cat{display:flex;align-items:center;gap:8px;font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.02em;font-size:19px;color:var(--color-primary)}
 /* 픽토그램은 흰 스트로크 고정 — 밝은 갱지 위에서는 인장 칩에 담아야 보인다 */
 .cat .ico{display:flex;align-items:center;justify-content:center;font-size:15px;width:26px;height:26px;border-radius:6px;background:var(--color-primary);transform:rotate(-3deg)}
 .cat .ln{flex:1;height:2px;background:repeating-linear-gradient(90deg,var(--ink) 0 8px,transparent 8px 14px);opacity:.35}
@@ -4214,14 +4211,14 @@ h1{font-family:'Black Han Sans',sans-serif;font-size:clamp(34px,10vw,52px);line-
 .dots{flex:1;min-width:14px;height:0;border-bottom:2px dotted rgba(26,22,20,.35);margin-bottom:9px}
 .pr{text-align:right;white-space:nowrap;flex-shrink:0}
 .pr .was{display:block;font-size:12px;color:rgba(26,22,20,.45);text-decoration:line-through}
-.pr .now{font-family:'Black Han Sans',sans-serif;font-size:34px;line-height:1;color:var(--ink)}
+.pr .now{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.02em;font-size:34px;line-height:1;color:var(--ink)}
 .pr .now.pr-m{font-size:30px}.pr .now.pr-l{font-size:26px}
 .pr .now i{font-style:normal;font-size:15px;margin-left:2px}
 .pr .off{display:inline-block;margin-left:6px;padding:2px 6px;background:var(--ink);color:var(--paper);font-size:12px;font-weight:900;border-radius:3px}
-.saveStamp{margin:30px auto 0;width:fit-content;padding:10px 20px;border:2.5px solid var(--color-primary);border-radius:8px;transform:rotate(-1.5deg);font-family:'Black Han Sans',sans-serif;font-size:16px;color:var(--color-primary)}
+.saveStamp{margin:30px auto 0;width:fit-content;padding:10px 20px;border:2.5px solid var(--color-primary);border-radius:8px;transform:rotate(-1.5deg);font-family:'Pretendard Variable',sans-serif;font-weight:900;font-size:16px;color:var(--color-primary)}
 .saveStamp b{font-size:21px}
 .foot{margin-top:34px;padding-top:16px;border-top:3px double var(--ink);text-align:center}
-.foot .nm2{font-family:'Black Han Sans',sans-serif;font-size:22px}
+.foot .nm2{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.02em;font-size:22px}
 .foot .cp{margin-top:6px;font-size:11px;color:rgba(26,22,20,.5)}
 </style>
 </head>
@@ -4319,17 +4316,16 @@ export function renderFreshDailyEngine(d: FlyerRenderData, token: SeasonToken): 
 <title>${esc(ogTitle)}</title>
 <meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(ogDesc)}">
 <meta property="og:image" content="${esc(ogImage)}"><meta property="og:type" content="website">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <style>
 :root{--color-primary:#15803D;--color-accent:#65A30D;--color-on-primary:#fff;--ink:#111827;--line:#E5E7EB;}
 ${seasonStyleBlock()}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#fff;color:var(--ink);font-family:'Noto Sans KR',sans-serif;-webkit-font-smoothing:antialiased}
+body{background:#fff;color:var(--ink);font-family:'Pretendard Variable',sans-serif;-webkit-font-smoothing:antialiased}
 .wrap{max-width:520px;margin:0 auto;padding-bottom:64px}
 .top{padding:26px 20px 20px;background:linear-gradient(160deg,var(--color-primary),var(--color-accent));color:#fff}
 .top .st{font-size:12px;letter-spacing:.28em;opacity:.9;font-weight:700}
-.top h1{font-family:'Black Han Sans',sans-serif;font-size:clamp(30px,8.5vw,42px);line-height:1.08;margin-top:8px;word-break:keep-all}
+.top h1{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.035em;font-size:clamp(30px,8.5vw,42px);line-height:1.08;margin-top:8px;word-break:keep-all}
 .top .per{margin-top:10px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
   background:rgba(255,255,255,.2);padding:5px 12px;border-radius:999px}
 .hero{margin:-18px 16px 0;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;
@@ -4346,7 +4342,7 @@ body{background:#fff;color:var(--ink);font-family:'Noto Sans KR',sans-serif;-web
 .ch.card{background:#EFF6FF;color:#1D4ED8}
 .prc{display:flex;align-items:baseline;gap:8px;margin-top:12px;flex-wrap:wrap}
 .prc .was{font-size:13px;color:#9CA3AF;text-decoration:line-through}
-.prc strong{font-family:'Black Han Sans',sans-serif;font-size:36px;line-height:1;color:var(--ink)}
+.prc strong{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.02em;font-size:36px;line-height:1;color:var(--ink)}
 .prc strong.pr-m{font-size:31px}.prc strong.pr-l{font-size:27px}
 .prc strong i{font-style:normal;font-size:16px;margin-left:1px}
 .prc .off{font-size:13px;font-weight:900;color:var(--color-primary)}
@@ -4444,8 +4440,13 @@ export function renderTemplate(
   //   URL 매체 토큰(:root 변수 — 시즌 동일값이라 색 무변·text/shadow/scale 변수 추가만).
   //   주입은 엔진 <style> 뒤(</head> 직전) — 매체 블록이 이긴다(13번 설계 §5 순서 계약).
   const band = itemCountBand(countItems(prepped));
-  html = html.replace('<html lang="ko" data-season=', `<html lang="ko" data-band="${band}" data-season=`);
+  html = html.replace('<html lang="ko" data-season=', `<html lang="ko" data-engine="${resolvedCode}" data-band="${band}" data-season=`);
+  // ★ 2026-08-21 가격 표기 공용 계약 — 전 엔진에 Pretendard 로드 보장 + 가격 서체·자세 통일(CT-F24 소유)
+  if (!html.includes('pretendardvariable.css')) {
+    html = html.replace('</head>', `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css"></head>`);
+  }
   const headInject = `<style data-media-css>${generateMediaCssBlock('url', seasonToken)}</style>` + bandStyleBlock(band)
+    + `<style data-price-css>${priceStyleBlock()}</style>`
     // ★ 2026-08-20 3단계 — 디자인 변형 주입(죽어 있던 claude-design-renderer 배선 — 13번 설계 §2-④).
     //   맨 뒤 주입 = 변형 팔레트가 최종 우선(재열람 재현성은 저장 스냅샷이 보장).
     + (opts?.variant ? `<style data-variant-css>${variantToStyleBlock(opts.variant)}</style>` : '');

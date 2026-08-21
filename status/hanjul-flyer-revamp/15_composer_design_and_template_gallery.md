@@ -31,7 +31,7 @@
 
 | 축 | 결정 |
 |---|---|
-| 타이포 | 헤드라인 = **Black Han Sans**(한국 마트 전단의 그 얼굴) / 본문 = Noto Sans KR |
+| 타이포 | ~~헤드라인 = Black Han Sans / 본문 = Noto Sans KR~~ → **0821 번복(Harold): 전면 Pretendard 단일, 계층은 weight 900~400** (§8) |
 | 색 | 종이(#f8fafc·surface) + 잉크(slate-900) + 행사 오렌지(brand) 지배색. 인디고(primary)는 시스템 액션에만 |
 | 질감 | 미세 격자 종이(`.paper`), 잉크 그라데이션 텍스트(`.ink-gradient`), 광택 스켈레톤(`.sheen`) |
 | 모션 | 진입 순차 노출(`.rise`, 70ms 간격) · 살아있는 점(`.pulse-dot`) · `prefers-reduced-motion` 존중 |
@@ -110,6 +110,22 @@ W3 §3에서 **네이버 자동 확정 금지**로 막았던 축을 **웹 전단
 
 ---
 
+## §8 0821 제작 화면 2차 개편 (Harold 접수 4건 — 코드 완료·배포 대기)
+
+**접수**: ①전면개편이 덜 됐다(우측 열이 옛 form 그대로) ②상품 정보 수정이 없다 ③두꺼운 고딕(Black Han Sans)이 갑자기 나온다 — **무조건 Pretendard** ④가격 표기가 옆 카드와 통일이 안 된다. +"AI 제작툴 딱지를 떼라".
+
+**원인(실측)**: ③ = §3의 0820 타이포 결정(화면 `.font-poster` + poster_pop·market_board·fresh_daily 3엔진). ④ = 가격 CSS를 엔진 11개가 각자 소유 + fresh_daily `.prc`가 `flex-wrap`이라 **가격 자릿수에 따라 원가·판매가가 한 줄/두 줄 오락가락**. ② = 손질 4종 철학으로 이름·판매가만, 그마저 수정 가능 표시 0.
+
+**구현**:
+- **서체**: 화면(index.html·index.css `--font-sans`·`.font-poster`) + 엔진 Black Han Sans 3종 + deal_feed Gasoek One 전부 → Pretendard(계층 = weight 900). 세리프(Hahmlet·Gowun — magazine·grid_muji 정체성)는 표제·본문에 한해 유지.
+- **가격 공용 계약**: CT-F24 `priceStyleBlock()` 신설 → `renderTemplate` headInject에서 전 엔진 주입(bandStyleBlock과 같은 실측 셀렉터 패턴). 가격 숫자 = 전 엔진 Pretendard 900 tabular / 원가 취소선은 판매가 **위** 한 줄 고정(wrap 제거) / grid_hero·deal_bento는 판매가 아래 있던 원가 마크업을 위로 이동. `<html>`에 `data-engine` 속성 추가 + Pretendard 미로드 엔진 자동 주입.
+- **상품 편집 시트**: 가격 키패드·이름 팝오버 2개 폐지 → 시트 1개(이름·판매가·원가·규격·원산지·뱃지 프리셋 4·이미지 자동 찾기/빼기 — auto-images 단건 재사용, 출처 표기·인쇄 관문 동의 축 그대로). 담긴 상품 행 = 썸네일+정보+가격(원가 취소선 포함)+연필. DDL 0·신규 endpoint 0.
+- **AI 딱지 제거**: 다크 "AI 구성" 스트립 폐지 → 라이트 상태 바 1줄(점+상태+디자인 칩+바꾸기). 판정 근거 칩 삭제. "AI가 구성하는 중"→"전단을 만드는 중", "AI가 알아서"→"알아서 고르기", "AI 추천"→"추천". 히어로 잉크 그라데이션 텍스트·장식 격자 제거(격자는 미리보기 종이 바닥만 유지).
+
+**검증**: backend tsc 0 · 게이트 99/99(엔진 실렌더 포함) · frontend `npm run build`(tsc -b) 통과 · Black Han Sans·Gasoek 잔존 grep 0 · 모델명 노출 grep 0.
+
+**범위 밖 기록(미착수)**: POP·인쇄 렌더러의 Noto Sans KR → Pretendard 통일 / admin-frontend 서체 / 폐기 엔진 2종(magazine_zine·catalog_swipe — 옛 발행 URL 전용이라 미변경).
+
 ## §7 ⛔
 
 - **엔진에 살아 있는 것을 화면에서 지우는 것은 단순화가 아니라 퇴보다.** 자동 선정을 얹더라도 고르는 자리는 남긴다.
@@ -117,3 +133,5 @@ W3 §3에서 **네이버 자동 확정 금지**로 막았던 축을 **웹 전단
 - **이 프론트는 라이트 테마다.** 다크 클래스·유령 클래스(`text-text-tertiary`·`bg-surface-secondary`) 금지.
 - **서버가 값을 덮어쓰면 화면의 선택은 없는 것과 같다.** 선택 축을 만들 때 저장·고정 경로까지 한 작업이다.
 - 신규 엔진 추가 = 레지스트리 + RENDERER_MAP + **스모크 테스트 ENGINES 배열**까지가 한 세트.
+- **(0821) 가격 표기의 서체·자세는 CT-F24 `priceStyleBlock()` 계약이 소유한다.** 엔진이 가격 숫자에 자기 서체를 다시 입히거나 원가·판매가 컨테이너를 `flex-wrap`으로 두지 않는다 — 자릿수 따라 줄이 붙었다 떨어지는 사고의 뿌리였다. 새 엔진의 가격 셀렉터는 계약 블록 주석의 실측 목록에 등재한다.
+- **(0821) 화면·전단의 기본 서체는 Pretendard 단일이다.** Black Han Sans·Gasoek One류 블랙 고딕 재도입 금지(Harold 명시). 세리프는 magazine·grid_muji 표제·본문 정체성에 한해 허용 — 가격 숫자는 예외 없이 계약을 따른다.

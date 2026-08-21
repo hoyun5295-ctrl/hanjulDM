@@ -100,9 +100,9 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [imageFilling, setImageFilling] = useState(false);
 
-  // 손질
-  const [pricePop, setPricePop] = useState<{ idx: number; value: string } | null>(null);
-  const [namePop, setNamePop] = useState<{ idx: number; value: string } | null>(null);
+  // 손질 — 상품 편집 시트 하나로(이름·판매가·원가·단위·원산지·뱃지·이미지)
+  const [editPop, setEditPop] = useState<{ idx: number; draft: NormItem } | null>(null);
+  const [editImageBusy, setEditImageBusy] = useState(false);
 
   // 인쇄 관문
   const [printAgree, setPrintAgree] = useState(false);
@@ -346,20 +346,54 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
     }
   };
 
-  // ── 손질 4종 ──
+  // ── 손질: 빼기 + 상품 편집 시트 ──
   const removeItem = (idx: number) => setItemsAndBuild(items.filter((_, i) => i !== idx));
-  const applyPrice = () => {
-    if (!pricePop) return;
-    const v = Math.max(0, Math.floor(Number(pricePop.value) || 0));
-    const next = items.map((it, i) => (i === pricePop.idx ? { ...it, salePrice: v } : it));
-    setPricePop(null); setItemsAndBuild(next);
+  const openEdit = (idx: number) => setEditPop({ idx, draft: { ...items[idx] } });
+  const setDraft = (patch: Partial<NormItem>) =>
+    setEditPop(p => (p ? { ...p, draft: { ...p.draft, ...patch } } : p));
+  const applyEdit = () => {
+    if (!editPop) return;
+    const d = editPop.draft;
+    const nm = d.name.trim();
+    if (!nm) return;
+    const next = items.map((it, i) => (i === editPop.idx ? {
+      ...it,
+      ...d,
+      name: nm,
+      salePrice: Math.max(0, Math.floor(Number(d.salePrice) || 0)),
+      originalPrice: Math.max(0, Math.floor(Number(d.originalPrice) || 0)),
+      unit: (d.unit || '').trim() || undefined,
+      origin: (d.origin || '').trim() || undefined,
+      badge: (d.badge || '').trim() || undefined,
+    } : it));
+    setEditPop(null); setItemsAndBuild(next);
   };
-  const applyName = () => {
-    if (!namePop) return;
-    const nm = namePop.value.trim();
-    if (!nm) { setNamePop(null); return; }
-    const next = items.map((it, i) => (i === namePop.idx ? { ...it, name: nm } : it));
-    setNamePop(null); setItemsAndBuild(next);
+  // 편집 시트 안 단건 이미지 찾기 — auto-images 재사용(신뢰도 게이트·로컬 저장·네이버 출처 표기 그대로)
+  const findOneImage = async () => {
+    if (!editPop || editImageBusy) return;
+    const nm = editPop.draft.name.trim();
+    if (!nm) return;
+    setEditImageBusy(true);
+    try {
+      const res = await apiFetch(`${API_BASE}/api/flyer/flyers/auto-images`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: [{ index: 0, name: nm }] }),
+      });
+      const d = await res.json();
+      const hit = res.ok ? (d.filled || [])[0] : null;
+      if (hit) {
+        setDraft({ imageUrl: hit.imageUrl, imageSource: '네이버' });
+      } else {
+        setAlert({
+          show: true, title: '이미지를 찾지 못했습니다', type: 'error',
+          message: d?.quota_exhausted
+            ? '오늘 이미지 검색 한도를 다 썼습니다. 내일 다시 시도해 주세요.'
+            : '확실히 일치하는 이미지가 없습니다. 카탈로그에 직접 올리면 다음부터 자동으로 붙습니다.',
+        });
+      }
+    } catch {
+      setAlert({ show: true, title: '오류', message: '네트워크 오류', type: 'error' });
+    } finally { setEditImageBusy(false); }
   };
   const reroll = () => {
     const nextSeed = (seed ?? (build?.design_variant?.variantSeed ?? 0)) + 1;
@@ -524,20 +558,20 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       <div className="max-w-5xl mx-auto space-y-7">
 
         {/* ══ 히어로 ══ */}
-        <section className="relative overflow-hidden rounded-3xl border border-border paper rise">
+        <section className="relative overflow-hidden rounded-3xl border border-border bg-surface rise">
           <div className="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-brand-500/15 blur-3xl" />
           <div className="absolute -bottom-28 -left-10 w-64 h-64 rounded-full bg-primary-500/10 blur-3xl" />
           <div className="relative px-6 sm:px-9 py-8 sm:py-10">
             <div className="flex items-center gap-2 mb-4">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[11px] font-bold tracking-wide">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot" />
-                AI 자동 구성
+                자동 완성
               </span>
               <span className="text-[11px] text-text-muted">담는 순간 완성본이 섭니다</span>
             </div>
 
-            <h1 className="font-poster text-[38px] sm:text-[52px] leading-[1.05] kr">
-              <span className="ink-gradient">오늘 뭐 파실래요?</span>
+            <h1 className="font-poster text-[38px] sm:text-[52px] leading-[1.05] kr text-text">
+              오늘 뭐 파실래요?
             </h1>
             <p className="mt-3 text-[15px] text-text-secondary kr max-w-lg">
               상품만 담으면 전단·POP·인쇄물이 한 번에 나옵니다. 편집은 필요 없습니다.
@@ -617,7 +651,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0">
             {[
               { n: '01', t: '상품을 담는다', d: 'POS 인기·지난 전단·카탈로그·엑셀에서 체크만' },
-              { n: '02', t: 'AI가 구성한다', d: '분류·디자인·시즌 톤까지 자동 구성' },
+              { n: '02', t: '알아서 구성된다', d: '분류·디자인·시즌 톤까지 자동 구성' },
               { n: '03', t: '뽑아 쓴다', d: '전단 URL·POP·인쇄물·문자 발송까지' },
             ].map((st, i) => (
               <Fragment key={st.n}>
@@ -739,36 +773,22 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
         {/* 좌: 미리보기 = 발행본 */}
         <div>
-          {/* AI 구성 결과 스트립 */}
-          <div className="rounded-t-2xl border border-b-0 border-border bg-slate-900 text-white px-4 py-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold">
-                <span className={`w-1.5 h-1.5 rounded-full ${building ? 'bg-amber-400 pulse-dot' : build ? 'bg-emerald-400' : 'bg-white/40'}`} />
-                {building ? 'AI가 구성하는 중' : build ? 'AI 구성 완료' : '상품을 기다리는 중'}
+          {/* 상태 바 — 결과물이 주인공, 상태는 한 줄로 조용히 */}
+          <div className="rounded-t-2xl border border-b-0 border-border bg-surface px-4 py-2.5 flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-text">
+              <span className={`w-1.5 h-1.5 rounded-full ${building ? 'bg-amber-500 pulse-dot' : build ? 'bg-emerald-500' : 'bg-border-strong'}`} />
+              {building ? '전단을 만드는 중' : build ? '전단 완성' : '상품을 기다리는 중'}
+            </span>
+            {build && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bg border border-border text-[11px] font-bold text-text">
+                {templateLabel(build.template)}
+                <span className="text-[10px] font-semibold text-text-muted">{build.picked ? '직접 고름' : '추천'}</span>
               </span>
-              {build && (
-                <>
-                  <span className="text-[11px] text-white/40">|</span>
-                  <span className="px-2 py-0.5 rounded-md bg-white/10 text-[11px] font-bold">
-                    {templateLabel(build.template)}
-                  </span>
-                  {build.picked
-                    ? <span className="px-2 py-0.5 rounded-md bg-brand-500 text-[10px] font-bold">직접 고름</span>
-                    : <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">AI 추천</span>}
-                </>
-              )}
-              <button onClick={() => setGalleryOpen(true)}
-                className="ml-auto px-3 py-1.5 rounded-lg bg-white text-slate-900 text-[11px] font-bold hover:bg-white/90 transition-colors">
-                디자인 바꾸기 {templates.length > 0 ? `(${templates.length})` : ''}
-              </button>
-            </div>
-            {build?.reasons?.length ? (
-              <div className="flex gap-1.5 flex-wrap mt-2">
-                {build.reasons.slice(0, 3).map((r, i) => (
-                  <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/60 kr">{r}</span>
-                ))}
-              </div>
-            ) : null}
+            )}
+            <button onClick={() => setGalleryOpen(true)}
+              className="ml-auto px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 transition-colors">
+              디자인 바꾸기 {templates.length > 0 ? `(${templates.length})` : ''}
+            </button>
           </div>
 
           {/* 종이 — 전단은 모바일 393px 기준이라 그 폭 그대로 세우고 바닥을 깐다 */}
@@ -780,7 +800,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                     <span className="font-poster text-[11px] text-text-muted">전단</span>
                   </div>
                   <p className="font-poster text-lg text-text">상품을 담아 주세요</p>
-                  <p className="text-[12px] text-text-muted kr max-w-[240px]">담는 순간 AI가 분류·디자인·시즌 톤까지 정해 완성본을 세웁니다.</p>
+                  <p className="text-[12px] text-text-muted kr max-w-[240px]">담는 순간 분류·디자인·시즌 톤까지 정해진 완성본이 섭니다.</p>
                   <button onClick={() => openSheet('pos')} className="mt-1 px-4 py-2 rounded-xl bg-slate-900 text-white text-[12px] font-bold">POS 인기 상품에서 담기</button>
                 </div>
               ) : (
@@ -829,17 +849,38 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
             {items.length === 0 ? (
               <p className="text-xs text-text-muted py-6 text-center">위의 칩에서 상품을 담아 주세요.<br />담는 순간 전단이 만들어집니다.</p>
             ) : (
-              <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
-                {items.map((it, i) => (
-                  <div key={`${it.name}-${i}`} className="flex items-center gap-2 bg-bg rounded-lg px-2.5 py-2">
-                    <button onClick={() => setNamePop({ idx: i, value: it.name })} className="flex-1 text-left text-[13px] text-text truncate hover:text-primary-600" title="이름 수정">{it.name}</button>
-                    <button onClick={() => setPricePop({ idx: i, value: String(it.salePrice || '') })} className="text-[13px] font-bold text-primary-600 tabular-nums hover:text-primary-500" title="가격 수정">
-                      {it.salePrice > 0 ? `${it.salePrice.toLocaleString()}원` : '가격 입력'}
-                    </button>
-                    <button onClick={() => removeItem(i)} className="text-text-muted hover:text-rose-500 px-1" aria-label="빼기">×</button>
-                  </div>
-                ))}
-              </div>
+              <>
+                <p className="text-[11px] text-text-muted mb-2">상품을 누르면 이름·가격·원산지·이미지를 고칠 수 있습니다</p>
+                <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+                  {items.map((it, i) => (
+                    <div key={`${it.name}-${i}`} className="flex items-center gap-2.5 bg-bg rounded-xl px-2 py-1.5 border border-transparent hover:border-border-strong transition-colors">
+                      <button onClick={() => openEdit(i)} className="w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center" aria-label="상품 수정">
+                        {it.imageUrl
+                          ? <img src={it.imageUrl} alt="" className="w-full h-full object-cover" />
+                          : <span className="text-[9px] font-bold text-text-muted">사진<br />없음</span>}
+                      </button>
+                      <button onClick={() => openEdit(i)} className="flex-1 min-w-0 text-left">
+                        <p className="text-[13px] font-semibold text-text truncate">{it.name}</p>
+                        <p className="text-[11px] text-text-muted truncate">
+                          {[it.origin, it.unit, it.badge].filter(Boolean).join(' · ') || '정보 추가하기'}
+                        </p>
+                      </button>
+                      <button onClick={() => openEdit(i)} className="text-right shrink-0 tabular-nums" aria-label="가격 수정">
+                        {it.originalPrice > it.salePrice && (
+                          <p className="text-[10px] text-text-muted line-through leading-tight">{it.originalPrice.toLocaleString()}원</p>
+                        )}
+                        <p className={`text-[13px] font-extrabold leading-tight ${it.salePrice > 0 ? 'text-text' : 'text-brand-600'}`}>
+                          {it.salePrice > 0 ? `${it.salePrice.toLocaleString()}원` : '가격 입력'}
+                        </p>
+                      </button>
+                      <button onClick={() => openEdit(i)} className="p-1 text-text-muted hover:text-text shrink-0" aria-label="정보 수정">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" /></svg>
+                      </button>
+                      <button onClick={() => removeItem(i)} className="text-text-muted hover:text-rose-500 px-1 shrink-0" aria-label="빼기">×</button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -910,7 +951,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                     <input type="checkbox" checked={!!sheetChecked[`pos-${i}`]} onChange={e => setSheetChecked({ ...sheetChecked, [`pos-${i}`]: e.target.checked })} className="w-4 h-4 accent-primary-600" />
                     <span className="flex-1 text-sm text-text truncate">{p.product_name}</span>
                     <span className="text-[11px] text-text-muted">{Number(p.total_qty) || 0}개 판매</span>
-                    <span className="text-[13px] font-bold text-primary-600 tabular-nums">{(Number(p.avg_price) || 0).toLocaleString()}원</span>
+                    <span className="text-[13px] font-extrabold text-text tabular-nums">{(Number(p.avg_price) || 0).toLocaleString()}원</span>
                   </label>
                 ))
               ) : sheet === 'catalog' ? (
@@ -919,7 +960,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                   <label key={i} className="flex items-center gap-3 bg-bg rounded-xl px-3 py-2.5 cursor-pointer">
                     <input type="checkbox" checked={!!sheetChecked[`cat-${i}`]} onChange={e => setSheetChecked({ ...sheetChecked, [`cat-${i}`]: e.target.checked })} className="w-4 h-4 accent-primary-600" />
                     <span className="flex-1 text-sm text-text truncate">{c.product_name || c.name}</span>
-                    <span className="text-[13px] font-bold text-primary-600 tabular-nums">{(Number(c.sale_price ?? c.price) || 0).toLocaleString()}원</span>
+                    <span className="text-[13px] font-extrabold text-text tabular-nums">{(Number(c.sale_price ?? c.price) || 0).toLocaleString()}원</span>
                   </label>
                 ))
               ) : (
@@ -974,7 +1015,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-text">AI가 알아서</p>
+                      <p className="text-sm font-bold text-text">알아서 고르기</p>
                       {pickedTemplate === null && <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold">사용 중</span>}
                     </div>
                     <p className="text-[12px] text-text-muted kr mt-0.5">
@@ -1005,7 +1046,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                           <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold ${
                             active ? 'bg-white text-slate-900' : 'bg-emerald-500 text-white'
                           }`}>
-                            {active ? '사용 중' : 'AI 추천'}
+                            {active ? '사용 중' : '추천'}
                           </span>
                         )}
                       </div>
@@ -1089,34 +1130,91 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
         </div>
       )}
 
-      {/* ── 가격 키패드 팝오버(손질 ①) ── */}
-      {pricePop && (
-        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setPricePop(null); }}>
-          <div className="bg-surface rounded-2xl border border-border p-5 w-[280px] space-y-3">
-            <p className="text-sm font-bold text-text truncate">{items[pricePop.idx]?.name}</p>
-            <Input type="number" inputMode="numeric" autoFocus value={pricePop.value}
-              onChange={e => setPricePop({ ...pricePop, value: e.target.value })}
-              onKeyDown={e => { if (e.key === 'Enter') applyPrice(); }}
-              placeholder="판매가 (원)" />
-            <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setPricePop(null)}>취소</Button>
-              <Button className="flex-1" onClick={applyPrice}>확인</Button>
+      {/* ── 상품 편집 시트 — 전단에 실리는 정보 전부 한 곳에서 ── */}
+      {editPop && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setEditPop(null); }}>
+          <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border max-h-[90vh] flex flex-col">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <p className="text-base font-bold text-text">상품 정보 수정</p>
+              <button onClick={() => setEditPop(null)} className="text-text-muted hover:text-text px-2" aria-label="닫기">✕</button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* ── 상품명 수정 팝오버(손질 ③ — POS 축약어 정정 통로) ── */}
-      {namePop && (
-        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setNamePop(null); }}>
-          <div className="bg-surface rounded-2xl border border-border p-5 w-[320px] space-y-3">
-            <p className="text-xs text-text-muted">전단에 보일 이름으로 고쳐 주세요</p>
-            <Input autoFocus value={namePop.value}
-              onChange={e => setNamePop({ ...namePop, value: e.target.value })}
-              onKeyDown={e => { if (e.key === 'Enter') applyName(); }} />
-            <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setNamePop(null)}>취소</Button>
-              <Button className="flex-1" onClick={applyName}>확인</Button>
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+              {/* 이미지 */}
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-xl bg-bg border border-border overflow-hidden shrink-0 flex items-center justify-center">
+                  {editPop.draft.imageUrl
+                    ? <img src={editPop.draft.imageUrl} alt="" className="w-full h-full object-cover" />
+                    : <span className="text-[10px] font-bold text-text-muted text-center">사진<br />없음</span>}
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex gap-1.5">
+                    <button onClick={findOneImage} disabled={editImageBusy}
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 disabled:opacity-60 transition-colors">
+                      {editImageBusy ? '찾는 중...' : '이미지 자동 찾기'}
+                    </button>
+                    {editPop.draft.imageUrl && (
+                      <button onClick={() => setDraft({ imageUrl: undefined, imageSource: '없음' })}
+                        className="px-3 py-1.5 rounded-lg bg-surface border border-border text-[11px] font-semibold text-text-secondary hover:text-rose-500">
+                        이미지 빼기
+                      </button>
+                    )}
+                  </div>
+                  {editPop.draft.imageSource && editPop.draft.imageSource !== '없음' && (
+                    <p className="text-[10px] text-text-muted">출처: {editPop.draft.imageSource}</p>
+                  )}
+                </div>
+              </div>
+
+              <Input label="상품명" autoFocus value={editPop.draft.name}
+                onChange={e => setDraft({ name: e.target.value })}
+                placeholder="전단에 보일 이름" />
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="판매가 (원)" type="number" inputMode="numeric"
+                  value={editPop.draft.salePrice > 0 ? String(editPop.draft.salePrice) : ''}
+                  onChange={e => setDraft({ salePrice: Number(e.target.value) || 0 })}
+                  placeholder="9,900" />
+                <Input label="원가 (할인 전, 선택)" type="number" inputMode="numeric"
+                  value={editPop.draft.originalPrice > 0 ? String(editPop.draft.originalPrice) : ''}
+                  onChange={e => setDraft({ originalPrice: Number(e.target.value) || 0 })}
+                  placeholder="원가에 취소선" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="규격·단위 (선택)" value={editPop.draft.unit || ''}
+                  onChange={e => setDraft({ unit: e.target.value })}
+                  placeholder="예: 3kg/박스" />
+                <Input label="원산지 (선택)" value={editPop.draft.origin || ''}
+                  onChange={e => setDraft({ origin: e.target.value })}
+                  placeholder="예: 국내산(청송)" />
+              </div>
+              <div>
+                <Input label="뱃지 (선택)" value={editPop.draft.badge || ''}
+                  onChange={e => setDraft({ badge: e.target.value })}
+                  placeholder="예: 1+1" />
+                <div className="flex gap-1.5 mt-1.5">
+                  {['특가', '1+1', '한정수량', '오늘만'].map(b => (
+                    <button key={b} onClick={() => setDraft({ badge: editPop.draft.badge === b ? '' : b })}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+                        editPop.draft.badge === b
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-surface text-text-secondary border-border hover:border-border-strong'
+                      }`}>
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-border flex items-center gap-2">
+              <button onClick={() => { removeItem(editPop.idx); setEditPop(null); }}
+                className="px-3 py-2 rounded-xl text-[12px] font-semibold text-text-muted hover:text-rose-500">
+                이 상품 빼기
+              </button>
+              <div className="ml-auto flex gap-2">
+                <Button variant="secondary" onClick={() => setEditPop(null)}>취소</Button>
+                <Button onClick={applyEdit} disabled={!editPop.draft.name.trim()}>저장</Button>
+              </div>
             </div>
           </div>
         </div>

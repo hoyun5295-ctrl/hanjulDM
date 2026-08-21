@@ -131,6 +131,34 @@ export function scaleStyleBlock(): string {
 }
 
 // ============================================================
+// 5-1. 가격 표기 공용 계약 — 전 엔진 오버라이드 (2026-08-21 Harold 접수: 서체·자세 통일)
+//
+// 배경: 가격 CSS를 엔진 11개가 각자 소유해 ①서체가 갈라지고(Black Han Sans·Hahmlet·Bagel Fat One…)
+//   ②원가·판매가 컨테이너가 flex-wrap이라 가격 자릿수에 따라 한 줄/두 줄이 오락가락했다(fresh_daily 실사고).
+// 계약: 가격 "숫자"는 전 엔진 Pretendard 900 tabular-nums 한 얼굴. 원가는 취소선으로 판매가 "위" 한 줄 고정.
+//   표제·본문 서체(엔진 개성)는 건드리지 않는다. 색·크기도 엔진 소유 유지.
+// 주입: renderTemplate headInject(엔진 <style> 뒤) — bandStyleBlock과 같은 "엔진 실측 셀렉터" 패턴.
+//   대상 셀렉터 실측(2026-08-21 grep):
+//   .price-num(.orig/.sale)+.won = story·deal_feed·grid_hero·poster_promo·deal_bento·grid_muji·poster_pop
+//   .prc(s|strong|.was|i)        = magazine·catalog_dark·fresh_daily
+//   .pr(.was|.now|i)             = market_board (자세는 이미 위/아래 고정 — 서체만)
+// ============================================================
+
+export function priceStyleBlock(): string {
+  return `
+/* 서체 — 가격 숫자는 전 엔진 공통 */
+.price-num,.prc s,.prc strong,.prc .was,.pr .was,.pr .now{font-family:'Pretendard Variable','Pretendard',sans-serif !important;font-variant-numeric:tabular-nums}
+.sale.price-num,.prc strong,.pr .now{font-weight:900 !important;letter-spacing:-0.02em}
+.orig.price-num,.prc s,.prc .was,.pr .was{font-weight:500;text-decoration:line-through;text-decoration-thickness:1.5px}
+.won,.prc strong i,.pr .now i{font-style:normal;font-weight:700}
+/* 자세 — 원가(취소선) 위 한 줄 · 판매가 아래 한 줄. 자릿수에 따라 줄이 붙지 않는다 */
+.prc,.price-row,.priceline,.priceBlock,.priceRow{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+[data-engine="grid_muji"] .price{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+/* market_board .pr = 우측 정렬 원장 스타일 — 자세 기존 유지(위 셀렉터에 미포함) */
+`;
+}
+
+// ============================================================
 // 6. 카테고리 픽토그램 — 단색 스트로크 SVG(1em 스케일·흰색 고정 — 폴백 배경은 전부 짙은 색).
 //    이모지 폴백 폐기: OS별 모양이 다르고 "임시 화면" 티가 났다(디자이너 1차 수용).
 // ============================================================

@@ -5,8 +5,8 @@
    ═══════════════════════════════════════ */
 
 @theme {
-  /* ── 폰트 ── */
-  --font-sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* ── 폰트: Pretendard 단일 — 계층은 weight로 (2026-08-21 Harold 지시) ── */
+  --font-sans: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* ── 브랜드 컬러 ── */
   --color-brand-50: #fff7ed;
@@ -68,10 +68,11 @@ body {
    만드는 물건이 전단이니 화면도 전단의 언어를 쓴다.
    ═══════════════════════════════════════ */
 
-/* 전단 헤드라인용 디스플레이 — 한국 마트 전단의 그 얼굴 */
+/* 전단 헤드라인용 디스플레이 — Pretendard 900 (Black Han Sans 폐기, 2026-08-21 Harold 지시) */
 .font-poster {
-  font-family: 'Black Han Sans', 'Noto Sans KR', sans-serif;
-  letter-spacing: -0.02em;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.035em;
 }
 
 /* 한글 줄바꿈 — 단어 중간에서 끊기지 않게 */
@@ -84,14 +85,6 @@ body {
     linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
   background-size: 22px 22px, 22px 22px;
-}
-
-/* 잉크 그라데이션 텍스트 */
-.ink-gradient {
-  background: linear-gradient(100deg, #1e293b 0%, #ea580c 55%, #f59e0b 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 /* 가격표 노치 */
