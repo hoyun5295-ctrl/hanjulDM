@@ -124,6 +124,8 @@ W3 §3에서 **네이버 자동 확정 금지**로 막았던 축을 **웹 전단
 
 **검증**: backend tsc 0 · 게이트 99/99(엔진 실렌더 포함) · frontend `npm run build`(tsc -b) 통과 · Black Han Sans·Gasoek 잔존 grep 0 · 모델명 노출 grep 0.
 
+**크롬 v2 (0821 2차 — Harold "버튼·디자인이 안 모던하다" 재접수)**: 화면의 강조 액션 색이 두 갈래(하단 발행 = 공용 Button 인디고 / 상단 = 잉크)로 갈라져 있던 것이 뿌리. index.css에 `.btn-ink`·`.btn-quiet`·`.field-quiet` 신설(잉크 단일 액센트 — radius는 호출부 유틸리티 소유: **비레이어 CSS가 Tailwind 유틸리티를 이기므로** 커스텀 클래스에 radius를 두면 rounded-full이 죽는다), 제작 화면의 공용 `Button` 사용 전량을 로컬 버튼으로 교체(공용 컴포넌트 무변경 — 호출부에서 막는다). 입력은 `.field-quiet` 랩으로 면 구분+포커스 잉크 링. 아이콘 체계 = 인라인 스트로크 SVG 단일(유니코드 ✕·× 및 🗑️ 이모지 제거). 히어로 장식 블러 2개·격자 제거(격자는 미리보기 종이 바닥만), 체크박스 `accent-slate-900`, 쿠폰 토글 잉크, 텍스트 선택·focus-visible 링도 잉크. 검출기 잔여 = 삼항 분기 오탐 1(gray-on-color)·미리보기 격자 의도 유지 1.
+
 **범위 밖 기록(미착수)**: POP·인쇄 렌더러의 Noto Sans KR → Pretendard 통일 / admin-frontend 서체 / 폐기 엔진 2종(magazine_zine·catalog_swipe — 옛 발행 URL 전용이라 미변경).
 
 ## §7 ⛔

@@ -13,7 +13,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import AlertModal from '../components/AlertModal';
-import { Button, Input, ConfirmModal, Toast } from '../components/ui';
+import { Input, ConfirmModal, Toast } from '../components/ui';
 import ExcelUploadModal, { type MappedProduct } from '../components/ExcelUploadModal';
 import FlyerPreview from '../components/FlyerPreview';
 
@@ -559,8 +559,6 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
 
         {/* ══ 히어로 ══ */}
         <section className="relative overflow-hidden rounded-3xl border border-border bg-surface rise">
-          <div className="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-brand-500/15 blur-3xl" />
-          <div className="absolute -bottom-28 -left-10 w-64 h-64 rounded-full bg-primary-500/10 blur-3xl" />
           <div className="relative px-6 sm:px-9 py-8 sm:py-10">
             <div className="flex items-center gap-2 mb-4">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[11px] font-bold tracking-wide">
@@ -583,11 +581,11 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 바로 시작하기
               </button>
               <button onClick={() => { setView('compose'); openSheet('pos'); }}
-                className="px-4 py-3 rounded-2xl bg-surface border border-border text-sm font-semibold text-text hover:border-brand-500 transition-colors">
+                className="px-4 py-3 rounded-2xl bg-surface border border-border text-sm font-semibold text-text hover:border-slate-900 transition-colors">
                 POS 인기 상품으로
               </button>
               <button onClick={() => { setView('compose'); openSheet('excel'); }}
-                className="px-4 py-3 rounded-2xl bg-surface border border-border text-sm font-semibold text-text hover:border-brand-500 transition-colors">
+                className="px-4 py-3 rounded-2xl bg-surface border border-border text-sm font-semibold text-text hover:border-slate-900 transition-colors">
                 엑셀 올리기
               </button>
             </div>
@@ -656,7 +654,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
             ].map((st, i) => (
               <Fragment key={st.n}>
                 <div className="flex-1 min-w-0 flex gap-3">
-                  <span className="font-poster text-2xl text-brand-500/70 leading-none shrink-0">{st.n}</span>
+                  <span className="font-poster text-2xl text-slate-300 leading-none shrink-0">{st.n}</span>
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-text">{st.t}</p>
                     <p className="text-[12px] text-text-muted kr mt-0.5 leading-snug">{st.d}</p>
@@ -688,7 +686,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {recent.map(f => (
-                <div key={f.id} className="group rounded-2xl border border-border bg-surface p-4 hover:border-brand-500/60 transition-colors">
+                <div key={f.id} className="group rounded-2xl border border-border bg-surface p-4 hover:border-slate-900/50 transition-colors">
                   <div className="flex items-start gap-3">
                     <div className="w-11 h-14 rounded-lg bg-bg border border-border flex items-center justify-center shrink-0">
                       <span className="font-poster text-[11px] text-text-muted leading-none">전단</span>
@@ -718,7 +716,9 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           )}
         </section>
 
-        <ConfirmModal show={deleteModal.show} icon="🗑️" title="전단지 삭제" message={`"${deleteModal.title}"을(를) 삭제하시겠습니까?`} danger confirmLabel="삭제" onConfirm={() => removeFlyer(deleteModal.id)} onCancel={() => setDeleteModal({ show: false, id: '', title: '' })} />
+        <ConfirmModal show={deleteModal.show}
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6" /></svg>}
+          title="전단지 삭제" message={`"${deleteModal.title}"을(를) 삭제하시겠습니까?`} danger confirmLabel="삭제" onConfirm={() => removeFlyer(deleteModal.id)} onCancel={() => setDeleteModal({ show: false, id: '', title: '' })} />
         <Toast show={copyToast} message="URL이 복사되었습니다" />
         <AlertModal alert={alert} onClose={() => setAlert({ ...alert, show: false })} />
       </div>
@@ -741,9 +741,10 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       {/* ══ 상단 툴바 — 돌아가기 + 상품 담기 4소스 ══ */}
       <div className="sticky top-14 z-30 -mx-4 px-4 py-3 mb-4 bg-bg/90 backdrop-blur border-b border-border">
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setView('home')} className="w-9 h-9 rounded-xl bg-surface border border-border text-text-secondary hover:text-text hover:border-border-strong transition-colors" aria-label="처음으로">←</button>
+          <button onClick={() => setView('home')} className="w-9 h-9 rounded-full btn-quiet" aria-label="처음으로">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+          </button>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-bold text-text-muted mr-0.5">상품 담기</span>
             {([
               { k: 'pos' as SheetKind, label: 'POS 인기' },
               { k: 'last' as SheetKind, label: '지난 전단' },
@@ -751,18 +752,21 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
               { k: 'excel' as SheetKind, label: '엑셀' },
             ]).map(c => (
               <button key={String(c.k)} onClick={() => openSheet(c.k)}
-                className="px-3 py-2 rounded-full bg-surface border border-border text-[13px] font-semibold text-text hover:border-brand-500 hover:text-brand-600 transition-colors">
+                className="h-9 px-3.5 rounded-full btn-quiet text-[13px]">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-text-muted"><path d="M12 5v14M5 12h14" /></svg>
                 {c.label}
               </button>
             ))}
           </div>
           <div className="ml-auto flex items-center gap-2">
             {items.length > 0 && (
-              <span className="text-[12px] text-text-muted tabular-nums">담긴 상품 <b className="text-text">{items.length}</b></span>
+              <span className="h-9 inline-flex items-center px-3 rounded-full bg-surface border border-border text-[12px] text-text-secondary tabular-nums">
+                담긴 상품&nbsp;<b className="text-text">{items.length}</b>
+              </span>
             )}
             {build && (
-              <button onClick={reroll} disabled={building}
-                className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-[13px] font-bold hover:bg-slate-800 disabled:opacity-60 transition-colors">
+              <button onClick={reroll} disabled={building} className="h-9 px-4 rounded-full btn-ink text-[13px]">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
                 {building ? '만드는 중...' : '다른 느낌으로'}
               </button>
             )}
@@ -780,13 +784,13 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
               {building ? '전단을 만드는 중' : build ? '전단 완성' : '상품을 기다리는 중'}
             </span>
             {build && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bg border border-border text-[11px] font-bold text-text">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bg text-[11px] font-bold text-text">
                 {templateLabel(build.template)}
                 <span className="text-[10px] font-semibold text-text-muted">{build.picked ? '직접 고름' : '추천'}</span>
               </span>
             )}
-            <button onClick={() => setGalleryOpen(true)}
-              className="ml-auto px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 transition-colors">
+            <button onClick={() => setGalleryOpen(true)} className="ml-auto h-8 px-3.5 rounded-full btn-ink text-[11px]">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
               디자인 바꾸기 {templates.length > 0 ? `(${templates.length})` : ''}
             </button>
           </div>
@@ -818,16 +822,17 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 </>
               )}
             </div>
-            <p className="text-[10px] text-text-muted italic mt-2 text-center">
-              이 미리보기가 그대로 발행됩니다 — 발행본과 동일한 서버 렌더
+            <p className="text-[11px] text-text-muted mt-2.5 text-center inline-flex items-center gap-1.5 w-full justify-center">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+              이 미리보기가 그대로 발행됩니다
             </p>
           </div>
         </div>
 
         {/* 우: 행사 정보 + 담긴 상품 + 발행 */}
         <div className="space-y-3">
-          <div className="bg-surface rounded-2xl border border-border p-4 space-y-2.5">
-            <p className="text-[11px] font-bold text-text-muted tracking-wider">행사 정보</p>
+          <div className="bg-surface rounded-2xl border border-border p-4 space-y-2.5 field-quiet">
+            <p className="text-[13px] font-bold text-text mb-1">행사 정보</p>
             <Input label="행사 이름" value={title} onChange={e => setTitle(e.target.value)} placeholder="예: 이번 주 행사" />
             <Input label="매장 이름" value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="전단에 표시됩니다" />
             <div className="grid grid-cols-2 gap-2">
@@ -838,11 +843,11 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
 
           <div className="bg-surface rounded-2xl border border-border p-4">
             <div className="flex items-center justify-between mb-2 gap-2">
-              <p className="text-sm font-bold text-text">담긴 상품 <span className="text-text-muted">{items.length}</span></p>
+              <p className="text-[13px] font-bold text-text">담긴 상품 <span className="font-semibold text-text-muted">{items.length}</span></p>
               {noImageCount > 0 && (
-                <button onClick={fillImages} disabled={imageFilling}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 disabled:opacity-60 transition-colors shrink-0">
-                  {imageFilling ? '이미지 찾는 중...' : `이미지 한 번에 채우기 (${noImageCount})`}
+                <button onClick={fillImages} disabled={imageFilling} className="h-8 px-3 rounded-full btn-ink text-[11px] shrink-0">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
+                  {imageFilling ? '이미지 찾는 중...' : `이미지 채우기 (${noImageCount})`}
                 </button>
               )}
             </div>
@@ -854,10 +859,10 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
                   {items.map((it, i) => (
                     <div key={`${it.name}-${i}`} className="flex items-center gap-2.5 bg-bg rounded-xl px-2 py-1.5 border border-transparent hover:border-border-strong transition-colors">
-                      <button onClick={() => openEdit(i)} className="w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center" aria-label="상품 수정">
+                      <button onClick={() => openEdit(i)} className="w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center text-text-muted" aria-label="상품 수정">
                         {it.imageUrl
                           ? <img src={it.imageUrl} alt="" className="w-full h-full object-cover" />
-                          : <span className="text-[9px] font-bold text-text-muted">사진<br />없음</span>}
+                          : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>}
                       </button>
                       <button onClick={() => openEdit(i)} className="flex-1 min-w-0 text-left">
                         <p className="text-[13px] font-semibold text-text truncate">{it.name}</p>
@@ -876,7 +881,9 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                       <button onClick={() => openEdit(i)} className="p-1 text-text-muted hover:text-text shrink-0" aria-label="정보 수정">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" /></svg>
                       </button>
-                      <button onClick={() => removeItem(i)} className="text-text-muted hover:text-rose-500 px-1 shrink-0" aria-label="빼기">×</button>
+                      <button onClick={() => removeItem(i)} className="p-1 text-text-muted hover:text-rose-500 shrink-0" aria-label="빼기">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -885,10 +892,10 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           </div>
 
           {/* 발행 카드 */}
-          <div className="bg-surface rounded-2xl border border-border p-4 space-y-3">
+          <div className="bg-surface rounded-2xl border border-border p-4 space-y-3 field-quiet">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-text">QR 쿠폰 넣기</p>
-              <button onClick={() => setCouponEnabled(!couponEnabled)} className={`w-11 h-6 rounded-full transition-colors relative ${couponEnabled ? 'bg-primary-600' : 'bg-gray-300'}`}>
+              <p className="text-[13px] font-bold text-text">QR 쿠폰 넣기</p>
+              <button onClick={() => setCouponEnabled(!couponEnabled)} className={`w-11 h-6 rounded-full transition-colors relative ${couponEnabled ? 'bg-slate-900' : 'bg-border-strong'}`}>
                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow ${couponEnabled ? 'left-[22px]' : 'left-0.5'}`} />
               </button>
             </div>
@@ -909,23 +916,29 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       </div>
 
       {/* 하단 고정 바 — 발행 1버튼 + POP·인쇄 뽑기 */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur border-t border-border shadow-card">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur border-t border-border">
         <div className="max-w-5xl mx-auto flex items-center gap-2 px-4 py-3">
           {published ? (
             <>
-              <button onClick={() => copyUrl(published.short_code)} className="flex-1 min-h-[46px] rounded-xl bg-emerald-600 text-white text-sm font-bold">
+              <button onClick={() => copyUrl(published.short_code)}
+                className="flex-1 h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-colors inline-flex items-center justify-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                 발행 완료 · URL 복사 ({published.short_url.replace('https://', '')})
               </button>
-              <Button variant="secondary" onClick={() => setSheet('pop')}>POP 뽑기</Button>
-              <Button variant="secondary" onClick={() => { setSheet('print'); setPrintAgree(false); }}>인쇄 뽑기</Button>
+              <button onClick={() => setSheet('pop')} className="h-12 px-5 rounded-2xl btn-quiet text-sm">POP 뽑기</button>
+              <button onClick={() => { setSheet('print'); setPrintAgree(false); }} className="h-12 px-5 rounded-2xl btn-quiet text-sm">인쇄 뽑기</button>
             </>
           ) : (
             <>
-              <Button className="flex-1 min-h-[46px]" onClick={publish} disabled={publishing || !build || items.length === 0}>
+              <button onClick={publish} disabled={publishing || !build || items.length === 0}
+                className="flex-1 h-12 rounded-2xl btn-ink text-[15px]">
                 {publishing ? '발행 중...' : couponEnabled ? '발행하기 (쿠폰 포함)' : '발행하기'}
-              </Button>
-              <Button variant="secondary" onClick={() => setSheet('pop')} disabled={items.length === 0}>POP 뽑기</Button>
-              <Button variant="secondary" onClick={() => { setSheet('print'); setPrintAgree(false); }} disabled={items.length === 0}>인쇄 뽑기</Button>
+                {!publishing && (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+                )}
+              </button>
+              <button onClick={() => setSheet('pop')} disabled={items.length === 0} className="h-12 px-5 rounded-2xl btn-quiet text-sm">POP 뽑기</button>
+              <button onClick={() => { setSheet('print'); setPrintAgree(false); }} disabled={items.length === 0} className="h-12 px-5 rounded-2xl btn-quiet text-sm">인쇄 뽑기</button>
             </>
           )}
         </div>
@@ -939,7 +952,9 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
               <p className="text-base font-bold text-text">
                 {sheet === 'pos' ? '요즘 잘 팔리는 상품' : sheet === 'catalog' ? '카탈로그에서 담기' : '지난 전단에서 가져오기'}
               </p>
-              <button onClick={() => setSheet(null)} className="text-text-muted hover:text-text px-2">✕</button>
+              <button onClick={() => setSheet(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:text-text hover:bg-bg transition-colors" aria-label="닫기">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5">
               {sheetLoading ? (
@@ -948,7 +963,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 posProducts.length === 0 ? <p className="text-sm text-text-muted text-center py-10">POS 판매 데이터가 아직 없어요.<br />POS Agent를 연결하면 여기에 인기 상품이 뜹니다.</p> :
                 posProducts.map((p, i) => (
                   <label key={i} className="flex items-center gap-3 bg-bg rounded-xl px-3 py-2.5 cursor-pointer">
-                    <input type="checkbox" checked={!!sheetChecked[`pos-${i}`]} onChange={e => setSheetChecked({ ...sheetChecked, [`pos-${i}`]: e.target.checked })} className="w-4 h-4 accent-primary-600" />
+                    <input type="checkbox" checked={!!sheetChecked[`pos-${i}`]} onChange={e => setSheetChecked({ ...sheetChecked, [`pos-${i}`]: e.target.checked })} className="w-4 h-4 accent-slate-900" />
                     <span className="flex-1 text-sm text-text truncate">{p.product_name}</span>
                     <span className="text-[11px] text-text-muted">{Number(p.total_qty) || 0}개 판매</span>
                     <span className="text-[13px] font-extrabold text-text tabular-nums">{(Number(p.avg_price) || 0).toLocaleString()}원</span>
@@ -958,7 +973,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 catalogItems.length === 0 ? <p className="text-sm text-text-muted text-center py-10">카탈로그가 비어 있어요.<br />상품관리에서 등록하거나 엑셀로 올려 주세요.</p> :
                 catalogItems.map((c, i) => (
                   <label key={i} className="flex items-center gap-3 bg-bg rounded-xl px-3 py-2.5 cursor-pointer">
-                    <input type="checkbox" checked={!!sheetChecked[`cat-${i}`]} onChange={e => setSheetChecked({ ...sheetChecked, [`cat-${i}`]: e.target.checked })} className="w-4 h-4 accent-primary-600" />
+                    <input type="checkbox" checked={!!sheetChecked[`cat-${i}`]} onChange={e => setSheetChecked({ ...sheetChecked, [`cat-${i}`]: e.target.checked })} className="w-4 h-4 accent-slate-900" />
                     <span className="flex-1 text-sm text-text truncate">{c.product_name || c.name}</span>
                     <span className="text-[13px] font-extrabold text-text tabular-nums">{(Number(c.sale_price ?? c.price) || 0).toLocaleString()}원</span>
                   </label>
@@ -966,20 +981,20 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
               ) : (
                 recent.length === 0 ? <p className="text-sm text-text-muted text-center py-10">지난 전단이 아직 없어요.</p> :
                 recent.map(f => (
-                  <button key={f.id} onClick={() => addFromLast(f)} className="w-full flex items-center gap-3 bg-bg rounded-xl px-3 py-2.5 text-left hover:border-primary-300 border border-transparent">
+                  <button key={f.id} onClick={() => addFromLast(f)} className="w-full flex items-center gap-3 bg-bg rounded-xl px-3 py-2.5 text-left hover:border-border-strong border border-transparent">
                     <span className="flex-1 text-sm text-text truncate">{f.title}</span>
                     <span className="text-[11px] text-text-muted">{String(f.created_at).slice(0, 10)}</span>
-                    <span className="text-[12px] text-primary-600 font-semibold">상품 가져오기</span>
+                    <span className="text-[12px] font-bold text-text">상품 가져오기 →</span>
                   </button>
                 ))
               )}
             </div>
             {(sheet === 'pos' || sheet === 'catalog') && (
               <div className="px-4 py-3 border-t border-border">
-                <Button className="w-full min-h-[46px]" onClick={sheet === 'pos' ? addFromPos : addFromCatalog}
+                <button className="w-full h-12 rounded-xl btn-ink text-sm" onClick={sheet === 'pos' ? addFromPos : addFromCatalog}
                   disabled={!Object.values(sheetChecked).some(Boolean)}>
-                  담기
-                </Button>
+                  {(() => { const n = Object.values(sheetChecked).filter(Boolean).length; return n > 0 ? `${n}개 담기` : '담기'; })()}
+                </button>
               </div>
             )}
           </div>
@@ -999,7 +1014,9 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                     누르면 바로 그 디자인으로 다시 섭니다. 담긴 상품은 그대로예요.
                   </p>
                 </div>
-                <button onClick={() => setGalleryOpen(false)} className="w-9 h-9 rounded-xl bg-bg border border-border text-text-muted hover:text-text shrink-0" aria-label="닫기">✕</button>
+                <button onClick={() => setGalleryOpen(false)} className="w-9 h-9 rounded-full btn-quiet shrink-0 !text-text-muted hover:!text-text" aria-label="닫기">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
               </div>
             </div>
 
@@ -1074,23 +1091,23 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border p-5 space-y-3">
             <p className="text-base font-bold text-text">POP 뽑기</p>
             <p className="text-xs text-text-muted">담긴 상품 그대로 나갑니다. 용도만 고르세요.</p>
-            <button onClick={() => popPreset('single')} disabled={popBusy} className="w-full text-left bg-bg rounded-xl px-4 py-3 hover:border-primary-300 border border-transparent disabled:opacity-60">
+            <button onClick={() => popPreset('single')} disabled={popBusy} className="w-full text-left bg-bg rounded-xl px-4 py-3 hover:border-border-strong border border-transparent disabled:opacity-60">
               <p className="text-sm font-bold text-text">대표 상품 A4 한 장</p>
               <p className="text-[11px] text-text-muted mt-0.5">첫 번째 상품이 큼직하게</p>
             </button>
-            <button onClick={() => popPreset('split8')} disabled={popBusy} className="w-full text-left bg-bg rounded-xl px-4 py-3 hover:border-primary-300 border border-transparent disabled:opacity-60">
+            <button onClick={() => popPreset('split8')} disabled={popBusy} className="w-full text-left bg-bg rounded-xl px-4 py-3 hover:border-border-strong border border-transparent disabled:opacity-60">
               <p className="text-sm font-bold text-text">A4 8분할 세트</p>
               <p className="text-[11px] text-text-muted mt-0.5">담긴 상품 전부, 잘라 쓰는 매대용</p>
             </button>
-            <button onClick={() => popPreset('pricecard')} disabled={popBusy} className="w-full text-left bg-bg rounded-xl px-4 py-3 hover:border-primary-300 border border-transparent disabled:opacity-60">
+            <button onClick={() => popPreset('pricecard')} disabled={popBusy} className="w-full text-left bg-bg rounded-xl px-4 py-3 hover:border-border-strong border border-transparent disabled:opacity-60">
               <p className="text-sm font-bold text-text">프라이스카드 (90×55)</p>
               <p className="text-[11px] text-text-muted mt-0.5">가격표 낱장 — A4 한 장에 35칸</p>
             </button>
-            <button onClick={() => popPreset('strip')} disabled={popBusy} className="w-full text-left bg-bg rounded-xl px-4 py-3 hover:border-primary-300 border border-transparent disabled:opacity-60">
+            <button onClick={() => popPreset('strip')} disabled={popBusy} className="w-full text-left bg-bg rounded-xl px-4 py-3 hover:border-border-strong border border-transparent disabled:opacity-60">
               <p className="text-sm font-bold text-text">매대 띠지</p>
               <p className="text-[11px] text-text-muted mt-0.5">매대 모서리에 붙이는 가로 띠 — A4 한 장에 4줄</p>
             </button>
-            {popBusy && <p className="text-xs text-primary-600 text-center">PDF 만드는 중...</p>}
+            {popBusy && <p className="text-xs text-text-secondary text-center">PDF 만드는 중...</p>}
           </div>
         </div>
       )}
@@ -1118,13 +1135,13 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
             <div className="px-4 py-3 border-t border-border space-y-2">
               {hasAutoImage && (
                 <label className="flex items-start gap-2 text-[12px] text-text-secondary cursor-pointer">
-                  <input type="checkbox" checked={printAgree} onChange={e => setPrintAgree(e.target.checked)} className="mt-0.5 w-4 h-4 accent-primary-600" />
+                  <input type="checkbox" checked={printAgree} onChange={e => setPrintAgree(e.target.checked)} className="mt-0.5 w-4 h-4 accent-slate-900" />
                   자동으로 붙은 이미지가 포함되어 있습니다. 인쇄 전에 위 목록에서 확인했습니다.
                 </label>
               )}
-              <Button className="w-full min-h-[46px]" onClick={doPrint} disabled={printBusy || (hasAutoImage && !printAgree)}>
+              <button className="w-full h-12 rounded-xl btn-ink text-sm" onClick={doPrint} disabled={printBusy || (hasAutoImage && !printAgree)}>
                 {printBusy ? '인쇄 PDF 만드는 중...' : '인쇄 PDF 받기'}
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -1136,7 +1153,9 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
           <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border max-h-[90vh] flex flex-col">
             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <p className="text-base font-bold text-text">상품 정보 수정</p>
-              <button onClick={() => setEditPop(null)} className="text-text-muted hover:text-text px-2" aria-label="닫기">✕</button>
+              <button onClick={() => setEditPop(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:text-text hover:bg-bg transition-colors" aria-label="닫기">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
@@ -1212,8 +1231,8 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 이 상품 빼기
               </button>
               <div className="ml-auto flex gap-2">
-                <Button variant="secondary" onClick={() => setEditPop(null)}>취소</Button>
-                <Button onClick={applyEdit} disabled={!editPop.draft.name.trim()}>저장</Button>
+                <button onClick={() => setEditPop(null)} className="h-10 px-4 rounded-xl btn-quiet text-sm">취소</button>
+                <button onClick={applyEdit} disabled={!editPop.draft.name.trim()} className="h-10 px-6 rounded-xl btn-ink text-sm">저장</button>
               </div>
             </div>
           </div>
