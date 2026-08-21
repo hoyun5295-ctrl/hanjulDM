@@ -20,15 +20,14 @@
  *  - 보존: push 성공 후 7일 (디버깅용), 그 후 자동 cleanup
  */
 
-import fs from 'fs';
-import path from 'path';
 import { logger } from './logger';
+import { appPath } from './app-paths';
 
 // ============================================================
 // 상수
 // ============================================================
 
-const CACHE_PATH = path.join(process.cwd(), 'pos-cache.sqlite');
+const CACHE_PATH = appPath('pos-cache.sqlite');
 const MAX_QUEUE_SIZE = 10000;
 const RETENTION_DAYS = 7;
 

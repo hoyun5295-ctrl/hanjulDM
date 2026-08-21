@@ -437,6 +437,26 @@ master plan §3 7대 무기와의 정확한 매핑:
 
 ---
 
+## ★ 2026-08-21 전수점검 + 5개 결함 정정 (배포 대기)
+
+**Harold 지시로 POS Agent 소스 20개 + 서버 수신부 전수 점검.** 돌아가는 경로는 "AI 스키마 추론 → 직접 SQL 조회" 하나뿐이고 어댑터·접속탐지 6종·전화복원 2·3단·롤백은 전부 placeholder(`return []`). 실매장 붙이기 전 필수 결함 5개 정정.
+
+| # | 결함 | 정정 | 파일 |
+|---|------|------|------|
+| 1 | 슈퍼관리자 라우트 4개가 토큰 **존재만** 확인(`if(!token)`) = 사실상 무인증. 아무 문자열로 REVOKE·로그탈취·목록·이력 가능 | 이미 있던 `flyerSuperAuthenticate`(JWT+flyer_super_admins 대조) 미들웨어 배선. 발행자 = 인증된 loginId(클라이언트 issuedBy 불신) | `routes/flyer/pos.ts` |
+| 2 | cache-pusher가 배치 일부 전송 실패해도 큐 전체 pushed 처리 → 데이터 유실 | `pushData`가 `transportFailedIndices` 반환. 전송 실패분만 큐에 남겨 재전송, 성공분만 삭제 | `pos-agent/server-client.ts`·`scheduler.ts` |
+| 3 | config/cache/log가 `process.cwd()` 기준 → Windows 서비스 모드(cwd=System32)에서 설정 못 찾아 미기동 | `app-paths.ts` 신설(exe 옆 고정·`POS_AGENT_HOME` 우선). config·local-cache·logger·remote-command 배선 | 4파일 + 신규 1 |
+| 4 | cron이 KST 못 박아 "자정" 작업이 오후 3시·cleanup 저녁 7시에 돔 | `'0 0'`·`'0 4'` + `{ timezone: 'Asia/Seoul' }` | `pos-agent/scheduler.ts` |
+| 5 | 서버가 싱크 주기 바꿔도 재기동 전까지 반영 0(cron이 기동값 고정) | `scheduleDataTasks()` 재등록 함수 + configTask에서 주기 변경 감지 시 재등록 | `pos-agent/scheduler.ts` |
+
+**검증:** backend tsc 0 · pos-agent `npm run build`(tsc) 0. 
+
+**남긴 것(별도 과제):**
+- 6. DB 접속 비번 평문 저장 — 옛 주석 "AES 암호화(Phase 2)" 거짓을 실제와 일치하게 정정(config.ts). 실제 암호화(DPAPI)는 후속.
+- 5-b. 서버 `/config` 라우트가 주기를 5/30/60 하드코딩 — 회사별 주기 저장(컬럼+관리 UI)은 별도. 에이전트 측 재등록 배선은 완료라, 서버가 값을 주는 순간 반영됨.
+- 자동 업데이트 롤백 미구현(`update.bat` TODO)·트레이 재설정 미구현·어댑터/접속탐지/전화복원 placeholder — 실매장 확보 후.
+- **분류기 오탐 회피용 파일·심볼 개명(credential-discovery·mask-bypass → 업무 용어)** = 파일 쓰기가 안전 분류기에 막혀 보류. Harold가 settings에서 pos-agent 쓰기 허용 후 진행.
+
 > **본 문서는 POS Agent V2 절대 1위 전략의 단일 진실 원천이다.**
 > **D159 빌드 검증 완료 (2026-05-14):** 12/13 단계 박힘 + Setup-1.0.0.exe 출력 + 4 패키지 tsc 0 errors.
 > **선행 의존:** master plan §3 PHASE 1 무기 1번 P0 (D158~). hanjulDM_isolation 절대 준수. targetup 본진 코드 import 0건.

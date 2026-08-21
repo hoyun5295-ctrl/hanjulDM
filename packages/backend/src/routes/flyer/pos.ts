@@ -31,6 +31,8 @@ import {
 } from '../../utils/flyer';
 import type { PosRawSchema, RemoteCommandType } from '../../utils/flyer';
 import { query } from '../../config/database';
+// ★ 슈퍼관리자 라우트 인증 — 이미 있는 미들웨어 사용(옛 코드는 토큰 존재만 확인 = 사실상 무인증이었다)
+import { flyerSuperAuthenticate } from '../../middlewares/super-auth';
 
 const router = Router();
 
@@ -274,12 +276,8 @@ router.get('/my-agent', flyerAuthenticate, async (req: Request, res: Response) =
 // ============================================================
 // GET /agents — POS Agent 상태 목록 (슈퍼관리자 전용)
 // ============================================================
-router.get('/agents', async (req: Request, res: Response) => {
+router.get('/agents', flyerSuperAuthenticate, async (_req: Request, res: Response) => {
   try {
-    // 슈퍼관리자 체크 — 간단 토큰 검증
-    const token = (req.headers.authorization || '').replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
     const agents = await getPosAgentStatusList();
     return res.json(agents);
   } catch (error: any) {
@@ -297,18 +295,17 @@ router.get('/agents', async (req: Request, res: Response) => {
  * Body: { agentId, type: RemoteCommandType, payload? }
  * Header: Authorization: Bearer <super_token>
  */
-router.post('/remote-command/issue', async (req: Request, res: Response) => {
+router.post('/remote-command/issue', flyerSuperAuthenticate, async (req: Request, res: Response) => {
   try {
-    const token = (req.headers.authorization || '').replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-    const { agentId, type, payload, issuedBy } = req.body;
+    const { agentId, type, payload } = req.body;
     if (!agentId || !type) return res.status(400).json({ error: 'agentId, type required' });
 
     const validTypes: RemoteCommandType[] = ['FORCE_SYNC', 'RESEND_SCHEMA', 'FETCH_LOGS', 'REVOKE', 'UPDATE', 'DIAGNOSE_MASK_BYPASS'];
     if (!validTypes.includes(type)) return res.status(400).json({ error: `Invalid type: ${type}` });
 
-    const commandId = await issueRemoteCommand(agentId, type, payload, issuedBy || 'super_admin');
+    // 발행자 = 인증된 슈퍼관리자 로그인 ID (클라이언트가 보낸 issuedBy를 믿지 않는다)
+    const issuedBy = req.flyerSuperUser?.loginId || 'super_admin';
+    const commandId = await issueRemoteCommand(agentId, type, payload, issuedBy);
     return res.json({ ok: true, commandId });
   } catch (error: any) {
     console.error('[pos] remote-command/issue error:', error);
@@ -367,11 +364,8 @@ router.post('/remote-command/respond', agentAuth, async (req: Request, res: Resp
 /**
  * GET /remote-command/history — 명령 이력 조회 (슈퍼관리자)
  */
-router.get('/remote-command/history', async (req: Request, res: Response) => {
+router.get('/remote-command/history', flyerSuperAuthenticate, async (req: Request, res: Response) => {
   try {
-    const token = (req.headers.authorization || '').replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
     const agentId = req.query.agentId as string;
     if (!agentId) return res.status(400).json({ error: 'agentId required' });
 

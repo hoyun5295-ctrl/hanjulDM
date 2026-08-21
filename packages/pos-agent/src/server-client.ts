@@ -114,12 +114,19 @@ export async function fetchConfig() {
   return res;
 }
 
-/** 데이터 푸시 */
+/**
+ * 데이터 푸시.
+ *
+ * ★ 반환에 transportFailedIndices를 포함한다(items[] 기준 절대 인덱스).
+ *   = 전송 자체가 실패해 서버에 닿지 못한 항목. cache-pusher는 이 항목만 큐에 남겨 재전송하고,
+ *     나머지(서버가 받았거나 잘못된 데이터라 되돌려보낸 것)는 삭제한다.
+ *   옛 구조는 배치 하나만 성공해도 전체를 pushed 처리해 실패분이 유실됐다 — 그 구멍을 닫는다.
+ */
 export async function pushData(
   type: 'sales' | 'members' | 'inventory',
   items: any[]
-): Promise<{ ok: boolean; data: { accepted: number; rejected: number; errors: any[] }; error?: string }> {
-  if (items.length === 0) return { ok: true, data: { accepted: 0, rejected: 0, errors: [] } };
+): Promise<{ ok: boolean; data: { accepted: number; rejected: number; errors: any[] }; transportFailedIndices: number[]; error?: string }> {
+  if (items.length === 0) return { ok: true, data: { accepted: 0, rejected: 0, errors: [] }, transportFailedIndices: [] };
 
   const config = getConfig();
   const batchSize = config.sync.batchSize || 500;
@@ -127,6 +134,7 @@ export async function pushData(
   let totalAccepted = 0;
   let totalRejected = 0;
   const allErrors: any[] = [];
+  const transportFailedIndices: number[] = [];
 
   // 배치 분할 전송
   for (let i = 0; i < items.length; i += batchSize) {
@@ -134,23 +142,25 @@ export async function pushData(
     const res = await apiCall<{ accepted: number; rejected: number; errors: any[] }>('POST', '/push', { type, items: batch });
 
     if (res.ok && res.data) {
+      // 서버가 받았다 — accepted/rejected는 서버 판정. 잘못된 데이터(rejected)는 재전송해도 안 되므로 큐에서 뺀다.
       totalAccepted += res.data.accepted;
       totalRejected += res.data.rejected;
       allErrors.push(...(res.data.errors || []));
     } else {
+      // 전송 실패 — 이 배치 전 항목은 서버에 닿지 못했다. 절대 인덱스로 남겨 재전송한다.
       totalRejected += batch.length;
+      for (let k = 0; k < batch.length; k++) transportFailedIndices.push(i + k);
       allErrors.push({ index: i, reason: res.error || 'batch failed' });
     }
   }
 
-  logger.info(`[${type}] push 완료: accepted=${totalAccepted}, rejected=${totalRejected}`);
+  logger.info(`[${type}] push 완료: accepted=${totalAccepted}, rejected=${totalRejected}, 전송실패=${transportFailedIndices.length}`);
 
-  // 전체 실패 시 ok=false (scheduler.ts cache-pusher가 markFailed 분기 박음)
-  const allFailed = totalAccepted === 0 && totalRejected > 0;
   return {
-    ok: !allFailed,
+    ok: transportFailedIndices.length === 0,
     data: { accepted: totalAccepted, rejected: totalRejected, errors: allErrors },
-    error: allFailed ? (allErrors[0]?.reason || 'all batches failed') : undefined,
+    transportFailedIndices,
+    error: transportFailedIndices.length > 0 ? (allErrors[0]?.reason || 'transport failed') : undefined,
   };
 }
 

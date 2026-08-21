@@ -4,8 +4,9 @@
 
 import fs from 'fs';
 import path from 'path';
+import { appPath } from './app-paths';
 
-const LOG_DIR = path.join(process.cwd(), 'logs');
+const LOG_DIR = appPath('logs');
 const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB
 
 function ensureLogDir() {

@@ -1,12 +1,12 @@
 /**
  * POS Agent 설정 관리
  *
- * ���정 파일: agent-config.json (실행 디렉토리)
- * 민감 정보(DB 비밀번호)는 AES 암호화 저장 (Phase 2)
+ * 설정 파일: agent-config.json (앱 홈 = exe 옆 고정 경로 — 서비스 모드에서도 동일 위치)
+ * ⚠️ DB 접속 비밀번호는 현재 평문 저장이다(암호화는 별도 과제 — 주석과 코드를 일치시켰다).
  */
 
 import fs from 'fs';
-import path from 'path';
+import { appPath } from './app-paths';
 
 export interface AgentConfig {
   // 서버 연결
@@ -41,7 +41,7 @@ export interface AgentConfig {
   lastInventorySync?: string;
 }
 
-const CONFIG_PATH = path.join(process.cwd(), 'agent-config.json');
+const CONFIG_PATH = appPath('agent-config.json');
 
 const DEFAULT_CONFIG: AgentConfig = {
   serverUrl: 'https://hanjul-flyer.kr',

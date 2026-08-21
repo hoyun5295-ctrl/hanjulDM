@@ -136,59 +136,32 @@ export function startScheduler(): void {
     }
   });
 
-  // 판매 데이터: config 동적
-  salesTask = cron.schedule(`*/${config.sync.salesIntervalMinutes} * * * *`, async () => {
-    if (!schemaMapping) return;
-    if (!isConnected()) { await tryReconnect(); if (!isConnected()) return; }
-    try {
-      await extractAndPushSales(schemaMapping);
-    } catch (err: any) {
-      errorCount24h++;
-      logger.error('판매 추출 스케줄 실패:', err.message);
-    }
-  });
+  // 판매/회원/재고: config 동적 — 재등록 가능한 함수로 뺀다(서버가 주기를 바꾸면 다시 건다)
+  scheduleDataTasks();
 
-  // 회원 데이터: config 동적
-  membersTask = cron.schedule(`*/${config.sync.membersIntervalMinutes} * * * *`, async () => {
-    if (!schemaMapping) return;
-    if (!isConnected()) { await tryReconnect(); if (!isConnected()) return; }
-    try {
-      await extractAndPushMembers(schemaMapping);
-    } catch (err: any) {
-      errorCount24h++;
-      logger.error('회원 추출 스케줄 실패:', err.message);
-    }
-  });
-
-  // 재고 스냅샷: config 동적
-  inventoryTask = cron.schedule(`*/${config.sync.inventoryIntervalMinutes} * * * *`, async () => {
-    if (!schemaMapping) return;
-    if (!isConnected()) { await tryReconnect(); if (!isConnected()) return; }
-    try {
-      await extractAndPushInventory(schemaMapping);
-    } catch (err: any) {
-      errorCount24h++;
-      logger.error('재고 추출 스케줄 실패:', err.message);
-    }
-  });
-
-  // 서버 설정 갱신: 매 10분
+  // 서버 설정 갱신: 매 10분. 주기가 바뀌면 데이터 태스크를 재등록한다(옛 코드는 재기동 전까지 반영 0).
   configTask = cron.schedule('*/10 * * * *', async () => {
     try {
-      const res = await fetchConfig();
+      const before = intervalSignature(getConfig());
+      const res = await fetchConfig(); // 내부에서 saveConfig({sync}) — getConfig()에 새 주기 반영됨
       if (res.ok && res.data?.schemaMapping) {
         schemaMapping = res.data.schemaMapping;
+      }
+      const after = intervalSignature(getConfig());
+      if (before !== after) {
+        logger.info(`싱크 주기 변경 감지 — 데이터 스케줄 재등록 (${before} → ${after})`);
+        scheduleDataTasks();
       }
     } catch (err: any) {
       logger.warn('설정 갱신 실패:', err.message);
     }
   });
 
-  // 24시간마다 에러 카운트 리셋 — KST 자정 (UTC 15:00)
-  resetTask = cron.schedule('0 15 * * *', () => {
+  // 24시간마다 에러 카운트 리셋 — KST 자정. timezone을 못 박아 매장 PC 로케일과 무관하게 정확히 돈다.
+  resetTask = cron.schedule('0 0 * * *', () => {
     logger.info(`에러 카운트 리셋 (오늘 ${errorCount24h}건)`);
     errorCount24h = 0;
-  });
+  }, { timezone: 'Asia/Seoul' });
 
   // ★ V2: cache-pusher (30초 주기) — local-cache 큐 → push
   cachePusherTask = cron.schedule('*/30 * * * * *', async () => {
@@ -200,16 +173,66 @@ export function startScheduler(): void {
     await runAutoUpdate();
   });
 
-  // ★ V2: cleanup (KST 04:00 = UTC 19:00) — local-cache 7일 보존
-  cleanupTask = cron.schedule('0 19 * * *', () => {
+  // ★ V2: cleanup (KST 04:00) — local-cache 7일 보존. timezone 못 박음.
+  cleanupTask = cron.schedule('0 4 * * *', () => {
     try {
       cleanupOldEntries();
     } catch (err: any) {
       logger.warn(`cleanup 실패: ${err.message}`);
     }
-  });
+  }, { timezone: 'Asia/Seoul' });
 
   logger.info(`스케줄: 판매=${config.sync.salesIntervalMinutes}분, 회원=${config.sync.membersIntervalMinutes}분, 재고=${config.sync.inventoryIntervalMinutes}분, cache-pusher=30초, auto-updater=1시간`);
+}
+
+// ============================================================
+// 데이터 태스크 (재)등록 — 판매/회원/재고. 서버 주기 변경 시 다시 건다.
+// ============================================================
+
+function intervalSignature(config: ReturnType<typeof getConfig>): string {
+  return `${config.sync.salesIntervalMinutes}/${config.sync.membersIntervalMinutes}/${config.sync.inventoryIntervalMinutes}`;
+}
+
+function scheduleDataTasks(): void {
+  const config = getConfig();
+
+  // 기존 것이 있으면 먼저 내린다(중복 가동 방지)
+  salesTask?.stop();
+  membersTask?.stop();
+  inventoryTask?.stop();
+
+  salesTask = cron.schedule(`*/${config.sync.salesIntervalMinutes} * * * *`, async () => {
+    if (!schemaMapping) return;
+    if (!isConnected()) { await tryReconnect(); if (!isConnected()) return; }
+    try {
+      await extractAndPushSales(schemaMapping);
+    } catch (err: any) {
+      errorCount24h++;
+      logger.error('판매 추출 스케줄 실패:', err.message);
+    }
+  });
+
+  membersTask = cron.schedule(`*/${config.sync.membersIntervalMinutes} * * * *`, async () => {
+    if (!schemaMapping) return;
+    if (!isConnected()) { await tryReconnect(); if (!isConnected()) return; }
+    try {
+      await extractAndPushMembers(schemaMapping);
+    } catch (err: any) {
+      errorCount24h++;
+      logger.error('회원 추출 스케줄 실패:', err.message);
+    }
+  });
+
+  inventoryTask = cron.schedule(`*/${config.sync.inventoryIntervalMinutes} * * * *`, async () => {
+    if (!schemaMapping) return;
+    if (!isConnected()) { await tryReconnect(); if (!isConnected()) return; }
+    try {
+      await extractAndPushInventory(schemaMapping);
+    } catch (err: any) {
+      errorCount24h++;
+      logger.error('재고 추출 스케줄 실패:', err.message);
+    }
+  });
 }
 
 // ============================================================
@@ -224,47 +247,46 @@ async function runCachePusher(): Promise<void> {
     const config = getConfig();
     const batchSize = config.sync.batchSize || 500;
 
+    // 공통: 전송 실패분(서버에 닿지 못한 것)만 큐에 남기고 재전송. 나머지는 pushed 처리.
+    //   서버가 받아 반려한 잘못된 데이터(rejected)는 재전송해도 안 되므로 큐에서 뺀다(sync_log에 남는다).
+    const splitByTransport = <T extends { id: number }>(items: T[], failedIdx: number[]) => {
+      const failed = new Set(failedIdx);
+      const pushedIds = items.filter((_, i) => !failed.has(i)).map(x => x.id);
+      const failedIds = items.filter((_, i) => failed.has(i)).map(x => x.id);
+      return { pushedIds, failedIds };
+    };
+
     // 1. sales
     const salesItems = dequeueSales(batchSize);
     if (salesItems.length > 0) {
       const result = await pushData('sales', salesItems.map(i => i.payload));
-      if (result.ok && result.data) {
-        const successIds = salesItems.map(i => i.id);
-        markSalesPushed(successIds);
-        recordSyncLog('sales', 'success', salesItems.length, result.data.accepted, result.data.rejected);
-        logger.info(`cache-pusher [sales]: ${salesItems.length}건 push 완료 (accepted=${result.data.accepted})`);
-      } else {
-        markSalesFailed(salesItems.map(i => i.id), result.error || 'push failed');
-        recordSyncLog('sales', 'failure', salesItems.length, 0, salesItems.length, result.error);
-      }
+      const { pushedIds, failedIds } = splitByTransport(salesItems, result.transportFailedIndices);
+      if (pushedIds.length > 0) markSalesPushed(pushedIds);
+      if (failedIds.length > 0) markSalesFailed(failedIds, result.error || 'transport failed');
+      recordSyncLog('sales', failedIds.length > 0 ? 'failure' : 'success', salesItems.length, result.data.accepted, result.data.rejected, result.error);
+      logger.info(`cache-pusher [sales]: pushed=${pushedIds.length}, 재전송대기=${failedIds.length} (accepted=${result.data.accepted})`);
     }
 
     // 2. members
     const memberItems = dequeueMembers(batchSize);
     if (memberItems.length > 0) {
       const result = await pushData('members', memberItems.map(i => i.payload));
-      if (result.ok && result.data) {
-        markMembersPushed(memberItems.map(i => i.id));
-        recordSyncLog('members', 'success', memberItems.length, result.data.accepted, result.data.rejected);
-        logger.info(`cache-pusher [members]: ${memberItems.length}건 push 완료 (accepted=${result.data.accepted})`);
-      } else {
-        markMembersFailed(memberItems.map(i => i.id), result.error || 'push failed');
-        recordSyncLog('members', 'failure', memberItems.length, 0, memberItems.length, result.error);
-      }
+      const { pushedIds, failedIds } = splitByTransport(memberItems, result.transportFailedIndices);
+      if (pushedIds.length > 0) markMembersPushed(pushedIds);
+      if (failedIds.length > 0) markMembersFailed(failedIds, result.error || 'transport failed');
+      recordSyncLog('members', failedIds.length > 0 ? 'failure' : 'success', memberItems.length, result.data.accepted, result.data.rejected, result.error);
+      logger.info(`cache-pusher [members]: pushed=${pushedIds.length}, 재전송대기=${failedIds.length} (accepted=${result.data.accepted})`);
     }
 
     // 3. inventory
     const inventoryItems = dequeueInventory(batchSize);
     if (inventoryItems.length > 0) {
       const result = await pushData('inventory', inventoryItems.map(i => i.payload));
-      if (result.ok && result.data) {
-        markInventoryPushed(inventoryItems.map(i => i.id));
-        recordSyncLog('inventory', 'success', inventoryItems.length, result.data.accepted, result.data.rejected);
-        logger.info(`cache-pusher [inventory]: ${inventoryItems.length}건 push 완료 (accepted=${result.data.accepted})`);
-      } else {
-        markInventoryFailed(inventoryItems.map(i => i.id), result.error || 'push failed');
-        recordSyncLog('inventory', 'failure', inventoryItems.length, 0, inventoryItems.length, result.error);
-      }
+      const { pushedIds, failedIds } = splitByTransport(inventoryItems, result.transportFailedIndices);
+      if (pushedIds.length > 0) markInventoryPushed(pushedIds);
+      if (failedIds.length > 0) markInventoryFailed(failedIds, result.error || 'transport failed');
+      recordSyncLog('inventory', failedIds.length > 0 ? 'failure' : 'success', inventoryItems.length, result.data.accepted, result.data.rejected, result.error);
+      logger.info(`cache-pusher [inventory]: pushed=${pushedIds.length}, 재전송대기=${failedIds.length} (accepted=${result.data.accepted})`);
     }
   } catch (err: any) {
     logger.error(`cache-pusher 예외: ${err.message}`);

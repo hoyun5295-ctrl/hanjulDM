@@ -23,6 +23,7 @@ import path from 'path';
 import fetch from 'node-fetch';
 import { getConfig, saveConfig } from './config';
 import { logger } from './logger';
+import { appPath } from './app-paths';
 
 // ============================================================
 // 타입
@@ -239,7 +240,7 @@ async function handleCommand(cmd: RemoteCommand): Promise<RemoteCommandResult> {
 // ============================================================
 
 async function fetchRecentLogs(lines: number): Promise<{ logs: string[]; totalLines: number }> {
-  const logDir = path.join(process.cwd(), 'logs');
+  const logDir = appPath('logs');
   if (!fs.existsSync(logDir)) {
     return { logs: [], totalLines: 0 };
   }
