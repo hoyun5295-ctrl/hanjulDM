@@ -10,7 +10,7 @@
  */
 
 import { query } from '../../../config/database';
-import { callAIWithFallback } from '../../../services/ai';
+import { callAIWithFallback } from '../ai/flyer-ai-call';
 
 // ============================================================
 // 업종별 키워드 규칙
@@ -181,4 +181,34 @@ export async function classifyProducts(
   }
 
   return merged;
+}
+
+// ============================================================
+// ★ 1025 17번 §1 F2 — 매장이 적은 카테고리는 그대로, 없는 상품만 분류해 묶는다
+//   (auto-build 소유였던 인라인 묶기를 CT로 — 이름 Map 합침 결함 차단 · 시험 가능)
+//   분류 결과는 이름 목록이므로, 같은 이름은 입력 순서대로 하나씩 소비해 원래 항목으로 되돌린다.
+// ============================================================
+export async function groupItemsByCategory<T extends { name: string; category?: string }>(
+  items: T[],
+  classify: (names: Array<{ name: string }>) => Promise<Record<string, string[]>>,
+): Promise<Array<{ name: string; items: T[] }>> {
+  const catOf: Array<string | undefined> = items.map(i => i.category);
+  const unassigned = items.map((i, idx) => ({ i, idx })).filter(x => !catOf[x.idx]);
+  if (unassigned.length > 0) {
+    const classified = await classify(unassigned.map(x => ({ name: x.i.name })));
+    const queue = new Map<string, number[]>();
+    for (const x of unassigned) queue.set(x.i.name, [...(queue.get(x.i.name) || []), x.idx]);
+    for (const [cat, names] of Object.entries(classified)) {
+      for (const n of names) {
+        const idx = queue.get(n)?.shift();
+        if (idx !== undefined) catOf[idx] = cat;
+      }
+    }
+  }
+  const groups = new Map<string, T[]>();
+  items.forEach((i, idx) => {
+    const cat = catOf[idx] || '기타';
+    groups.set(cat, [...(groups.get(cat) || []), i]);
+  });
+  return [...groups.entries()].map(([name, list]) => ({ name, items: list }));
 }

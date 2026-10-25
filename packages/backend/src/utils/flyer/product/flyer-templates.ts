@@ -25,7 +25,7 @@
 
 import { renderProductImage, resolveProductImageUrl } from '../../../utils/product-images';
 import { resolveSeasonToken, SEASON_TOKENS, type SeasonToken } from './season-resolver';
-import { DEPRECATED_FALLBACK_MAP } from '../config/flyer-business-types';
+import { DEPRECATED_FALLBACK_MAP, PAN_TABLE, type PanLayout } from '../config/flyer-business-types';
 import { renderQrSection, renderCartScript } from './flyer-page-injections';
 // ★ 2026-08-20 슈퍼버전업 2단계 — 렌더 준비 CT(프로모 분리·밴드·픽토그램) + URL 매체 토큰(13번 설계 §4·§5)
 import { prepareFlyerData, itemCountBand, countItems, bandStyleBlock, categoryPictogram, nameSizeClass, priceScaleClass, priceStyleBlock } from './flyer-render-prep';
@@ -41,6 +41,10 @@ export interface FlyerRenderData {
   title: string;
   period: string;
   categories: Array<{ name: string; items: FlyerRenderItem[] }>;
+  /** ★ 1025 17번 §3-2 판 구조 — renderTemplate 이 판 코드에서 채운다(미지정 = 엔진 기본 출력 그대로) */
+  layout?: PanLayout;
+  /** ★ 1025 갤러리 목업 — 상품명으로 로컬 사진을 자동으로 붙이지 않는다(그림 대체 원칙) */
+  noAutoImage?: boolean;
   qrCodeDataUrl?: string;
   qrCouponText?: string;
   /** 외부 링크 (밴드/쇼핑몰/전화/지도/인스타/블로그) */
@@ -693,7 +697,7 @@ body {
       ph.style.backgroundColor = it.bg;
       var em = document.createElement('span');
       em.className = 'ph-emoji';
-      em.textContent = it.emoji;
+      em.innerHTML = it.emoji; // ★ 1025 F1 같은 뿌리 — SVG 픽토그램(서버 생성 상수) · textContent면 마크업이 글자로 노출
       ph.appendChild(em);
       hero.appendChild(ph);
     }
@@ -931,7 +935,7 @@ export function renderMagazineEngine(d: FlyerRenderData, token: SeasonToken): st
       || '이번 주 ' + cat.name + ' 코너에서 직접 고른 상품들입니다.';
     const cards = cat.items.map(it => {
       const disc = calcDisc(it.originalPrice, it.salePrice);
-      const meta = [it.origin, it.unit].filter(Boolean).map(v => esc(String(v))).join(' · ');
+      const meta = [it.badge, it.origin, it.unit, it.cardDiscount].filter(Boolean).map(v => esc(String(v))).join(' · ');
       return (
         '<article class="pcard"' + productDataAttr(it, cat.name) + '>' +
           '<div class="ph">' + plate(it, cat.name, false) +
@@ -2995,11 +2999,11 @@ export function renderDealBentoEngine(d: FlyerRenderData, token: SeasonToken): s
     const it = items[0];
     const sold = 62; // 시뮬레이션 (실제 limit/sold 데이터 박힘 가능)
     tiles.push(
-      '<article class="tile hero span-hero" style="--em: \'' + categoryPictogram(it.category) + '\'; --sold: ' + sold + '%;"' + productDataAttr(it, it.category) + '>' +
+      '<article class="tile hero span-hero" style="--sold: ' + sold + '%;"' + productDataAttr(it, it.category) + '>' +
         '<span class="kicker"><span class="d"></span>WEEK PICK · NO.1</span>' +
-        '<div class="pic"></div>' +
+        '<div class="pic"><span class="em">' + categoryPictogram(it.category) + '</span></div>' +
         '<div class="name">' + esc(it.name) + (it.unit ? '<br>' + esc(it.unit) : '') + '</div>' +
-        '<div class="spec">' + esc(it.origin || '') + (it.unit ? ' · ' + esc(it.unit) : '') + (it.badge ? ' · ' + esc(it.badge) : '') + '</div>' +
+        '<div class="spec">' + esc(it.origin || '') + (it.unit ? ' · ' + esc(it.unit) : '') + (it.badge ? ' · ' + esc(it.badge) : '') + (it.cardDiscount ? ' · ' + esc(it.cardDiscount) : '') + '</div>' +
         '<div class="priceBlock">' +
           (it.originalPrice > 0 ? '<span class="orig price-num">' + fmtPrice(it.originalPrice) + '원</span>' : '') +
           '<span class="sale price-num">' + fmtPrice(it.salePrice) + '<span class="won">원</span></span>' +
@@ -3064,7 +3068,7 @@ export function renderDealBentoEngine(d: FlyerRenderData, token: SeasonToken): s
         '<span class="badge">' + esc(it.badge || (disc > 0 ? disc + '%↓' : '특가')) + '</span>' +
         picHtml +
         '<div class="name"' + nameSize + '>' + esc(it.name) + (it.unit ? '<br>' + esc(it.unit) : '') + '</div>' +
-        (it.origin || it.unit ? '<div class="spec">' + esc(it.origin || it.unit || '') + '</div>' : '') +
+        (it.origin || it.unit || it.cardDiscount ? '<div class="spec">' + [it.origin || it.unit, it.cardDiscount].filter(Boolean).map(v => esc(String(v))).join(' · ') + '</div>' : '') +
         (it.originalPrice > 0 ? '<div class="orig price-num">' + fmtPrice(it.originalPrice) + '원</div>' : '') +
         '<div class="priceLine">' +
           (offText !== '특가' ? '<span class="off">' + esc(offText) + '</span>' : '') +
@@ -3184,7 +3188,8 @@ button { font-family: inherit; cursor: pointer; }
 .tile.hero .kicker { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; background: var(--ink); color: var(--bg); padding: 4px 10px; border-radius: 999px; align-self: flex-start; }
 .tile.hero .kicker .d { width: 5px; height: 5px; border-radius: 50%; background: #ff4d4d; }
 .tile.hero .pic { position: absolute; right: -14px; top: 30px; width: 200px; height: 200px; border-radius: 24px; background: rgba(255,255,255,0.5); backdrop-filter: blur(8px); transform: rotate(-6deg); display: grid; place-items: center; overflow: hidden; }
-.tile.hero .pic::after { content: var(--em, "🛒"); font-size: 130px; line-height: 1; filter: drop-shadow(0 12px 24px rgba(0,0,0,0.18)); }
+.tile.hero .pic { --picto-color: var(--ink); }
+.tile.hero .pic .em { display: flex; font-size: 130px; line-height: 1; filter: drop-shadow(0 12px 24px rgba(0,0,0,0.18)); }
 .tile.hero .name { margin-top: 14px; font-size: 30px; font-weight: 900; letter-spacing: -0.035em; line-height: 1; }
 .tile.hero .spec { margin-top: 4px; font-size: 12px; color: var(--ink); opacity: 0.65; font-weight: 600; }
 .tile.hero .priceBlock { margin-top: auto; display: flex; align-items: baseline; gap: 8px; }
@@ -3344,12 +3349,12 @@ export function renderGridMujiEngine(d: FlyerRenderData, token: SeasonToken): st
       const tagOnly = it.badge && (it.badge.indexOf('한정') >= 0 || it.badge.indexOf('1+1') >= 0);
       const phStyle = it.imageUrl
         ? 'background:url(\'' + esc(toAbsUrl(it.imageUrl) || '') + '\') center/cover;'
-        : '--ph-bg:' + categoryBg(cat.name) + '; --ph-emoji:\'' + categoryPictogram(cat.name) + '\';';
+        : '--ph-bg:' + categoryBg(cat.name) + ';';
       grid.push(
         '<article class="pcard"' + productDataAttr(it, cat.name) + '>' +
           '<div class="pic">' +
             '<span class="id">No.' + idStr + '</span>' +
-            '<div class="ph" style="' + phStyle + '"></div>' +
+            '<div class="ph" style="' + phStyle + '">' + (it.imageUrl ? '' : '<span class="em">' + categoryPictogram(cat.name) + '</span>') + '</div>' +
             '<button class="add" aria-label="담기">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
             '</button>' +
@@ -3443,7 +3448,7 @@ button { font-family: inherit; cursor: pointer; }
 .featureCard { margin: 22px 22px 0; display: grid; grid-template-columns: 1fr; gap: 14px; padding-top: 22px; border-top: 1px solid var(--ink); }
 .featureCard .pic { aspect-ratio: 4/3; background: var(--paper-2); position: relative; overflow: hidden; }
 .ph { position: absolute; inset: 0; display: grid; place-items: center; background: var(--ph-bg, var(--paper-2)); }
-.ph::after { content: var(--ph-emoji, ""); font-size: 130px; line-height: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.10)); }
+.ph .em { display: flex; font-size: 130px; line-height: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.10)); }
 .featureCard .pic .id { position: absolute; left: 14px; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--ink-3); }
 .featureCard .info { display: flex; flex-direction: column; gap: 6px; }
 .featureCard .id2 { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
@@ -3538,7 +3543,7 @@ ${featured ? `
 <article class="featureCard"${productDataAttr(featured, featured.category || '')}>
   <div class="pic">
     <span class="id">NO.01 · FEATURE</span>
-    <div class="ph" style="${featured.imageUrl ? `background:url('${esc(toAbsUrl(featured.imageUrl) || '')}') center/cover;` : `--ph-bg:${categoryBg(featured.category || '')}; --ph-emoji:'${categoryPictogram(featured.category || '')}';`}"></div>
+    <div class="ph" style="${featured.imageUrl ? `background:url('${esc(toAbsUrl(featured.imageUrl) || '')}') center/cover;` : `--ph-bg:${categoryBg(featured.category || '')};`}">${featured.imageUrl ? '' : `<span class="em">${categoryPictogram(featured.category || '')}</span>`}</div>
   </div>
   <div class="info">
     <div class="id2 mono">No. 01 · ${esc(featured.category || '')}${featured.unit ? ' · ' + esc(featured.unit) : ''}</div>
@@ -3662,6 +3667,9 @@ export function renderCatalogDarkEngine(d: FlyerRenderData, token: SeasonToken):
       '<div class="stage">' + stage(hero, hero.category) + '</div>' +
       '<p class="spot-tag">오늘의 스포트라이트</p>' +
       '<h2 class="' + nameSizeClass(hero.name) + '">' + esc(hero.name) + '</h2>' +
+      // ★ 1025 F2: 스포트라이트도 뱃지·원산지·규격·카드할인을 그린다(목록 중복 제거 뒤 드러난 누락)
+      ([hero.badge, hero.origin, hero.unit, hero.cardDiscount].some(Boolean)
+        ? '<p class="spot-meta">' + [hero.badge, hero.origin, hero.unit, hero.cardDiscount].filter(Boolean).map(v => esc(String(v))).join(' · ') + '</p>' : '') +
       '<div class="spot-prc">' +
         (hero.originalPrice > hero.salePrice ? '<s>' + fmtPrice(hero.originalPrice) + '원</s>' : '') +
         '<strong class="' + priceScaleClass(hero.salePrice) + '">' + fmtPrice(hero.salePrice) + '<i>원</i></strong>' +
@@ -3670,12 +3678,16 @@ export function renderCatalogDarkEngine(d: FlyerRenderData, token: SeasonToken):
     '</section>'
   ) : '';
 
+  // ★ 1025: flattenItems 는 새 객체를 돌려준다 — 객체 비교(it !== hero)는 늘 참이라 스포트라이트 상품이 목록에 또 나왔다.
+  //   위치(펼친 순서)로 한 번만 뺀다.
+  const heroIdx = hero ? items.indexOf(hero) : -1;
+  let pos = 0;
   const rows = d.categories.map(cat => {
-    const list = cat.items.filter(it => !hero || it !== hero);
+    const list = cat.items.filter(() => pos++ !== heroIdx);
     if (list.length === 0) return '';
     const cards = list.map(it => {
       const disc = calcDisc(it.originalPrice, it.salePrice);
-      const meta = [it.origin, it.unit].filter(Boolean).map(v => esc(String(v))).join(' · ');
+      const meta = [it.badge, it.origin, it.unit, it.cardDiscount].filter(Boolean).map(v => esc(String(v))).join(' · ');
       return (
         '<article class="card"' + productDataAttr(it, cat.name) + '>' +
           '<div class="ph">' + stage(it, cat.name) +
@@ -3728,6 +3740,7 @@ body{background:var(--bg);color:#F2F2F2;font-family:'Noto Sans KR',sans-serif;-w
 .spot-tag{margin-top:16px;font-size:11px;letter-spacing:.22em;font-weight:700;color:var(--color-primary)}
 .spot h2{font-family:'Do Hyeon',sans-serif;font-size:27px;margin-top:7px;word-break:keep-all}
 .spot h2.nm-l{font-size:22px}
+.spot-meta{margin-top:6px;font-size:12px;color:rgba(255,255,255,.62)}
 .spot-prc{display:flex;align-items:baseline;justify-content:center;gap:9px;margin-top:9px;flex-wrap:wrap}
 .spot-prc s{font-size:13px;color:var(--dim)}
 .spot-prc strong{font-family:'Do Hyeon',sans-serif;font-size:44px;line-height:1;color:var(--color-primary);font-variant-numeric:tabular-nums}
@@ -3843,32 +3856,17 @@ export function renderPosterPopEngine(d: FlyerRenderData, token: SeasonToken): s
       '</div>'
     );
 
-    // 카테고리 안 상품: 첫 2개는 일반 slab, 그 외는 pair (2 묶음씩)
+    // 카테고리 안 상품: 앞 heroN개 = 큰 slab(기본 1) · 나머지 = cols개 묶음(기본 2) · 남은 1개는 큰 slab
+    // ★ 1025 판 구조 — 기본값(1·2)은 옛 분기(첫 1개 + 2개 묶음 + 남은 1개)와 같은 출력
     const allItems = cat.items;
-    let i = 0;
-    // 첫 상품 = 일반 slab (큰 사이즈)
-    if (allItems.length > 0) {
-      sections.push(buildPopSlab(allItems[0], cat.name, ++slabIdx, false));
-      i = 1;
-    }
-
-    // 두 번째 상품 = pair 또는 단독
-    if (allItems.length === 2) {
-      sections.push(buildPopSlab(allItems[1], cat.name, ++slabIdx, false));
-      i = 2;
-    } else if (allItems.length > 2) {
-      // pair 묶음 (2개씩)
-      const remaining = allItems.slice(1);
-      for (let j = 0; j < remaining.length; j += 2) {
-        if (j + 1 < remaining.length) {
-          const a = buildPopSlab(remaining[j], cat.name, ++slabIdx, true);
-          const b = buildPopSlab(remaining[j + 1], cat.name, ++slabIdx, true);
-          sections.push('<div class="pair">' + a + b + '</div>');
-        } else {
-          sections.push(buildPopSlab(remaining[j], cat.name, ++slabIdx, false));
-        }
-      }
-      i = allItems.length;
+    const heroN = d.layout ? d.layout.hero : 1;
+    const cols = d.layout ? d.layout.cols : 2;
+    for (const it of allItems.slice(0, heroN)) sections.push(buildPopSlab(it, cat.name, ++slabIdx, false, true));
+    const remaining = allItems.slice(heroN);
+    for (let j = 0; j < remaining.length; j += cols) {
+      const group = remaining.slice(j, j + cols);
+      if (group.length === 1) sections.push(buildPopSlab(group[0], cat.name, ++slabIdx, false));
+      else sections.push('<div class="pair" data-cols="' + cols + '">' + group.map(g => buildPopSlab(g, cat.name, ++slabIdx, true)).join('') + '</div>');
     }
 
     // 첫 카테고리 후 megaStrip 1회
@@ -3884,7 +3882,7 @@ export function renderPosterPopEngine(d: FlyerRenderData, token: SeasonToken): s
     }
   });
 
-  function buildPopSlab(it: any, catName: string, num: number, isPair: boolean): string {
+  function buildPopSlab(it: any, catName: string, num: number, isPair: boolean, isHero = false): string {
     const disc = calcDisc(it.originalPrice, it.salePrice);
     const saved = it.originalPrice > 0 ? it.originalPrice - it.salePrice : 0;
     const numStr = String(num).padStart(2, '0');
@@ -3894,21 +3892,22 @@ export function renderPosterPopEngine(d: FlyerRenderData, token: SeasonToken): s
     const stampB = stampPalette.getB(it, disc, saved);
     const phStyle = it.imageUrl
       ? `background:url('${esc(toAbsUrl(it.imageUrl) || '')}') center/cover;`
-      : `--ph-bg:${categoryBg(catName)}; --ph-emoji:'${categoryPictogram(catName)}';`;
+      : `--ph-bg:${categoryBg(catName)};`;
     const specs: string[] = [];
     if (it.unit) specs.push('<span class="' + POP_SPEC_COLS[0] + '">' + esc(it.unit.toUpperCase()) + '</span>');
     if (it.origin) specs.push('<span class="' + POP_SPEC_COLS[1] + '">' + esc(it.origin) + '</span>');
-    if (it.badge && !isPair) specs.push('<span class="' + POP_SPEC_COLS[2] + '">' + esc(it.badge) + '</span>');
+    if (it.badge) specs.push('<span class="' + POP_SPEC_COLS[2] + '">' + esc(it.badge) + '</span>'); // ★ 1025 F2: 짝 슬랩도 뱃지 표시
     if (disc > 0 && !isPair) specs.push('<span class="' + POP_SPEC_COLS[3] + '">' + disc + '%↓</span>');
+    if (it.cardDiscount) specs.push('<span class="' + POP_SPEC_COLS[0] + '">' + esc(it.cardDiscount) + '</span>');
     const bangHtml = disc >= 30 ? '<span class="bang">!!</span>' : '';
     const unitpText = it.aiCopy || (it.unit && it.salePrice > 0
       ? '단위 ' + esc(it.unit) + ' · 한정 특가!'
       : '한정 특가야!');
 
     return (
-      '<article class="slab' + tiltCls + '" data-num="' + numStr + '"' + productDataAttr(it, catName) + '>' +
+      '<article class="slab' + tiltCls + '"' + (isHero ? ' data-hero' : '') + ' data-num="' + numStr + '"' + productDataAttr(it, catName) + '>' +
         '<div class="pic">' +
-          '<div class="ph" style="' + phStyle + '"></div>' +
+          '<div class="ph" style="' + phStyle + '">' + (it.imageUrl ? '' : '<span class="em">' + categoryPictogram(catName) + '</span>') + '</div>' +
           '<span class="deco-1"></span>' +
           '<span class="deco-2"></span>' +
           '<div class="stamp fat" style="background:' + stampPalette.bg + ';color:' + stampPalette.color + ';">' +
@@ -4002,7 +4001,7 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .slab.tilt2.in { transform: rotate(0.8deg); }
 .slab .pic { aspect-ratio: 16/10; position: relative; background: var(--paper); border-bottom: 3px solid var(--ink); overflow: hidden; }
 .ph { position: absolute; inset: 0; display: grid; place-items: center; background: var(--ph-bg, var(--paper)); }
-.ph::after { content: var(--ph-emoji, ""); font-size: 130px; line-height: 1; filter: drop-shadow(2px 2px 0 var(--ink)) drop-shadow(0 6px 12px rgba(0,0,0,0.18)); }
+.ph .em { display: flex; font-size: 130px; line-height: 1; filter: drop-shadow(2px 2px 0 var(--ink)) drop-shadow(0 6px 12px rgba(0,0,0,0.18)); }
 .pic .deco-1 { position: absolute; left: 12px; top: 12px; width: 32px; height: 32px; border-radius: 50%; background: var(--pop-blue); border: 2px solid var(--ink); }
 .pic .deco-2 { position: absolute; right: 12px; top: 12px; width: 36px; height: 36px; background: var(--color-accent); border: 2px solid var(--ink); transform: rotate(20deg); }
 .pic .stripe { position: absolute; left: 0; right: 0; bottom: 0; height: 16px; background: repeating-linear-gradient(45deg, var(--ink) 0 6px, var(--paper) 6px 12px); }
@@ -4036,6 +4035,16 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-i
 .pair .slab .specs span { font-size: 10px; padding: 2px 6px; }
 .pair .slab .pic .stamp { width: 60px; height: 60px; right: 8px; bottom: 14px; }
 .pair .slab .pic .stamp .a { font-size: 9px; }
+.pair[data-cols="3"] { grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 14px 16px; }
+.pair[data-cols="3"] .slab { box-shadow: 3px 3px 0 var(--ink); }
+.pair[data-cols="3"] .slab h3 { font-size: 13px; }
+.pair[data-cols="3"] .slab .sale { font-size: 24px; }
+.pair[data-cols="3"] .slab .sale .won { font-size: 11px; }
+.pair[data-cols="3"] .slab .unitp { display: none; }
+.pair[data-cols="3"] .slab .specs span { font-size: 9px; padding: 1px 4px; }
+.pair[data-cols="3"] .slab .pic .stamp { width: 42px; height: 42px; right: 4px; bottom: 6px; }
+.pair[data-cols="3"] .slab .pic .stamp .a { font-size: 7px; }
+.pair[data-cols="3"] .slab .pic .stamp .b { font-size: 10px; }
 .pair .slab .pic .stamp .b { font-size: 18px; }
 .megaStrip { margin: 24px 0; background: var(--ink); color: var(--paper); padding: 14px 0; border-top: 4px solid var(--ink); border-bottom: 4px solid var(--ink); overflow: hidden; white-space: nowrap; font-family: 'Bagel Fat One', cursive; font-size: 22px; letter-spacing: 0.04em; }
 .megaStrip .track { display: inline-flex; gap: 24px; animation: marquee 18s linear infinite; }
@@ -4145,10 +4154,35 @@ export function renderMarketBoardEngine(d: FlyerRenderData, token: SeasonToken):
     ? d.periodStart.replace(/-/g, '.').slice(5) + ' — ' + d.periodEnd.replace(/-/g, '.').slice(5)
     : (d.period || '');
 
-  const sections = d.categories.map((cat, ci) => {
-    const rows = cat.items.map(it => {
+  // ★ 1025 판 구조: 대표 수(기본 0) · 열 수(기본 1). 대표는 전체 순서의 앞 N개(위치로 판정)
+  const heroN = d.layout ? d.layout.hero : 0;
+  const cols = d.layout ? d.layout.cols : 1;
+  const picks = items.slice(0, heroN);
+  const pickHtml = picks.length === 0 ? '' : '<section class="pick">' + picks.map(it => {
+    const disc = calcDisc(it.originalPrice, it.salePrice);
+    const meta = [it.unit, it.origin, it.cardDiscount].filter(Boolean).map(v => esc(String(v))).join(' · ');
+    return (
+      '<article class="pk" data-hero' + productDataAttr(it, it.category) + '>' +
+        '<span class="pk-tag">오늘의 대표</span>' +
+        '<p class="pk-nm ' + nameSizeClass(it.name) + '">' + esc(it.name) + '</p>' +
+        (it.badge ? '<span class="bdg">' + esc(it.badge) + '</span>' : '') +
+        (meta ? '<span class="mt">' + meta + '</span>' : '') +
+        '<div class="pk-pr">' +
+          (it.originalPrice > it.salePrice ? '<span class="was">' + fmtPrice(it.originalPrice) + '</span>' : '') +
+          '<span class="now ' + priceScaleClass(it.salePrice) + '">' + fmtPrice(it.salePrice) + '<i>원</i></span>' +
+          (disc > 0 ? '<span class="off">' + disc + '%</span>' : '') +
+        '</div>' +
+      '</article>'
+    );
+  }).join('') + '</section>';
+
+  let seen = 0;
+  const sections = d.categories.map(cat => {
+    const list = cat.items.filter(() => seen++ >= heroN);
+    if (list.length === 0) return '';
+    const rows = list.map(it => {
       const disc = calcDisc(it.originalPrice, it.salePrice);
-      const meta = [it.unit, it.origin].filter(Boolean).map(v => esc(String(v))).join(' · ');
+      const meta = [it.unit, it.origin, it.cardDiscount].filter(Boolean).map(v => esc(String(v))).join(' · ');
       return (
         '<li class="row"' + productDataAttr(it, cat.name) + '>' +
           '<div class="nm">' +
@@ -4169,7 +4203,7 @@ export function renderMarketBoardEngine(d: FlyerRenderData, token: SeasonToken):
     return (
       '<section class="blk">' +
         '<h2 class="cat"><span class="ico">' + categoryPictogram(cat.name) + '</span>' + esc(cat.name) + '<span class="ln"></span></h2>' +
-        '<ul class="rows">' + rows + '</ul>' +
+        '<ul class="rows" data-cols="' + cols + '">' + rows + '</ul>' +
       '</section>'
     );
   }).join('');
@@ -4220,6 +4254,25 @@ h1{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-
 .foot{margin-top:34px;padding-top:16px;border-top:3px double var(--ink);text-align:center}
 .foot .nm2{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.02em;font-size:22px}
 .foot .cp{margin-top:6px;font-size:11px;color:rgba(26,22,20,.5)}
+.pick{margin-top:22px;display:grid;gap:10px}
+.pk{position:relative;padding:14px 16px 16px;border:2.5px solid var(--color-primary);border-radius:8px;background:rgba(255,255,255,.55)}
+.pk-tag{display:inline-block;padding:2px 8px;background:var(--color-primary);color:#fff;font-size:11px;font-weight:900;border-radius:3px}
+.pk-nm{margin-top:8px;font-weight:900;font-size:24px;line-height:1.2;letter-spacing:-0.02em;word-break:keep-all}
+.pk-nm.nm-m{font-size:21px}.pk-nm.nm-l{font-size:18px}
+.pk .bdg{display:inline-block;margin-top:6px;padding:2px 7px;background:var(--ink);color:var(--paper);font-size:11px;font-weight:900;border-radius:3px}
+.pk .mt{display:block;margin-top:5px;font-size:12px;color:rgba(26,22,20,.6)}
+.pk-pr{margin-top:10px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pk-pr .was{font-size:14px;color:rgba(26,22,20,.45);text-decoration:line-through}
+.pk-pr .now{font-weight:900;letter-spacing:-0.02em;font-size:46px;line-height:1;color:var(--color-primary)}
+.pk-pr .now.pr-m{font-size:40px}.pk-pr .now.pr-l{font-size:34px}
+.pk-pr .now i{font-style:normal;font-size:18px;margin-left:2px}
+.pk-pr .off{padding:2px 7px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:900;border-radius:3px}
+.rows[data-cols="2"]{display:grid;grid-template-columns:1fr 1fr;column-gap:14px}
+.rows[data-cols="2"] .row{flex-direction:column;align-items:stretch;gap:4px}
+.rows[data-cols="2"] .dots{display:none}
+.rows[data-cols="2"] .pr{text-align:left}
+.rows[data-cols="2"] .nm .t{font-size:15px}
+.rows[data-cols="2"] .pr .now{font-size:26px}.rows[data-cols="2"] .pr .now.pr-m{font-size:23px}.rows[data-cols="2"] .pr .now.pr-l{font-size:20px}
 </style>
 </head>
 <body>
@@ -4230,7 +4283,7 @@ h1{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-
     <h1>${esc(d.title)}</h1>
     ${period ? '<div class="per">' + esc(period) + '</div>' : ''}
   </header>
-  ${sections}
+  ${pickHtml}${sections}
   ${totalSaved > 0 ? '<div class="saveStamp">오늘 다 담으면 <b>' + fmtPrice(totalSaved) + '원</b> 아낍니다</div>' : ''}
   <footer class="foot">
     <p class="nm2">${esc(d.storeName)}</p>
@@ -4250,8 +4303,10 @@ h1{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-
  */
 export function renderFreshDailyEngine(d: FlyerRenderData, token: SeasonToken): string {
   const items = flattenItems(d);
-  const hero = items[0];
-  const rest = items.slice(1);
+  // ★ 1025 판 구조: 대표 수(기본 1) · 열 수(기본 2). 대표는 전체 순서의 앞 N개(위치로 판정 — 같은 이름 상품 오제외 차단)
+  const heroN = d.layout ? d.layout.hero : 1;
+  const cols = d.layout ? d.layout.cols : 2;
+  const heroes = items.slice(0, heroN);
   const ogTitle = d.storeName + ' · ' + d.title;
   const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ');
   const ogImage = buildOgImageUrl(d, token);
@@ -4259,17 +4314,24 @@ export function renderFreshDailyEngine(d: FlyerRenderData, token: SeasonToken): 
     ? d.periodStart.replace(/-/g, '.').slice(5) + ' ~ ' + d.periodEnd.replace(/-/g, '.').slice(5)
     : (d.period || '');
 
+  // ★ 1025: 사진 없음 = 카테고리 색 바탕 + 큰 픽토그램(옛 resolveImg 이모지 글자는 스타일이 없어 빈 회색 칸으로 보였다)
+  const vis = (it: FlyerRenderItem, cat: string, size: number) =>
+    toAbsUrl(it.imageUrl || (d.noAutoImage ? '' : resolveProductImageUrl(it.name)))
+      ? resolveImg(it.name, size, it.imageUrl)
+      : '<div class="phx" style="background:' + categoryBg(cat) + '"><span class="em">' + categoryPictogram(cat) + '</span></div>';
+
   const chip = (it: FlyerRenderItem) => {
     const parts: string[] = [];
+    if (it.badge) parts.push('<span class="ch bdg">' + esc(it.badge) + '</span>');
     if (it.origin) parts.push('<span class="ch org">' + esc(it.origin) + '</span>');
     if (it.unit) parts.push('<span class="ch">' + esc(it.unit) + '</span>');
     if (it.cardDiscount) parts.push('<span class="ch card">' + esc(it.cardDiscount) + '</span>');
     return parts.join('');
   };
 
-  const heroHtml = hero ? (
-    '<article class="hero"' + productDataAttr(hero, hero.category) + '>' +
-      '<div class="ph">' + resolveImg(hero.name, 520, hero.imageUrl) + '</div>' +
+  const heroHtml = heroes.map(hero => (
+    '<article class="hero" data-hero' + productDataAttr(hero, hero.category) + '>' +
+      '<div class="ph">' + vis(hero, hero.category, 520) + '</div>' +
       '<div class="body">' +
         '<span class="tag">이번 주 대표</span>' +
         '<h2 class="' + nameSizeClass(hero.name) + '">' + esc(hero.name) + '</h2>' +
@@ -4282,14 +4344,15 @@ export function renderFreshDailyEngine(d: FlyerRenderData, token: SeasonToken): 
         '</div>' +
       '</div>' +
     '</article>'
-  ) : '';
+  )).join('');
 
+  let seen = 0;
   const gridHtml = d.categories.map(cat => {
-    const list = cat.items.filter(it => !hero || it.name !== hero.name || cat.name !== hero.category);
+    const list = cat.items.filter(() => seen++ >= heroN);
     if (list.length === 0) return '';
     const cards = list.map(it => (
       '<article class="card"' + productDataAttr(it, cat.name) + '>' +
-        '<div class="ph">' + resolveImg(it.name, 300, it.imageUrl) + '</div>' +
+        '<div class="ph">' + vis(it, cat.name, 300) + '</div>' +
         '<div class="body">' +
           '<h3 class="' + nameSizeClass(it.name) + '">' + esc(it.name) + '</h3>' +
           '<div class="chips">' + chip(it) + '</div>' +
@@ -4304,7 +4367,7 @@ export function renderFreshDailyEngine(d: FlyerRenderData, token: SeasonToken): 
       '<section class="sec">' +
         '<h2 class="cat"><span class="ico">' + categoryPictogram(cat.name) + '</span>' + esc(cat.name) +
           '<span class="cnt">' + list.length + '</span></h2>' +
-        '<div class="grid">' + cards + '</div>' +
+        '<div class="grid" data-cols="' + cols + '">' + cards + '</div>' +
       '</section>'
     );
   }).join('');
@@ -4340,6 +4403,7 @@ body{background:#fff;color:var(--ink);font-family:'Pretendard Variable',sans-ser
 .ch{padding:3px 8px;border-radius:6px;background:#F3F4F6;font-size:11px;font-weight:700;color:#4B5563}
 .ch.org{background:#DCFCE7;color:#166534}
 .ch.card{background:#EFF6FF;color:#1D4ED8}
+.ch.bdg{background:#FEF3C7;color:#92400E}
 .prc{display:flex;align-items:baseline;gap:8px;margin-top:12px;flex-wrap:wrap}
 .prc .was{font-size:13px;color:#9CA3AF;text-decoration:line-through}
 .prc strong{font-family:'Pretendard Variable',sans-serif;font-weight:900;letter-spacing:-0.02em;font-size:36px;line-height:1;color:var(--ink)}
@@ -4366,6 +4430,16 @@ body{background:#fff;color:var(--ink);font-family:'Pretendard Variable',sans-ser
 .foot p{font-size:11px;color:#9CA3AF;line-height:1.6}
 [data-band="large"] .grid{gap:9px}
 [data-band="large"] .card h3{font-size:13px}
+.hero + .hero{margin-top:12px}
+.phx{width:100%;height:100%;display:grid;place-items:center}
+.phx .em{display:flex;font-size:44px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.25))}
+.hero .phx .em{font-size:96px}
+.grid[data-cols="3"] .phx .em{font-size:32px}
+.grid[data-cols="3"]{grid-template-columns:repeat(3,1fr);gap:8px}
+.grid[data-cols="3"] .card .body{padding:8px 8px 10px}
+.grid[data-cols="3"] .card h3{font-size:12.5px}
+.grid[data-cols="3"] .card .prc strong{font-size:18px}
+.grid[data-cols="3"] .chips{gap:3px}.grid[data-cols="3"] .ch{padding:2px 5px;font-size:10px}
 </style>
 </head>
 <body>
@@ -4384,7 +4458,314 @@ body{background:#fff;color:var(--ink);font-family:'Pretendard Variable',sans-ser
 }
 
 // ============================================================
-// RENDERER_MAP (신규 6 + D155 추가 5 + 0820 신규 2)
+// ★ 2026-10-25 신규 엔진 3 (17번 설계 §3-1) — 현 10종이 못 덮는 상품 수 축
+// ============================================================
+
+function periodLabel(d: FlyerRenderData, sep: string): string {
+  return d.periodStart && d.periodEnd
+    ? d.periodStart.replace(/-/g, '.').slice(5) + sep + d.periodEnd.replace(/-/g, '.').slice(5)
+    : (d.period || '');
+}
+
+function headMeta(d: FlyerRenderData, token: SeasonToken, items: FlyerRenderItem[]): string {
+  const ogTitle = d.storeName + ' · ' + d.title;
+  const ogDesc = items.slice(0, 3).map(i => i.name + ' ' + fmtPrice(i.salePrice) + '원').join(' · ');
+  return '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>' + esc(ogTitle) + '</title>' +
+    '<meta property="og:title" content="' + esc(ogTitle) + '"><meta property="og:description" content="' + esc(ogDesc) + '">' +
+    '<meta property="og:image" content="' + esc(buildOgImageUrl(d, token)) + '"><meta property="og:type" content="website">' +
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">';
+}
+
+/**
+ * PRICE BOARD (빼곡 가격표) — 사진 없이 30개 이상을 한 장에.
+ * 카테고리 띠 + 품목·규격·가격 3열 줄표. 행사 뱃지 있는 줄은 옅은 강조색.
+ */
+export function renderPriceBoardEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const period = periodLabel(d, ' ~ ');
+  const sections = d.categories.map(cat => {
+    if (cat.items.length === 0) return '';
+    const rows = cat.items.map(it => {
+      const disc = calcDisc(it.originalPrice, it.salePrice);
+      const tags = [it.badge, it.cardDiscount].filter(Boolean).map(v => '<span class="tg">' + esc(String(v)) + '</span>').join('');
+      return (
+        '<li class="pr-row' + (it.badge ? ' hot' : '') + '"' + productDataAttr(it, cat.name) + '>' +
+          '<span class="nm"><b class="' + nameSizeClass(it.name) + '">' + esc(it.name) + '</b>' + tags +
+            (it.origin ? '<em>' + esc(it.origin) + '</em>' : '') + '</span>' +
+          '<span class="sp">' + esc(it.unit || '') + '</span>' +
+          '<span class="pc">' +
+            (it.originalPrice > it.salePrice ? '<s>' + fmtPrice(it.originalPrice) + '</s>' : '') +
+            '<strong class="' + priceScaleClass(it.salePrice) + '">' + fmtPrice(it.salePrice) + '</strong>' +
+            (disc >= 10 ? '<i>' + disc + '%</i>' : '') +
+          '</span>' +
+        '</li>'
+      );
+    }).join('');
+    return (
+      '<section class="pb-sec">' +
+        '<h2 class="band"><span class="ico">' + categoryPictogram(cat.name) + '</span>' + esc(cat.name) +
+          '<span class="n">' + cat.items.length + '</span></h2>' +
+        '<ol class="pb-rows">' + rows + '</ol>' +
+      '</section>'
+    );
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${token}">
+<head>
+${headMeta(d, token, items)}
+<style>
+:root{--color-primary:#DC2626;--color-accent:#F59E0B;--color-on-primary:#fff;--ink:#18181B;--line:#E4E4E7;--paper:#FAFAF9;}
+${seasonStyleBlock()}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:'Pretendard Variable',sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding-bottom:56px}
+.top{background:var(--color-primary);color:var(--color-on-primary);padding:22px 18px 18px}
+.top .st{font-size:12px;font-weight:800;letter-spacing:.24em;opacity:.92}
+.top h1{margin-top:6px;font-weight:900;letter-spacing:-0.035em;font-size:clamp(30px,8.6vw,44px);line-height:1.05;word-break:keep-all}
+.top .meta{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:800}
+.top .meta span{padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.18)}
+.pb-sec{margin-top:14px}
+.band{display:flex;align-items:center;gap:8px;padding:9px 16px;background:var(--ink);color:#fff;font-size:15px;font-weight:900;letter-spacing:-0.01em}
+.band .ico{display:flex;font-size:16px}
+.band .n{margin-left:auto;font-size:11px;font-weight:700;opacity:.65}
+.pb-rows{list-style:none;background:#fff}
+.pr-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--line)}
+.pr-row.hot{background:#FEF2F2}
+.pr-row .nm{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.pr-row .nm b{font-size:14.5px;font-weight:800;line-height:1.3;word-break:keep-all;margin-right:2px}
+.pr-row .nm b.nm-m{font-size:13.5px}.pr-row .nm b.nm-l{font-size:12.5px}
+.pr-row .tg{padding:1px 6px;border-radius:4px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:900}
+.pr-row .nm em{font-style:normal;font-size:10.5px;color:#71717A}
+.pr-row .sp{font-size:11.5px;color:#71717A;white-space:nowrap}
+.pr-row .pc{display:flex;align-items:baseline;gap:5px;white-space:nowrap;justify-content:flex-end;min-width:92px}
+.pr-row .pc s{font-size:11px;color:#A1A1AA}
+.pr-row .pc strong{font-size:20px;font-weight:900;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+.pr-row .pc strong.pr-m{font-size:18px}.pr-row .pc strong.pr-l{font-size:16px}
+.pr-row .pc strong::after{content:"원";font-size:11px;font-weight:700;margin-left:1px}
+.pr-row .pc i{font-style:normal;font-size:11px;font-weight:900;color:var(--color-primary)}
+.foot{margin-top:26px;padding:0 18px;text-align:center}
+.foot .nm2{font-size:20px;font-weight:900;letter-spacing:-0.02em}
+.foot p{margin-top:6px;font-size:11px;color:#71717A}
+/* 좁은 화면: 규격(묶음 수량·가격 기준)은 숨기지 않고 상품명 아래로 내린다 — 판매 조건을 지우지 않는다 */
+@media (max-width:380px){.pr-row{grid-template-columns:1fr auto;grid-template-areas:"nm pc" "sp pc";row-gap:2px}.pr-row .nm{grid-area:nm}.pr-row .sp{grid-area:sp}.pr-row .pc{grid-area:pc}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <p class="st">${esc(d.storeName)}</p>
+    <h1>${esc(d.title)}</h1>
+    <div class="meta">${period ? '<span>' + esc(period) + '</span>' : ''}<span>총 ${items.length}개 품목</span></div>
+  </header>
+  ${sections}
+  <footer class="foot"><p class="nm2">${esc(d.storeName)}</p><p>가격은 행사 기간 내 매장 사정에 따라 조기 소진될 수 있습니다</p></footer>
+</div>
+</body>
+</html>`;
+}
+
+/**
+ * SINGLE HERO (단일 상품 폭탄) — 한 상품을 화면 가득. 1~3개.
+ * 첫 상품 = 대형 그림·초대형 가격 · 나머지 = 「같이 사면 좋아요」 카드.
+ */
+export function renderSingleHeroEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const hero = items[0];
+  const rest = items.slice(1);
+  const period = periodLabel(d, ' ~ ');
+  const visual = (it: FlyerRenderItem & { category: string }, size: number) => it.imageUrl
+    ? '<img src="' + esc(toAbsUrl(it.imageUrl) || '') + '" alt="' + esc(it.name) + '" loading="lazy">'
+    : '<span class="em" style="font-size:' + size + 'px">' + categoryPictogram(it.category) + '</span>';
+  const heroDisc = hero ? calcDisc(hero.originalPrice, hero.salePrice) : 0;
+  const heroHtml = hero ? (
+    '<article class="sh-hero" data-hero' + productDataAttr(hero, hero.category) + '>' +
+      '<div class="vis' + (hero.imageUrl ? ' img' : '') + '" style="background:' + categoryBg(hero.category) + '">' + visual(hero, 150) +
+        (heroDisc > 0 ? '<span class="burst"><b>' + heroDisc + '%</b>할인</span>' : '') + '</div>' +
+      '<div class="tags">' + [hero.badge, hero.origin, hero.unit].filter(Boolean).map(v => '<span>' + esc(String(v)) + '</span>').join('') + '</div>' +
+      '<h2 class="' + nameSizeClass(hero.name) + '">' + esc(hero.name) + '</h2>' +
+      (hero.originalPrice > hero.salePrice ? '<p class="was">정상가 ' + fmtPrice(hero.originalPrice) + '원</p>' : '') +
+      '<p class="now ' + priceScaleClass(hero.salePrice) + '">' + fmtPrice(hero.salePrice) + '<i>원</i></p>' +
+      (hero.cardDiscount ? '<p class="card">' + esc(hero.cardDiscount) + '</p>' : '') +
+    '</article>'
+  ) : '';
+  const restHtml = rest.length === 0 ? '' : (
+    '<section class="sh-rest"><h3>같이 사면 좋아요</h3><div class="cards">' +
+    rest.map(it => (
+      '<article class="sh-card"' + productDataAttr(it, it.category) + '>' +
+        '<div class="vis' + (it.imageUrl ? ' img' : '') + '" style="background:' + categoryBg(it.category) + '">' + visual(it, 54) + '</div>' +
+        '<div class="bd"><p class="nm ' + nameSizeClass(it.name) + '">' + esc(it.name) + '</p>' +
+          '<p class="mt">' + [it.badge, it.unit, it.origin, it.cardDiscount].filter(Boolean).map(v => esc(String(v))).join(' · ') + '</p>' +
+          '<p class="pr"><strong class="' + priceScaleClass(it.salePrice) + '">' + fmtPrice(it.salePrice) + '</strong>원' +
+          (it.originalPrice > it.salePrice ? ' <s>' + fmtPrice(it.originalPrice) + '</s>' : '') + '</p></div>' +
+      '</article>'
+    )).join('') + '</div></section>'
+  );
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${token}">
+<head>
+${headMeta(d, token, items)}
+<style>
+:root{--color-primary:#DC2626;--color-accent:#F59E0B;--color-on-primary:#fff;--ink:#111827;}
+${seasonStyleBlock()}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;color:var(--ink);font-family:'Pretendard Variable',sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:520px;margin:0 auto;padding-bottom:56px}
+.top{padding:20px 20px 0;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.top .st{font-size:13px;font-weight:900;letter-spacing:.18em;color:var(--color-primary)}
+.top .per{font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;border:1.5px solid var(--ink);white-space:nowrap}
+.ttl{padding:8px 20px 0;font-weight:900;letter-spacing:-0.04em;font-size:clamp(28px,8vw,38px);line-height:1.08;word-break:keep-all}
+.sh-hero{margin:16px 16px 0;border-radius:26px;overflow:hidden;background:linear-gradient(170deg,var(--color-primary),var(--color-accent));color:var(--color-on-primary);padding-bottom:22px}
+.sh-hero .vis{position:relative;aspect-ratio:1/1;display:grid;place-items:center;overflow:hidden}
+.sh-hero .vis img{width:100%;height:100%;object-fit:cover}
+.sh-hero .vis .em{display:flex;line-height:1;filter:drop-shadow(0 18px 30px rgba(0,0,0,.35))}
+.burst{position:absolute;right:14px;top:14px;width:92px;height:92px;border-radius:50%;background:#FDE047;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:900;transform:rotate(10deg);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.burst b{font-size:30px;line-height:1;letter-spacing:-0.04em}
+.sh-hero .tags{display:flex;flex-wrap:wrap;gap:6px;padding:16px 20px 0}
+.sh-hero .tags span{padding:3px 10px;border-radius:999px;background:rgba(0,0,0,.2);font-size:12px;font-weight:800}
+.sh-hero h2{padding:10px 20px 0;font-size:32px;font-weight:900;letter-spacing:-0.035em;line-height:1.15;word-break:keep-all}
+.sh-hero h2.nm-m{font-size:27px}.sh-hero h2.nm-l{font-size:23px}
+.sh-hero .was{padding:10px 20px 0;font-size:15px;font-weight:700;opacity:.8;text-decoration:line-through}
+.sh-hero .now{padding:0 20px;font-size:clamp(68px,22vw,104px);font-weight:900;letter-spacing:-0.05em;line-height:1;font-variant-numeric:tabular-nums}
+.sh-hero .now.pr-m{font-size:clamp(58px,18vw,88px)}.sh-hero .now.pr-l{font-size:clamp(48px,15vw,72px)}
+.sh-hero .now i{font-style:normal;font-size:26px;margin-left:3px;letter-spacing:0}
+.sh-hero .card{margin:12px 20px 0;display:inline-block;padding:6px 12px;border-radius:10px;background:#fff;color:var(--color-primary);font-size:13px;font-weight:900}
+.sh-rest{margin-top:26px;padding:0 16px}
+.sh-rest h3{font-size:16px;font-weight:900}
+.sh-rest .cards{margin-top:10px;display:grid;gap:10px}
+.sh-card{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;border:1px solid #E5E7EB;border-radius:16px;overflow:hidden}
+.sh-card .vis{aspect-ratio:1/1;display:grid;place-items:center}
+.sh-card .vis img{width:100%;height:100%;object-fit:cover}
+.sh-card .vis .em{display:flex}
+.sh-card .bd{padding:8px 12px 8px 0;min-width:0}
+.sh-card .nm{font-size:15px;font-weight:800;word-break:keep-all}
+.sh-card .nm.nm-m{font-size:14px}.sh-card .nm.nm-l{font-size:13px}
+.sh-card .mt{margin-top:2px;font-size:11px;color:#6B7280}
+.sh-card .pr{margin-top:4px;font-size:13px;font-weight:800}
+.sh-card .pr strong{font-size:22px;font-weight:900;letter-spacing:-0.02em}
+.sh-card .pr s{font-size:11px;color:#9CA3AF;font-weight:600}
+.foot{margin-top:30px;text-align:center;padding:0 20px}
+.foot .nm2{font-size:20px;font-weight:900}
+.foot p{margin-top:6px;font-size:11px;color:#9CA3AF}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><span class="st">${esc(d.storeName)}</span>${period ? '<span class="per">' + esc(period) + '</span>' : ''}</header>
+  <h1 class="ttl">${esc(d.title)}</h1>
+  ${heroHtml}
+  ${restHtml}
+  <footer class="foot"><p class="nm2">${esc(d.storeName)}</p><p>준비 수량이 소진되면 조기 마감될 수 있습니다</p></footer>
+</div>
+</body>
+</html>`;
+}
+
+/**
+ * GIFT SET (명절 선물세트) — 세트 카드 + 가격대 묶음(3만·5만·10만·그 이상).
+ * 가격대 = 판매가 기준 단일 규칙(GIFT_TIERS) · 빈 가격대는 그리지 않는다.
+ */
+const GIFT_TIERS: Array<{ max: number; label: string }> = [
+  { max: 30000, label: '3만원 이하' },
+  { max: 50000, label: '5만원 이하' },
+  { max: 100000, label: '10만원 이하' },
+  { max: Infinity, label: '10만원 이상 프리미엄' },
+];
+export function renderGiftSetEngine(d: FlyerRenderData, token: SeasonToken): string {
+  const items = flattenItems(d);
+  const period = periodLabel(d, ' ~ ');
+  const tiers = GIFT_TIERS.map(t => ({ ...t, items: [] as typeof items }));
+  for (const it of items) tiers.find(t => it.salePrice <= t.max)!.items.push(it);
+  const sections = tiers.filter(t => t.items.length > 0).map(t => (
+    '<section class="gs-tier">' +
+      '<h2><span class="lb">' + esc(t.label) + '</span><span class="ln"></span><span class="n">' + t.items.length + '종</span></h2>' +
+      '<div class="gs-grid">' + t.items.map(it => {
+        const disc = calcDisc(it.originalPrice, it.salePrice);
+        return (
+          '<article class="gs-card"' + productDataAttr(it, it.category) + '>' +
+            '<div class="vis" style="background:' + categoryBg(it.category) + '">' +
+              (it.imageUrl
+                ? '<img src="' + esc(toAbsUrl(it.imageUrl) || '') + '" alt="' + esc(it.name) + '" loading="lazy">'
+                : '<span class="em">' + categoryPictogram(it.category) + '</span>') +
+              (it.badge ? '<span class="rb">' + esc(it.badge) + '</span>' : '') +
+            '</div>' +
+            '<div class="bd">' +
+              '<p class="nm ' + nameSizeClass(it.name) + '">' + esc(it.name) + '</p>' +
+              (it.unit || it.origin ? '<p class="cmp">' + [it.unit, it.origin].filter(Boolean).map(v => esc(String(v))).join(' · ') + '</p>' : '') +
+              '<p class="pr">' +
+                (it.originalPrice > it.salePrice ? '<s>' + fmtPrice(it.originalPrice) + '</s>' : '') +
+                '<strong class="' + priceScaleClass(it.salePrice) + '">' + fmtPrice(it.salePrice) + '<i>원</i></strong>' +
+                (disc > 0 ? '<em>' + disc + '%</em>' : '') +
+              '</p>' +
+              (it.cardDiscount ? '<p class="cd">' + esc(it.cardDiscount) + '</p>' : '') +
+            '</div>' +
+          '</article>'
+        );
+      }).join('') + '</div>' +
+    '</section>'
+  )).join('');
+
+  return `<!DOCTYPE html>
+<html lang="ko" data-season="${token}">
+<head>
+${headMeta(d, token, items)}
+<style>
+:root{--color-primary:#7F1D1D;--color-accent:#CA8A04;--color-on-primary:#FEF3C7;--ink:#1C1917;--gold:#CA8A04;--cream:#FFFBEB;}
+${seasonStyleBlock()}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--cream);color:var(--ink);font-family:'Pretendard Variable',sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:520px;margin:0 auto;padding-bottom:56px}
+.top{position:relative;padding:30px 20px 26px;background:var(--color-primary);color:var(--color-on-primary);text-align:center;overflow:hidden}
+.top::before,.top::after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;border:1.5px solid rgba(254,243,199,.25)}
+.top::before{left:-70px;top:-80px}.top::after{right:-70px;bottom:-90px}
+.top .st{position:relative;font-size:12px;font-weight:800;letter-spacing:.3em;color:var(--gold)}
+.top h1{position:relative;margin-top:10px;font-weight:900;letter-spacing:-0.035em;font-size:clamp(30px,8.6vw,42px);line-height:1.1;word-break:keep-all}
+.top .per{position:relative;margin-top:12px;display:inline-block;padding:5px 14px;border:1px solid rgba(254,243,199,.5);border-radius:999px;font-size:12px;font-weight:700}
+.gs-tier{margin-top:24px;padding:0 16px}
+.gs-tier h2{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:900;color:var(--color-primary)}
+.gs-tier h2 .lb{padding:4px 12px;border-radius:999px;background:var(--color-primary);color:var(--color-on-primary);font-size:13px}
+.gs-tier h2 .ln{flex:1;height:1px;background:var(--gold);opacity:.5}
+.gs-tier h2 .n{font-size:12px;color:#78716C;font-weight:700}
+.gs-grid{margin-top:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.gs-card{background:#fff;border:1px solid #F5E6C8;border-radius:16px;overflow:hidden;box-shadow:0 6px 16px -10px rgba(127,29,29,.35)}
+.gs-card .vis{position:relative;aspect-ratio:1/1;display:grid;place-items:center}
+.gs-card .vis img{width:100%;height:100%;object-fit:cover}
+.gs-card .vis .em{display:flex;font-size:64px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.3))}
+.gs-card .rb{position:absolute;left:0;top:10px;padding:3px 10px 3px 8px;background:var(--gold);color:#fff;font-size:11px;font-weight:900;border-radius:0 999px 999px 0}
+.gs-card .bd{padding:10px 11px 12px}
+.gs-card .nm{font-size:14px;font-weight:800;line-height:1.3;word-break:keep-all}
+.gs-card .nm.nm-m{font-size:13px}.gs-card .nm.nm-l{font-size:12px}
+.gs-card .cmp{margin-top:3px;font-size:11px;color:#78716C}
+.gs-card .pr{margin-top:8px;display:flex;align-items:baseline;gap:5px;flex-wrap:wrap}
+.gs-card .pr s{font-size:11px;color:#A8A29E}
+.gs-card .pr strong{font-size:21px;font-weight:900;letter-spacing:-0.02em;color:var(--color-primary)}
+.gs-card .pr strong.pr-m{font-size:19px}.gs-card .pr strong.pr-l{font-size:17px}
+.gs-card .pr strong i{font-style:normal;font-size:12px;margin-left:1px}
+.gs-card .pr em{font-style:normal;font-size:11px;font-weight:900;color:var(--gold)}
+.gs-card .cd{margin-top:6px;display:inline-block;padding:2px 7px;border-radius:6px;background:#FEF3C7;color:#92400E;font-size:10.5px;font-weight:800}
+.foot{margin-top:30px;text-align:center;padding:0 20px}
+.foot .nm2{font-size:20px;font-weight:900;color:var(--color-primary)}
+.foot p{margin-top:6px;font-size:11px;color:#78716C}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <p class="st">${esc(d.storeName)}</p>
+    <h1>${esc(d.title)}</h1>
+    ${period ? '<span class="per">' + esc(period) + '</span>' : ''}
+  </header>
+  ${sections}
+  <footer class="foot"><p class="nm2">${esc(d.storeName)}</p><p>선물 포장·택배 접수는 매장 계산대에 문의해 주세요</p></footer>
+</div>
+</body>
+</html>`;
+}
+
+// ============================================================
+// RENDERER_MAP (신규 6 + D155 추가 5 + 0820 신규 2 + 1025 신규 3)
 // STORY 함수는 코드 유지(옛 발행 폴백) but REGISTRY/DEFAULT에서 제거 예정
 // ============================================================
 
@@ -4400,6 +4781,9 @@ const RENDERERS: Record<string, (d: FlyerRenderData, token: SeasonToken) => stri
   poster_pop:    renderPosterPopEngine,
   market_board:  renderMarketBoardEngine,
   fresh_daily:   renderFreshDailyEngine,
+  price_board:   renderPriceBoardEngine,
+  single_hero:   renderSingleHeroEngine,
+  gift_set:      renderGiftSetEngine,
   // ⛔ 16번 설계 §3 — magazine_zine·catalog_swipe는 통합 폐기. 렌더러 함수는 보존(export),
   //   진입은 DEPRECATED_FALLBACK_MAP이 새 본체로 보낸다.
 };
@@ -4420,13 +4804,21 @@ export function renderTemplate(
   data: FlyerRenderData,
   opts?: { variant?: DesignVariant | null },
 ): string {
-  // 1. templateCode 정규화 (신규 6 → 그대로 / deprecated → 폴백 / 미존재 → 'grid_hero')
-  const resolvedCode = RENDERERS[templateCode]
-    ? templateCode
-    : (DEPRECATED_FALLBACK_MAP[templateCode] || 'grid_hero');
+  // 1. templateCode 정규화 (판 → 기반 엔진 / 엔진 → 그대로 / deprecated → 폴백 / 미존재 → 'grid_hero')
+  // ★ 1025 17번 §3-2: 판은 독립 템플릿 코드(flyers.template 저장) — 구조(layout)·시즌을 여기서 붙인다
+  const pan = Object.prototype.hasOwnProperty.call(PAN_TABLE, templateCode) ? PAN_TABLE[templateCode] : null;
+  // 자기 키만 본다 — 'constructor' 같은 프로토타입 키가 렌더러로 잡히면 렌더가 깨진다(외부 입력 코드)
+  const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+  const resolvedCode = pan
+    ? pan.engine
+    : own(RENDERERS, templateCode)
+      ? templateCode
+      : (own(DEPRECATED_FALLBACK_MAP, templateCode) ? DEPRECATED_FALLBACK_MAP[templateCode] : 'grid_hero');
 
   // ★ 2026-08-20 2단계 — 렌더 준비(프로모 토큰 분리 → badge 승격·이름 단축). 원본 무변경.
-  const prepped = prepareFlyerData(data);
+  const prepped = prepareFlyerData(pan
+    ? { ...data, layout: pan.layout, ...(pan.season ? { seasonToken: pan.season } : {}) }
+    : data);
 
   // 2. 시즌 토큰 결정 (강제 지정 > 자동 매핑)
   const seasonToken: SeasonToken = prepped.seasonToken
@@ -4439,8 +4831,8 @@ export function renderTemplate(
   // ★ 2026-08-20 2단계 — 상품 수 밴드 3단(≤6/7~20/21+) 속성 + 밴드 CSS +
   //   URL 매체 토큰(:root 변수 — 시즌 동일값이라 색 무변·text/shadow/scale 변수 추가만).
   //   주입은 엔진 <style> 뒤(</head> 직전) — 매체 블록이 이긴다(13번 설계 §5 순서 계약).
-  const band = itemCountBand(countItems(prepped));
-  html = html.replace('<html lang="ko" data-season=', `<html lang="ko" data-engine="${resolvedCode}" data-band="${band}" data-season=`);
+  const band = pan?.layout.band === 'dense' ? 'large' : itemCountBand(countItems(prepped));
+  html = html.replace('<html lang="ko" data-season=', `<html lang="ko" data-engine="${resolvedCode}"${pan ? ` data-template="${templateCode}"` : ''} data-band="${band}" data-season=`);
   // ★ 2026-08-21 가격 표기 공용 계약 — 전 엔진에 Pretendard 로드 보장 + 가격 서체·자세 통일(CT-F24 소유)
   if (!html.includes('pretendardvariable.css')) {
     html = html.replace('</head>', `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css"></head>`);

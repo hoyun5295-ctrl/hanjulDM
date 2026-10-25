@@ -26,7 +26,8 @@ const router = Router();
 // ============================================================
 
 let _browser: Browser | null = null;
-async function getOgBrowser(): Promise<Browser> {
+/** ★ 1025: 템플릿 미리보기(template-sample)도 이 싱글톤을 같이 쓴다 — 브라우저 1개 */
+export async function getOgBrowser(): Promise<Browser> {
   if (!_browser || !_browser.isConnected()) {
     _browser = await puppeteer.launch({
       headless: true,

@@ -8,6 +8,8 @@
 
 import { Request, Response, Router } from 'express';
 import { flyerAuthenticate } from '../../middlewares/flyer-auth';
+import { templateSamplePng } from '../../utils/flyer/product/template-sample';
+import { getOgBrowser } from './og-image';
 import {
   getBusinessTypes,
   getAvailableTemplates,
@@ -49,6 +51,23 @@ router.get('/', flyerAuthenticate, async (_req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[flyer/business-types] error:', error);
     return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * ★ 1025 17번 §3-4 — GET /templates/:code/sample.png : 갤러리 미리보기(목업으로 그린 실렌더 PNG)
+ * 인증 없음: <img> 요청은 인증 헤더를 못 싣고, 그리는 내용은 목업뿐(매장 데이터 0). 코드는 레지스트리 허용 목록만.
+ */
+router.get('/templates/:code/sample.png', async (req: Request, res: Response) => {
+  try {
+    const buf = await templateSamplePng(String(req.params.code || ''), getOgBrowser);
+    if (!buf) return res.status(404).send('Not found');
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.send(buf);
+  } catch (err: any) {
+    console.error('[template-sample] 생성 실패:', err?.message || err);
+    return res.status(500).send('Internal error');
   }
 });
 

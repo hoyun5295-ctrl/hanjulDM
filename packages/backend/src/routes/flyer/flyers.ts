@@ -24,12 +24,13 @@ import { renderPrintFlyer, getAvailableThemes, getThemeByName, PrintProduct } fr
 import { renderFlyerPdf } from '../../utils/flyer/product/print/renderer/paged-pdf';
 import { listTemplates } from '../../utils/flyer/product/print/renderer/template-registry';
 import { processProductImages } from '../../utils/flyer/product/print/pipeline/image-pipeline';
-import { mapFlyerExcelHeaders, applyFlyerMapping, getFlyerMappingFields } from '../../utils/flyer/product/flyer-excel-mapper';
+import { mapFlyerExcelHeaders, applyFlyerMapping, getFlyerMappingFields, summarizeUserMapping, type FlyerMappingResult } from '../../utils/flyer/product/flyer-excel-mapper';
+import { readProductSheet, SheetReadError, type SheetReadResult } from '../../utils/flyer/product/flyer-sheet-reader';
 import { renderFlyerPage } from './short-urls';
 import { renderPricePop, renderMultiPop, renderPromoPop, renderStripPop, normalizePopSeason } from '../../utils/flyer/product/flyer-pop-templates';
 // ★ D155: 발행/수정 시 AI 카피 자동 enrich (사장님 수동 일괄문구 보존)
 import { enrichCategoriesWithAiCopy } from '../../utils/flyer/product/flyer-ai-copy';
-import { classifyProducts } from '../../utils/flyer/product/flyer-category-classifier';
+import { classifyProducts, groupItemsByCategory } from '../../utils/flyer/product/flyer-category-classifier';
 // ★ 2026-08-20 3단계 — 자동 구성 배선(13번 설계 §2): 죽어 있던 추천기·변형 렌더러 소비 시작
 import { recommendTemplateAndSeason } from '../../utils/flyer/product/template-recommender';
 import { TEMPLATE_REGISTRY } from '../../utils/flyer/config/flyer-business-types';
@@ -905,20 +906,18 @@ router.post('/auto-build', async (req: Request, res: Response) => {
       cardDiscount: p?.cardDiscount ? String(p.cardDiscount) : undefined,
       aiCopy: p?.aiCopy ? String(p.aiCopy) : undefined,
       imageUrl: p?.imageUrl ? String(p.imageUrl) : undefined,
+      // ★ 1025 17번 §1 F2: 매장이 적은 카테고리는 그대로 쓴다(엑셀 칸이 렌더까지 살아 간다)
+      category: p?.category && String(p.category).trim() && String(p.category).trim() !== '기타'
+        ? String(p.category).trim().slice(0, 20) : undefined,
     })).filter((i: any) => i.name);
     if (items.length === 0) return res.status(400).json({ error: '상품명이 있는 항목이 없습니다.' });
 
     // ② 이미지 자동 채움 — 자사 소유물 2단만. 네이버는 후보 제시 전용(§3 — 자동 확정 금지)
     await fillMissingImages(items, companyId);
 
-    // ③ 카테고리 자동 분류(키워드→카탈로그→AI)
-    const classified = await classifyProducts(
-      items.map((i: any) => ({ name: i.name })), String(body.business_type || 'mart'), companyId,
-    );
-    const byName = new Map(items.map((i: any) => [i.name, i]));
-    const categories = Object.entries(classified)
-      .map(([name, names]) => ({ name, items: (names as string[]).map(n => byName.get(n)).filter(Boolean) }))
-      .filter(c => c.items.length > 0);
+    // ③ 카테고리 — 매장이 적은 것은 그대로, 없는 상품만 자동 분류(키워드→카탈로그→AI) · ★ 1025 F2 CT
+    const categories = await groupItemsByCategory(items, names =>
+      classifyProducts(names, String(body.business_type || 'mart'), companyId));
 
     // ④ 엔진 자동 선정 + 시즌 + 디자인 변형
     const renderData: FlyerRenderData = {
@@ -933,7 +932,7 @@ router.post('/auto-build', async (req: Request, res: Response) => {
 
     // ★ 0820: 사장님이 고른 템플릿이 오면 그것을 고정한다(AI 추천도 함께 돌려준다).
     //   레지스트리에 없는 값은 무시하고 추천으로 떨어진다 — 화이트리스트.
-    const picked = typeof body.template === 'string' && TEMPLATE_REGISTRY[body.template]
+    const picked = typeof body.template === 'string' && Object.prototype.hasOwnProperty.call(TEMPLATE_REGISTRY, body.template)
       ? body.template : null;
     const templateCode = picked || rec.templateCode;
 
@@ -1391,71 +1390,66 @@ router.get('/print-flyer/themes', (_req: Request, res: Response) => {
 // ★ CT-F24: 엑셀 업로드 + AI 자동 매핑
 // ══════════════════════════════════════════
 
-/** POST /upload-excel — 엑셀 파일 업로드 → 헤더 추출 + AI 매핑 */
-const excelUpload = multer({ dest: '/tmp/flyer-excel/', limits: { fileSize: 10 * 1024 * 1024 } });
+/**
+ * ★ 1025 17번 §2-5 — 파일 등록형 제작
+ * POST /upload-excel        : 파일 → 시트 읽기 → 헤더 매핑(양식이면 AI 0회) → 전 행 판정
+ * POST /apply-excel-mapping : 같은 파일 + 사장님이 고친 열 연결/시트 → 전 행 재판정
+ * 응답 = { mapping, mappingSource, headers, sheets, sheetName, headerRow, rows[{index,status,reasons,raw,product}], summary, fields }
+ * 파일은 메모리로만 받는다(디스크 임시 파일 0).
+ */
+const excelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+function judgedResponse(sheet: SheetReadResult, mapped: FlyerMappingResult) {
+  const rows = applyFlyerMapping(sheet.headers, sheet.rows, mapped.mapping, sheet.headerRow + 1);
+  return {
+    mapping: mapped.mapping,
+    mappingSource: mapped.source,
+    message: mapped.message,
+    hasProductName: mapped.hasProductName,
+    hasSalePrice: mapped.hasSalePrice,
+    headers: sheet.headers.filter(h => h.trim()),
+    sheets: sheet.sheets,
+    sheetName: sheet.sheetName,
+    headerRow: sheet.headerRow,
+    rows,
+    summary: {
+      ok: rows.filter(r => r.status === 'ok').length,
+      review: rows.filter(r => r.status === 'needsReview').length,
+      dropped: rows.filter(r => r.status === 'dropped').length,
+    },
+    fields: getFlyerMappingFields(),
+  };
+}
+
 router.post('/upload-excel', excelUpload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: '파일이 없습니다' });
-
-    const xlsx = require('xlsx');
-    const workbook = xlsx.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const jsonData = xlsx.utils.sheet_to_json(sheet, { defval: '' });
-
-    if (!jsonData || jsonData.length === 0) {
-      return res.status(400).json({ error: '엑셀에 데이터가 없습니다' });
-    }
-
-    const headers = Object.keys(jsonData[0]);
-
-    // AI 자동 매핑
-    const mappingResult = await mapFlyerExcelHeaders(headers);
-
-    // 임시 파일 삭제
-    try { fs.unlinkSync(req.file.path); } catch {}
-
-    return res.json({
-      ...mappingResult,
-      headers,
-      preview: jsonData.slice(0, 5), // 미리보기 5행
-      totalRows: jsonData.length,
-      fields: getFlyerMappingFields(),
-    });
+    const wantSheet = typeof req.body?.sheet === 'string' ? req.body.sheet : undefined;
+    const sheet = readProductSheet(req.file.buffer, req.file.originalname || '', wantSheet);
+    const mapped = await mapFlyerExcelHeaders(sheet.headers);
+    return res.json(judgedResponse(sheet, mapped));
   } catch (err: any) {
-    console.error('[전단AI] 엑셀 업로드 실패:', err.message);
-    res.status(500).json({ error: err.message || '엑셀 처리에 실패했습니다' });
+    if (err instanceof SheetReadError) return res.status(400).json({ error: err.message });
+    console.error('[전단AI] 엑셀 업로드 실패:', err?.message || err);
+    return res.status(500).json({ error: '파일 처리에 실패했습니다' });
   }
 });
 
-/** POST /apply-excel-mapping — 매핑 확정 → 상품 배열 반환 */
 router.post('/apply-excel-mapping', excelUpload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: '파일이 없습니다' });
-
-    const mappingJson = req.body.mapping;
-    if (!mappingJson) return res.status(400).json({ error: 'mapping 필수' });
-
-    const mapping = typeof mappingJson === 'string' ? JSON.parse(mappingJson) : mappingJson;
-
-    const xlsx = require('xlsx');
-    const workbook = xlsx.readFile(req.file.path);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = xlsx.utils.sheet_to_json(sheet, { defval: '' });
-
-    const products = applyFlyerMapping(jsonData, mapping);
-
-    try { fs.unlinkSync(req.file.path); } catch {}
-
-    return res.json({
-      success: true,
-      products,
-      totalRows: jsonData.length,
-      mappedCount: products.length,
-    });
+    let raw: unknown = req.body?.mapping;
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw); } catch { return res.status(400).json({ error: '열 연결 형식이 올바르지 않습니다' }); }
+    }
+    if (!raw || typeof raw !== 'object') return res.status(400).json({ error: 'mapping 필수' });
+    const wantSheet = typeof req.body?.sheet === 'string' ? req.body.sheet : undefined;
+    const sheet = readProductSheet(req.file.buffer, req.file.originalname || '', wantSheet);
+    return res.json(judgedResponse(sheet, summarizeUserMapping(raw, sheet.headers)));
   } catch (err: any) {
-    console.error('[전단AI] 매핑 적용 실패:', err.message);
-    res.status(500).json({ error: err.message || '매핑 적용에 실패했습니다' });
+    if (err instanceof SheetReadError) return res.status(400).json({ error: err.message });
+    console.error('[전단AI] 매핑 적용 실패:', err?.message || err);
+    return res.status(500).json({ error: '열 연결 적용에 실패했습니다' });
   }
 });
 

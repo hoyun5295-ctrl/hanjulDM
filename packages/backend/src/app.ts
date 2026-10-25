@@ -26,7 +26,8 @@ import flyerCartPublicRoutes from './routes/flyer/carts';
 import flyerOrdersRoutes from './routes/flyer/orders';
 import flyerRoutes from './routes/flyer/flyers';
 import flyerPublicRoutes from './routes/flyer/short-urls';
-import flyerOgImageRoutes from './routes/flyer/og-image';
+import flyerOgImageRoutes, { getOgBrowser } from './routes/flyer/og-image';
+import { warmTemplateSamples } from './utils/flyer/product/template-sample';
 
 // ★ hanjulDM 슈퍼관리자 라우트
 import flyerAdminRoutes from './routes/admin/flyer-admin';
@@ -178,6 +179,9 @@ app.listen(PORT, () => {
 
   // ★ POS 자동 전단 생성 워커 시작 (5분 간격)
   startAutoFlyerWorker();
+
+  // ★ 1025 17번 §3-4 — 템플릿 갤러리 미리보기 20종 예열(부팅 30초 뒤 · 실패는 로그만)
+  setTimeout(() => { warmTemplateSamples(getOgBrowser).catch(() => {}); }, 30_000);
 
   // ★ 알림톡 검수 스케줄러 시작 (카테고리 03:00 KST 일일 + 검수 5분 polling + 발신프로필 1시간)
   startFlyerAlimtalkScheduler();

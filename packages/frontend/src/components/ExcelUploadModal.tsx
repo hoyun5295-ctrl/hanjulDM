@@ -1,16 +1,14 @@
 /**
- * ★ 전단AI 공용 엑셀 업로드 + AI 매핑 모달
+ * ★ 전단AI 공용 파일 등록 모달 (17번 설계 §2-5 · 2026-10-25 2단계 개편)
  *
- * 사용처: FlyerPage, PopPage, PrintFlyerPage
- * CT-F24 API 연동: upload-excel → AI 매핑 → 매핑 수정 → 확정
- *
- * Props:
- *   isOpen: boolean
- *   onClose: () => void
- *   onComplete: (products: MappedProduct[]) => void
+ * 사용처: FlyerComposerPage, PopPage, PrintFlyerPage
+ * 흐름: 올리기 → 결과(확인 필요 행 맨 위 · 그 칸만 고침) → 담기 1클릭
+ *   - 판정(ok / 확인 필요 / 빠짐)은 서버가 한다(CT-F24 · 화면 판정 0).
+ *   - 열 연결 바꾸기는 결과 화면의 접힌 줄 안 — 기본 흐름에 단계가 없다.
+ *   - requirePrice(인쇄·POP): 가격을 읽지 못한 상품은 넘기지 않는다(인쇄 오가격 차단).
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import { Button } from './ui';
 
@@ -23,6 +21,12 @@ export interface MappedProduct {
   promoType: 'main' | 'sub' | 'general';
   origin: string;
   imageUrl: string;
+  /** ★ 1025 신규(optional) — 기존 8키는 이름·뜻 불변 */
+  badge?: string;
+  cardDiscount?: string;
+  review?: string[];
+  /** 가격을 읽지 못함 — 인쇄 관문 차단 대상 */
+  reviewPrice?: boolean;
 }
 
 interface MappingField {
@@ -32,390 +36,380 @@ interface MappingField {
   required: boolean;
 }
 
+interface JudgedRow {
+  index: number;
+  status: 'ok' | 'needsReview' | 'dropped';
+  reasons: string[];
+  /** reasons 와 같은 순서의 기계 키(서버 CT-F24 소유) — 화면은 문구가 아니라 키로 판단한다 */
+  reasonKeys: string[];
+  raw: Record<string, string>;
+  product: MappedProduct | null;
+}
+
+interface ReadResult {
+  mapping: Record<string, string | null>;
+  mappingSource: 'template' | 'ai';
+  message: string;
+  hasProductName: boolean;
+  hasSalePrice: boolean;
+  headers: string[];
+  sheets: string[];
+  sheetName: string;
+  rows: JudgedRow[];
+  summary: { ok: number; review: number; dropped: number };
+  fields: MappingField[];
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onComplete: (products: MappedProduct[]) => void;
+  /** 인쇄·POP처럼 곧바로 인쇄되는 화면 — 가격 미확인 상품은 넘기지 않는다 */
+  requirePrice?: boolean;
 }
 
-type Step = 'upload' | 'mapping' | 'preview';
+/** 가격을 확정하지 못한 사유 키(서버 PRICE_REASON_KEYS 와 같은 목록) — 사장님이 「확인」해야 걷힌다 */
+const PRICE_KEYS = ['price', 'bundle', 'dup:sale_price', 'dup:bundle_price', 'dup:bundle_qty', 'dup:unit'];
+const SAMPLE_URL = '/samples/hanjul-flyer-sample.xlsx';
 
-export default function ExcelUploadModal({ isOpen, onClose, onComplete }: Props) {
+export default function ExcelUploadModal({ isOpen, onClose, onComplete, requirePrice = false }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
-
-  // 단계
-  const [step, setStep] = useState<Step>('upload');
-
-  // 업로드 상태
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-
-  // 매핑 데이터
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [mapping, setMapping] = useState<Record<string, string | null>>({});
-  const [fields, setFields] = useState<MappingField[]>([]);
-  const [preview, setPreview] = useState<any[]>([]);
-  const [totalRows, setTotalRows] = useState(0);
   const [file, setFile] = useState<File | null>(null);
-
-  // 결과
-  const [products, setProducts] = useState<MappedProduct[]>([]);
-  const [applying, setApplying] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
+  const [data, setData] = useState<ReadResult | null>(null);
+  const [mappingDraft, setMappingDraft] = useState<Record<string, string | null>>({});
+  const [showMapping, setShowMapping] = useState(false);
+  const [showAllOk, setShowAllOk] = useState(false);
+  /** 행 번호 → 사장님이 고친 값. 가격은 초안(priceDraft)으로만 두고 「확인」을 눌러야 판정에 들어간다
+   *  (★1025 Codex 1R: 첫 숫자를 누르는 순간 행이 정상으로 바뀌어 편집칸이 사라지고 1원이 통과하던 결함) */
+  const [edits, setEdits] = useState<Record<number, { productName?: string; priceDraft?: string; confirmed?: boolean }>>({});
+  const setEdit = (index: number, patch: { productName?: string; priceDraft?: string; confirmed?: boolean }) =>
+    setEdits(prev => ({ ...prev, [index]: { ...prev[index], ...patch } }));
 
-  // ============================================================
-  // Step 1: 엑셀 업로드 + AI 매핑
-  // ============================================================
-  const handleFileSelect = async (selectedFile: File) => {
-    setFile(selectedFile);
-    setUploading(true);
+  const reset = () => {
+    setFile(null); setData(null); setMappingDraft({}); setEdits({});
+    setShowMapping(false); setShowAllOk(false); setError(''); setBusy(false);
+  };
+  const close = () => { reset(); onClose(); };
+
+  const send = async (url: string, f: File, extra: Record<string, string>) => {
+    setBusy(true);
     setError('');
-
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      const res = await apiFetch(`${API_BASE}/api/flyer/flyers/upload-excel`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: '업로드 실패' }));
-        throw new Error(err.error || '업로드 실패');
-      }
-
-      const data = await res.json();
-      setHeaders(data.headers || []);
-      setMapping(data.mapping || {});
-      setFields(data.fields || []);
-      setPreview(data.preview || []);
-      setTotalRows(data.totalRows || 0);
-      setStep('mapping');
+      const fd = new FormData();
+      fd.append('file', f);
+      for (const [k, v] of Object.entries(extra)) fd.append(k, v);
+      const res = await apiFetch(url, { method: 'POST', body: fd });
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body) throw new Error(body?.error || '파일을 읽지 못했습니다');
+      setData(body as ReadResult);
+      setMappingDraft((body as ReadResult).mapping || {});
+      setEdits({});
     } catch (err: any) {
-      setError(err.message || '엑셀 처리에 실패했습니다');
+      setError(err.message || '파일을 읽지 못했습니다');
+    } finally {
+      setBusy(false);
     }
-    setUploading(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f) handleFileSelect(f);
+  const handleFileSelect = (f: File) => {
+    setFile(f);
+    send(`${API_BASE}/api/flyer/flyers/upload-excel`, f, {});
+  };
+  // 시트를 바꾸면 그 시트 기준으로 처음부터 읽는다(옛 시트의 열 연결을 보내면 새 시트 열이 전부 지워진다 — Codex 1R)
+  const changeSheet = (sheet: string) => {
+    if (!file || !data || sheet === data.sheetName) return;
+    send(`${API_BASE}/api/flyer/flyers/upload-excel`, file, { sheet });
+  };
+  // 같은 시트에서 열 연결만 바꿔 다시 읽기
+  const reread = () => {
+    if (!file || !data) return;
+    send(`${API_BASE}/api/flyer/flyers/apply-excel-mapping`, file, {
+      mapping: JSON.stringify(mappingDraft),
+      sheet: data.sheetName,
+    });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) handleFileSelect(f);
-    if (fileRef.current) fileRef.current.value = '';
-  };
+  const draftPrice = (s?: string) => Number(String(s ?? '').replace(/[^0-9]/g, '')) || 0;
 
-  // ============================================================
-  // Step 2: 매핑 수정
-  // ============================================================
-  const updateMapping = (header: string, value: string) => {
-    setMapping(prev => ({ ...prev, [header]: value || null }));
-  };
-
-  const hasProductName = Object.values(mapping).includes('product_name');
-  const hasSalePrice = Object.values(mapping).includes('sale_price');
-
-  // ============================================================
-  // Step 3: 매핑 적용
-  // ============================================================
-  const applyMapping = async () => {
-    if (!file) return;
-    setApplying(true);
-    setError('');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('mapping', JSON.stringify(mapping));
-
-      const res = await apiFetch(`${API_BASE}/api/flyer/flyers/apply-excel-mapping`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: '매핑 적용 실패' }));
-        throw new Error(err.error);
-      }
-
-      const data = await res.json();
-      setProducts(data.products || []);
-      setStep('preview');
-    } catch (err: any) {
-      setError(err.message || '매핑 적용 실패');
+  // ── 고친 값 반영 — 「확인」한 행만 가격 사유 키가 걷힌다(다른 사유는 표시 유지 · 판정은 키로만) ──
+  const rows = useMemo(() => (data?.rows || []).map(r => {
+    if (!r.product) return r;
+    const e = edits[r.index] || {};
+    const p: MappedProduct = { ...r.product };
+    if (e.productName !== undefined) p.productName = e.productName;
+    let reasons = r.reasons;
+    let keys = r.reasonKeys;
+    if (e.confirmed) {
+      if (e.priceDraft !== undefined) p.salePrice = draftPrice(e.priceDraft);
+      const keep = keys.map(k => !PRICE_KEYS.includes(k));
+      reasons = reasons.filter((_, i) => keep[i]);
+      keys = keys.filter((_, i) => keep[i]);
     }
-    setApplying(false);
+    p.review = reasons.length ? reasons : undefined;
+    // 확인하지 않은 가격 초안(원래 값과 다름)은 어느 행이든 미확정 — 화면에 보이는 값과 넘기는 값이 갈리지 않게(★Codex 2R)
+    const unconfirmedDraft = !e.confirmed && e.priceDraft !== undefined && draftPrice(e.priceDraft) !== r.product.salePrice;
+    // 가격 사유가 남았거나 · 미확인 초안이 있거나 · 가격이 양수가 아니면 인쇄 차단
+    p.reviewPrice = keys.some(k => PRICE_KEYS.includes(k)) || unconfirmedDraft || !(p.salePrice > 0) || undefined;
+    return { ...r, reasons, reasonKeys: keys, product: p };
+  }), [data, edits]);
+
+  // 확인 목록은 서버 판정 그대로 고정 — 고치는 중에 행이 목록 사이를 오가지 않는다
+  const reviewRows = rows.filter(r => r.status === 'needsReview');
+  const okRows = rows.filter(r => r.status === 'ok');
+  const droppedRows = rows.filter(r => r.status === 'dropped');
+  const priceBlocked = rows.filter(r => r.product?.reviewPrice);
+  const handOver = rows
+    .filter(r => r.product && r.product.productName.trim())
+    .filter(r => !(requirePrice && (r.product!.reviewPrice || !(r.product!.salePrice > 0))))
+    .map(r => r.product!);
+
+  const complete = () => {
+    onComplete(handOver);
+    close();
   };
 
-  // ============================================================
-  // 완료
-  // ============================================================
-  const handleComplete = () => {
-    onComplete(products);
-    // 초기화
-    setStep('upload');
-    setHeaders([]);
-    setMapping({});
-    setPreview([]);
-    setProducts([]);
-    setFile(null);
-    setError('');
-    onClose();
-  };
-
-  // ============================================================
-  // 렌더링
-  // ============================================================
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+  const fieldLabel = (key: string | null) => data?.fields.find(f => f.fieldKey === key)?.displayName || '';
+  const firstRawPrice = (r: JudgedRow) => {
+    const h = Object.entries(data?.mapping || {}).find(([, f]) => f === 'sale_price' || f === 'bundle_price')?.[0];
+    return h ? r.raw[h] : '';
+  };
 
-        {/* 헤더 */}
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
-          <div>
-            <h3 className="text-sm font-bold text-text">
-              {step === 'upload' && '엑셀 파일 업로드'}
-              {step === 'mapping' && 'AI 필드 매핑'}
-              {step === 'preview' && '매핑 결과 확인'}
-            </h3>
-            <p className="text-xs text-text-secondary mt-0.5">
-              {step === 'upload' && '.xlsx, .xls, .csv 파일을 업로드하세요'}
-              {step === 'mapping' && `${totalRows}개 행 감지 — AI가 자동 매핑했습니다. 수정 후 확정하세요.`}
-              {step === 'preview' && `${products.length}개 상품이 변환되었습니다.`}
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={close}>
+      <div className="bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl sm:mx-4 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+
+        {/* 머리 */}
+        <div className="px-5 sm:px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-text">{data ? '읽은 상품 확인' : '파일로 상품 담기'}</h3>
+            <p className="text-xs text-text-secondary mt-0.5 truncate">
+              {data
+                ? `${data.message} · ${data.sheetName}`
+                : '엑셀(xlsx) 또는 CSV 파일을 올리면 상품을 정리해 담습니다'}
             </p>
           </div>
-          <button onClick={onClose} className="text-text-secondary hover:text-text text-lg">&times;</button>
+          <button onClick={close} className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-text-muted hover:text-text hover:bg-bg" aria-label="닫기">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
         </div>
 
         {/* 본문 */}
-        <div className="p-6 overflow-y-auto flex-1">
-
-          {/* 에러 */}
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1">
           {error && (
             <div className="mb-4 p-3 bg-error-50 border border-error-200 rounded-xl text-sm text-error-600">{error}</div>
           )}
 
-          {/* Step 1: 업로드 */}
-          {step === 'upload' && (
+          {/* ── 1. 올리기 ── */}
+          {!data && (
             <div
               onDragOver={e => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
-              onDrop={uploading ? undefined : handleDrop}
-              onClick={uploading ? undefined : () => fileRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-2xl text-center transition overflow-hidden min-h-[280px] flex items-center justify-center ${
-                uploading
-                  ? 'border-primary-300 bg-gradient-to-br from-primary-50/60 via-surface to-primary-50/40 cursor-default'
-                  : dragOver
-                    ? 'border-primary-400 bg-primary-50/30 cursor-pointer'
-                    : 'border-border hover:border-primary-300 cursor-pointer'
+              onDrop={busy ? undefined : (e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFileSelect(f); })}
+              onClick={busy ? undefined : () => fileRef.current?.click()}
+              className={`relative border-2 border-dashed rounded-2xl text-center transition min-h-[260px] flex items-center justify-center ${
+                busy ? 'border-primary-300 bg-primary-50/40 cursor-default'
+                  : dragOver ? 'border-primary-400 bg-primary-50/30 cursor-pointer'
+                  : 'border-border hover:border-primary-300 cursor-pointer'
               }`}
             >
-              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleInputChange} />
-              {uploading ? (
-                <div className="w-full px-8 py-4 flex flex-col items-center gap-5">
-                  {/* SVG 링 스피너 — transform-origin 고정으로 흔들림 제거 */}
-                  <div className="relative w-16 h-16" aria-label="분석 중">
-                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 50 50">
-                      <defs>
-                        <linearGradient id="spinnerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="var(--color-primary-400, #a78bfa)" />
-                          <stop offset="100%" stopColor="var(--color-primary-600, #7c3aed)" />
-                        </linearGradient>
-                      </defs>
-                      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="3" className="text-primary-100" />
-                      <circle
-                        cx="25" cy="25" r="20"
-                        fill="none" stroke="url(#spinnerGrad)" strokeWidth="3" strokeLinecap="round"
-                        strokeDasharray="60 126"
-                        style={{ transformOrigin: '50% 50%', animation: 'excel-spin 1s linear infinite' }}
-                      />
-                    </svg>
-                    {/* 중앙 AI 뱃지 */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-[11px] font-bold text-primary-600 tracking-wider">AI</div>
-                    </div>
-                  </div>
-
-                  {/* 타이틀 */}
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); if (fileRef.current) fileRef.current.value = ''; }} />
+              {busy ? (
+                <div className="px-8 py-4 flex flex-col items-center gap-4">
+                  <div className="w-10 h-10 rounded-full border-[3px] border-primary-100 border-t-primary-500 animate-spin" aria-label="읽는 중" />
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-text">AI가 엑셀을 분석하고 있습니다</p>
-                    <p className="text-xs text-text-secondary">컬럼명을 자동으로 매핑하는 중… 잠시만 기다려주세요.</p>
-                  </div>
-
-                  {/* 단계 progress dots (3단계) */}
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex items-center gap-1.5 text-[11px] text-primary-600 font-semibold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary-500" style={{ animation: 'excel-dot 1.4s ease-in-out infinite' }} />
-                      <span>파일 분석</span>
-                    </div>
-                    <span className="text-border">·</span>
-                    <div className="flex items-center gap-1.5 text-[11px] text-text-secondary">
-                      <span className="w-1.5 h-1.5 rounded-full bg-border" style={{ animation: 'excel-dot 1.4s ease-in-out infinite', animationDelay: '0.2s' }} />
-                      <span>AI 매핑</span>
-                    </div>
-                    <span className="text-border">·</span>
-                    <div className="flex items-center gap-1.5 text-[11px] text-text-secondary">
-                      <span className="w-1.5 h-1.5 rounded-full bg-border" style={{ animation: 'excel-dot 1.4s ease-in-out infinite', animationDelay: '0.4s' }} />
-                      <span>미리보기 생성</span>
-                    </div>
-                  </div>
-
-                  {/* 진행바 (indeterminate) */}
-                  <div className="w-3/4 h-1 bg-primary-100 rounded-full overflow-hidden mt-1">
-                    <div
-                      className="h-full w-1/3 bg-gradient-to-r from-primary-400 to-primary-600 rounded-full"
-                      style={{ animation: 'excel-bar 1.6s ease-in-out infinite' }}
-                    />
+                    <p className="text-sm font-semibold text-text">파일을 읽고 상품을 정리하고 있습니다</p>
+                    <p className="text-xs text-text-secondary">가격·묶음·행사 표시를 하나씩 확인하는 중이에요</p>
                   </div>
                 </div>
               ) : (
-                <div className="px-8 py-4">
+                <div className="px-6 py-4">
                   <div className="mx-auto w-14 h-14 mb-4 rounded-2xl bg-primary-50 flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7 text-primary-500" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7 text-primary-500">
+                      <path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <p className="text-sm font-semibold text-text mb-1">파일을 드래그하거나 클릭하세요</p>
-                  <p className="text-xs text-text-secondary">.xlsx, .xls, .csv 지원 · 최대 10MB · AI가 자동으로 컬럼을 매핑합니다</p>
-                </div>
-              )}
-
-              {/* 로컬 keyframes — 모달 내부에서만 동작 */}
-              <style>{`
-                @keyframes excel-spin { to { transform: rotate(360deg); } }
-                @keyframes excel-dot { 0%, 100% { opacity: 0.35; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.15); } }
-                @keyframes excel-bar {
-                  0% { transform: translateX(-100%); }
-                  100% { transform: translateX(300%); }
-                }
-              `}</style>
-            </div>
-          )}
-
-          {/* Step 2: 매핑 */}
-          {step === 'mapping' && (
-            <div className="space-y-3">
-              {headers.map(header => (
-                <div key={header} className="flex items-center gap-4 p-3 bg-bg rounded-xl">
-                  <div className="w-1/3 text-sm font-medium text-text truncate" title={header}>{header}</div>
-                  <div className="text-text-secondary">&rarr;</div>
-                  <div className="flex-1">
-                    <select
-                      value={mapping[header] || ''}
-                      onChange={e => updateMapping(header, e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface"
-                    >
-                      <option value="">매핑 안 함</option>
-                      {fields.map(f => (
-                        <option key={f.fieldKey} value={f.fieldKey}>
-                          {f.displayName} {f.required ? '(필수)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              ))}
-
-              {/* 미리보기 테이블 */}
-              {preview.length > 0 && (
-                <div className="mt-4">
-                  <div className="text-xs font-medium text-text-secondary mb-2">미리보기 (상위 5행)</div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-bg">
-                          {headers.map(h => <th key={h} className="px-2 py-1.5 text-left font-medium text-text-secondary truncate max-w-[120px]">{h}</th>)}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {preview.map((row, i) => (
-                          <tr key={i} className="border-t border-border">
-                            {headers.map(h => <td key={h} className="px-2 py-1.5 text-text truncate max-w-[120px]">{String(row[h] ?? '')}</td>)}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <p className="text-sm font-semibold text-text mb-1">파일을 끌어 놓거나 눌러서 고르세요</p>
+                  <p className="text-xs text-text-secondary">.xlsx · .xls · .csv · 최대 10MB · 2,000행</p>
+                  <a href={SAMPLE_URL} download onClick={e => e.stopPropagation()}
+                    className="inline-flex items-center gap-1.5 mt-5 h-9 px-4 rounded-full border border-border bg-surface text-xs font-semibold text-text hover:border-primary-300">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14" /></svg>
+                    예시 양식 받기(.xlsx)
+                  </a>
+                  <p className="text-[11px] text-text-muted mt-2">양식 그대로 채워 올리면 가장 정확하게 읽습니다</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Step 3: 결과 확인 */}
-          {step === 'preview' && (
-            <div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-bg text-text-secondary">
-                      <th className="px-3 py-2 text-left font-medium">상품명</th>
-                      <th className="px-3 py-2 text-right font-medium">판매가</th>
-                      <th className="px-3 py-2 text-right font-medium">원가</th>
-                      <th className="px-3 py-2 text-left font-medium">단위</th>
-                      <th className="px-3 py-2 text-left font-medium">카테고리</th>
-                      <th className="px-3 py-2 text-center font-medium">행사</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.slice(0, 20).map((p, i) => (
-                      <tr key={i} className="border-t border-border">
-                        <td className="px-3 py-2 font-medium text-text">{p.productName}</td>
-                        <td className="px-3 py-2 text-right text-primary-600 font-bold">{p.salePrice.toLocaleString()}원</td>
-                        <td className="px-3 py-2 text-right text-text-secondary">{p.originalPrice > 0 ? `${p.originalPrice.toLocaleString()}원` : '-'}</td>
-                        <td className="px-3 py-2 text-text-secondary">{p.unit || '-'}</td>
-                        <td className="px-3 py-2 text-text-secondary">{p.category}</td>
-                        <td className="px-3 py-2 text-center">
-                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                            p.promoType === 'main' ? 'bg-error-100 text-error-600'
-                            : p.promoType === 'sub' ? 'bg-primary-100 text-primary-600'
-                            : 'bg-bg text-text-secondary'
-                          }`}>
-                            {p.promoType === 'main' ? '메인' : p.promoType === 'sub' ? '서브' : '일반'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* ── 2. 결과 ── */}
+          {data && (
+            <div className="space-y-5">
+              {/* 요약 */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { n: okRows.length, l: '바로 담김', c: 'text-text' },
+                  { n: reviewRows.length, l: '확인 필요', c: reviewRows.length ? 'text-amber-600' : 'text-text-muted' },
+                  { n: droppedRows.length, l: '빠진 행', c: droppedRows.length ? 'text-error-600' : 'text-text-muted' },
+                ].map(s => (
+                  <div key={s.l} className="rounded-xl bg-bg px-3 py-2.5 text-center">
+                    <p className={`text-lg font-bold ${s.c}`}>{s.n}</p>
+                    <p className="text-[11px] text-text-secondary">{s.l}</p>
+                  </div>
+                ))}
               </div>
-              {products.length > 20 && (
-                <p className="text-xs text-text-secondary mt-2 text-center">외 {products.length - 20}개 상품 더 있음</p>
+
+              {data.sheets.length > 1 && (
+                <label className="flex items-center gap-2 text-xs text-text-secondary">
+                  <span className="shrink-0">읽은 시트</span>
+                  <select value={data.sheetName} disabled={busy} onChange={e => changeSheet(e.target.value)}
+                    className="flex-1 h-9 px-2 border border-border rounded-lg text-sm bg-surface text-text">
+                    {data.sheets.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </label>
               )}
+
+              {/* 확인 필요 — 맨 위, 전부 */}
+              {reviewRows.length > 0 && (
+                <section>
+                  <p className="text-xs font-bold text-amber-700 mb-2">
+                    확인이 필요한 상품 {reviewRows.length}개
+                    {requirePrice && priceBlocked.length > 0 ? ' · 가격을 채우지 않은 상품은 인쇄에 넣지 않습니다' : ''}
+                  </p>
+                  <ul className="space-y-2">
+                    {reviewRows.map(r => {
+                      const p = r.product!;
+                      const e = edits[r.index] || {};
+                      // 서버가 가격 사유를 붙인 행만 가격 확인이 필요하다(키 기준 · 문구 비교 없음)
+                      const server = data.rows.find(x => x.index === r.index);
+                      const needsPrice = !!server?.reasonKeys.some(k => PRICE_KEYS.includes(k));
+                      const draft = e.priceDraft ?? (p.salePrice ? String(p.salePrice) : '');
+                      const canConfirm = draftPrice(draft) > 0;
+                      // 가격 확인이 필요한 행이거나, 원래 값과 다르게 고친 행이면 「확인」을 받는다
+                      const askConfirm = needsPrice || (e.priceDraft !== undefined && draftPrice(e.priceDraft) !== (server?.product?.salePrice ?? 0));
+                      return (
+                        <li key={r.index} className={`rounded-xl border p-3 ${e.confirmed ? 'border-border bg-surface' : 'border-amber-200 bg-amber-50/50'}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <input value={e.productName ?? p.productName}
+                                onChange={ev => setEdit(r.index, { productName: ev.target.value })}
+                                className="w-full bg-transparent text-sm font-semibold text-text border-b border-transparent focus:border-primary-300 outline-none" />
+                              <p className="text-[11px] text-text-muted mt-0.5">{r.index}행 · 원문 가격 「{firstRawPrice(r) || '비어 있음'}」</p>
+                            </div>
+                            <label className="shrink-0 flex items-center gap-1">
+                              <input inputMode="numeric" placeholder="가격" value={draft}
+                                onChange={ev => setEdit(r.index, { priceDraft: ev.target.value.replace(/[^0-9]/g, ''), confirmed: false })}
+                                className={`w-24 h-9 px-2 text-right rounded-lg border text-sm bg-surface ${askConfirm && !e.confirmed ? 'border-amber-400' : 'border-border'}`} />
+                              <span className="text-xs text-text-secondary">원</span>
+                            </label>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1 mt-2">
+                            {r.reasons.map((x, i) => (
+                              <span key={x} className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${PRICE_KEYS.includes(r.reasonKeys[i]) ? 'bg-amber-200 text-amber-900' : 'bg-surface text-text-secondary border border-border'}`}>{x}</span>
+                            ))}
+                            {askConfirm && (e.confirmed
+                              ? <span className="ml-auto px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">가격 확인함 · {draftPrice(draft).toLocaleString()}원</span>
+                              : <button type="button" disabled={!canConfirm} onClick={() => setEdit(r.index, { priceDraft: draft, confirmed: true })}
+                                  className="ml-auto h-7 px-3 rounded-full bg-slate-900 text-white text-[11px] font-bold disabled:opacity-40">
+                                  {canConfirm ? `${draftPrice(draft).toLocaleString()}원으로 확인` : '가격을 적어 주세요'}
+                                </button>)}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+
+              {/* 바로 담기는 상품 */}
+              {okRows.length > 0 && (
+                <section>
+                  <p className="text-xs font-bold text-text-secondary mb-2">바로 담기는 상품 {okRows.length}개</p>
+                  <ul className="divide-y divide-border rounded-xl border border-border">
+                    {(showAllOk ? okRows : okRows.slice(0, 20)).map(r => {
+                      const p = r.product!;
+                      return (
+                        <li key={r.index} className="flex items-center gap-3 px-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-text truncate">{p.productName}</p>
+                            <p className="text-[11px] text-text-muted truncate">
+                              {[p.category !== '기타' ? p.category : '', p.unit, p.badge, p.cardDiscount, p.origin].filter(Boolean).join(' · ') || ' '}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-bold text-primary-600">{p.salePrice.toLocaleString()}원</p>
+                            {p.originalPrice > 0 && <p className="text-[11px] text-text-muted line-through">{p.originalPrice.toLocaleString()}원</p>}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {!showAllOk && okRows.length > 20 && (
+                    <button onClick={() => setShowAllOk(true)} className="w-full mt-2 text-xs text-text-secondary hover:text-text">나머지 {okRows.length - 20}개 펼치기</button>
+                  )}
+                </section>
+              )}
+
+              {/* 빠진 행 — 늘 사유와 함께 */}
+              {droppedRows.length > 0 && (
+                <section className="rounded-xl bg-bg px-3 py-2.5">
+                  <p className="text-xs font-bold text-text-secondary">빠진 행 {droppedRows.length}개</p>
+                  <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
+                    {droppedRows.slice(0, 12).map(r => `${r.index}행(${r.reasons.join(', ')})`).join(' · ')}
+                    {droppedRows.length > 12 ? ` 외 ${droppedRows.length - 12}행` : ''}
+                  </p>
+                </section>
+              )}
+
+              {/* 열 연결 바꾸기 — 접힌 줄 */}
+              <section className="rounded-xl border border-border">
+                <button onClick={() => setShowMapping(v => !v)} className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-text-secondary">
+                  <span>열 연결 바꾸기 {data.mappingSource === 'template' ? '· 예시 양식으로 읽음' : '· AI가 연결함'}</span>
+                  <span>{showMapping ? '접기' : '펼치기'}</span>
+                </button>
+                {showMapping && (
+                  <div className="px-3 pb-3 space-y-2">
+                    {data.headers.map(h => (
+                      <div key={h} className="flex items-center gap-2">
+                        <span className="w-2/5 text-xs text-text truncate" title={h}>{h}</span>
+                        <select value={mappingDraft[h] || ''} onChange={e => setMappingDraft(prev => ({ ...prev, [h]: e.target.value || null }))}
+                          className="flex-1 h-8 px-2 border border-border rounded-lg text-xs bg-surface text-text">
+                          <option value="">쓰지 않음</option>
+                          {data.fields.map(f => <option key={f.fieldKey} value={f.fieldKey}>{f.displayName}{f.required ? ' (필수)' : ''}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] text-text-muted">
+                        {Object.values(mappingDraft).includes('product_name') ? '' : '상품명 열을 골라 주세요 · '}
+                        {Object.values(mappingDraft).some(v => v === 'sale_price' || v === 'bundle_price') ? '' : '가격 열을 골라 주세요'}
+                      </span>
+                      <Button size="sm" onClick={() => reread()} disabled={busy}>{busy ? '읽는 중...' : '이 연결로 다시 읽기'}</Button>
+                    </div>
+                    {data.mappingSource === 'ai' && <p className="text-[11px] text-text-muted">지금 연결: {Object.entries(data.mapping).filter(([, f]) => f).map(([h, f]) => `${h} → ${fieldLabel(f)}`).join(' · ') || '없음'}</p>}
+                  </div>
+                )}
+              </section>
             </div>
           )}
         </div>
 
-        {/* 하단 버튼 */}
-        <div className="px-6 py-4 border-t border-border flex justify-between items-center shrink-0">
+        {/* 바닥 */}
+        <div className="px-5 sm:px-6 py-4 border-t border-border flex justify-between items-center gap-2 shrink-0">
           <div>
-            {step !== 'upload' && (
-              <Button variant="ghost" onClick={() => setStep(step === 'preview' ? 'mapping' : 'upload')}>
-                &larr; 이전
-              </Button>
-            )}
+            {data && <Button variant="ghost" onClick={reset} disabled={busy}>다른 파일</Button>}
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={onClose}>취소</Button>
-            {step === 'mapping' && (
-              <Button
-                onClick={applyMapping}
-                disabled={!hasProductName || !hasSalePrice || applying}
-              >
-                {applying ? 'AI 변환 중...' : '매핑 확정'}
-              </Button>
-            )}
-            {step === 'preview' && (
-              <Button onClick={handleComplete}>
-                {products.length}개 상품 추가
+            <Button variant="secondary" onClick={close}>취소</Button>
+            {data && (
+              <Button onClick={complete} disabled={busy || handOver.length === 0}>
+                {handOver.length}개 담기
               </Button>
             )}
           </div>

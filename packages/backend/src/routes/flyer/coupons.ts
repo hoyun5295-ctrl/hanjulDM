@@ -101,7 +101,7 @@ publicRouter.post('/:qrCode/claim', async (req: Request, res: Response) => {
         // CT-F01 인증 라인으로 1건 발송 (대량발송 Agent 차단 우회)
         const { getAuthSmsTable, toQtmsgType } = await import('../../utils/flyer');
         const { mysqlQuery } = await import('../../config/database');
-        const authTable = getAuthSmsTable();
+        const authTable = await getAuthSmsTable(); // ★ 1025: async — await 누락 시 「INSERT INTO [object Promise]」로 조용히 실패했다
 
         // 발신번호: 회사의 대표 콜백번호 조회
         const cbResult = await query(

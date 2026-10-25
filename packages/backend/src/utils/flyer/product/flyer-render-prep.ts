@@ -159,18 +159,21 @@ export function priceStyleBlock(): string {
 }
 
 // ============================================================
-// 6. 카테고리 픽토그램 — 단색 스트로크 SVG(1em 스케일·흰색 고정 — 폴백 배경은 전부 짙은 색).
+// 6. 카테고리 픽토그램 — 단색 스트로크 SVG(1em 스케일).
 //    이모지 폴백 폐기: OS별 모양이 다르고 "임시 화면" 티가 났다(디자이너 1차 수용).
+//    ★ 1025 17번 §1 F1: 선 색 = --picto-color(기본 흰색 — 폴백 배경이 짙은 엔진은 그대로).
+//      밝은 바탕에 그리는 자리만 컨테이너에 --picto-color 를 지정한다.
+//    ⛔ 이 SVG는 큰따옴표를 담는다 — style 속성·CSS 변수 값에 넣지 말고 요소로 그린다(3엔진 백지 결함).
 // ============================================================
 
 const P = (paths: string) =>
-  `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.92" aria-hidden="true">${paths}</svg>`;
+  `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.92;color:var(--picto-color,#FFFFFF)" aria-hidden="true">${paths}</svg>`;
 
 const PICTOGRAMS: Record<string, string> = {
   leaf: P('<path d="M5 20c0-8 5-14 14-15-1 9-7 14-14 15z"/><path d="M5 20c3-5 7-9 11-11"/>'),
   apple: P('<path d="M12 7c-4-2-8 1-8 6 0 4 3 8 6 8 1 0 1.6-.5 2-.5s1 .5 2 .5c3 0 6-4 6-8 0-5-4-8-8-6z"/><path d="M12 7c0-2 1-4 3-5"/>'),
   meat: P('<ellipse cx="11" cy="12" rx="8" ry="6"/><ellipse cx="11" cy="12" rx="3.4" ry="2.4"/><path d="M19 8l2.2-2.2M21 12h2"/>'),
-  fish: P('<path d="M3 12c3-4 7-6 11-6 3 0 6 2 7 6-1 4-4 6-7 6-4 0-8-2-11-6z"/><path d="M14 6l3 6-3 6"/><circle cx="7.5" cy="11" r=".6" fill="#FFFFFF"/>'),
+  fish: P('<path d="M3 12c3-4 7-6 11-6 3 0 6 2 7 6-1 4-4 6-7 6-4 0-8-2-11-6z"/><path d="M14 6l3 6-3 6"/><circle cx="7.5" cy="11" r=".6" fill="currentColor"/>'),
   box: P('<path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v8"/>'),
   snowflake: P('<path d="M12 3v18M5 6.5l14 11M19 6.5l-14 11"/><path d="M12 3l-2 2M12 3l2 2M12 21l-2-2M12 21l2-2"/>'),
   milk: P('<path d="M9 3h6v3l2 4v9a2 2 0 01-2 2H9a2 2 0 01-2-2v-9l2-4z"/><path d="M7 12h10"/>'),
@@ -178,7 +181,13 @@ const PICTOGRAMS: Record<string, string> = {
   bottle: P('<path d="M10 3h4v4l2 3v10a2 2 0 01-2 2h-4a2 2 0 01-2-2V10l2-3z"/><path d="M8 14h8"/>'),
   spray: P('<path d="M9 8h6v13H9z"/><path d="M11 8V5h2v3M13 3h4M15 3v2"/>'),
   bread: P('<path d="M4 12a4 4 0 014-4h8a4 4 0 012 7.5V20H6v-4.5A4 4 0 014 12z"/><path d="M10 8c0 3-2 4-2 6M15 8c0 3-2 4-2 6"/>'),
-  cookie: P('<circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r=".7" fill="#FFFFFF"/><circle cx="14.5" cy="9" r=".7" fill="#FFFFFF"/><circle cx="11" cy="15" r=".7" fill="#FFFFFF"/><circle cx="15.5" cy="14" r=".7" fill="#FFFFFF"/>'),
+  cookie: P('<circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r=".7" fill="currentColor"/><circle cx="14.5" cy="9" r=".7" fill="currentColor"/><circle cx="11" cy="15" r=".7" fill="currentColor"/><circle cx="15.5" cy="14" r=".7" fill="currentColor"/>'),
+  egg: P('<path d="M12 3c-3.5 0-6.5 5.5-6.5 10a6.5 6.5 0 0013 0C18.5 8.5 15.5 3 12 3z"/><path d="M9.5 14.5a2.6 2.6 0 002.5 2.3"/>'),
+  rice: P('<path d="M3 11h18a9 9 0 01-18 0z"/><path d="M7 11c0-3 2.2-5 5-5s5 2 5 5"/><path d="M9 21h6"/>'),
+  kimchi: P('<path d="M6 4h12v3H6z"/><path d="M7 7h10v3a6 6 0 012 4.5V19a2 2 0 01-2 2H7a2 2 0 01-2-2v-4.5A6 6 0 017 10z"/><path d="M9 15c1.5-1 4.5-1 6 0"/>'),
+  ramen: P('<path d="M3 12h18a9 9 0 01-18 0z"/><path d="M8 12c0-2 1-3 1-5M12 12c0-2 1-3 1-5M16 12c0-2 1-3 1-5"/><path d="M14 3l7 6"/>'),
+  tissue: P('<path d="M4 10h16v10H4z"/><path d="M9 10c0-3 1.5-5 3-6 1.5 1 3 3 3 6"/>'),
+  gift: P('<path d="M4 10h16v10H4z"/><path d="M3 7h18v3H3z"/><path d="M12 7v13"/><path d="M12 7c-2-3-5-3-5-1s3 1 5 1zM12 7c2-3 5-3 5-1s-3 1-5 1z"/>'),
   cart: P('<circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M3 4h2.5l2.3 11.5a1.5 1.5 0 001.5 1.2h7.9a1.5 1.5 0 001.5-1.2L20.5 8H6"/>'),
 };
 
@@ -193,7 +202,26 @@ const CATEGORY_PICTO_MAP: Record<string, string> = {
   '생활용품': 'spray',
   '베이커리': 'bread', '빵': 'bread',
   '간식': 'cookie',
+  // ★ 1025 17번 §3-3: 예시 양식 드롭다운·목업 카테고리를 덮는 6종
+  '계란': 'egg', '달걀': 'egg',
+  '쌀/잡곡': 'rice', '쌀': 'rice', '잡곡': 'rice',
+  '김치/반찬': 'kimchi', '김치': 'kimchi', '반찬': 'kimchi',
+  '라면/면': 'ramen', '라면': 'ramen', '면': 'ramen',
+  '휴지/위생': 'tissue', '휴지': 'tissue',
+  '선물세트': 'gift', '선물': 'gift',
 };
+
+/**
+ * 예시 양식(public/samples/hanjul-flyer-sample.xlsx) 「목록」 시트의 카테고리 드롭다운 값.
+ * 전부 CATEGORY_PICTO_MAP 키여야 한다(양식 파일 시험이 대조 — 드롭다운으로 고른 칸이 그림 없이 서지 않게).
+ */
+export const SAMPLE_CATEGORIES = [
+  '정육', '수산', '청과', '야채', '과일', '유제품', '계란', '쌀/잡곡', '김치/반찬',
+  '라면/면', '공산품', '냉동', '음료', '주류', '베이커리', '간식', '생활용품', '휴지/위생', '선물세트',
+];
+export function hasCategoryPictogram(name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(CATEGORY_PICTO_MAP, (name || '').trim());
+}
 
 /** 무이미지 폴백 픽토그램 — categoryEmoji의 대체(같은 호출 자리에서 그대로 치환 가능) */
 export function categoryPictogram(name: string): string {

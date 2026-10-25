@@ -346,8 +346,10 @@ describe('게이트 6 — 베스트10 골격 계약(16번 §4)', () => {
     });
   }
 
-  it('REGISTRY = 정확히 베스트 10', () => {
-    expect(Object.keys(TEMPLATE_REGISTRY).sort()).toEqual([...BEST10].sort());
+  it('REGISTRY = 베스트 10 + 1025 새 엔진 3 + 판 7 (17번 §3) — 늘릴 땐 17번 게이트(목업 스모크·판 구조)가 함께 검사한다', () => {
+    const NEW3 = ['price_board', 'single_hero', 'gift_set'];
+    const PAN7 = ['fd_produce', 'fd_seafood', 'mb_seol', 'mb_dense', 'pp_opening', 'pp_chuseok', 'pp_weekend'];
+    expect(Object.keys(TEMPLATE_REGISTRY).sort()).toEqual([...BEST10, ...NEW3, ...PAN7].sort());
   });
 
   it('폐기 2코드(magazine_zine·catalog_swipe)는 새 본체로 폴백 렌더된다', () => {

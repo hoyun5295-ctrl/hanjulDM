@@ -856,6 +856,7 @@ export default function PrintFlyerPage({ token: _token }: { token: string }) {
         isOpen={showExcelModal}
         onClose={() => setShowExcelModal(false)}
         onComplete={handleExcelComplete}
+        requirePrice
       />
       {catPop && (
         <div className="fixed inset-0 z-[2000] bg-black/50 flex items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setCatPop(null); }}>

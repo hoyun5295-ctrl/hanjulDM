@@ -30,7 +30,9 @@ export type EngineCode =
   | 'deal_feed' | 'deal_bento'
   | 'grid_hero' | 'grid_muji'
   | 'catalog_swipe' | 'catalog_dark'
-  | 'poster_promo' | 'poster_pop';
+  | 'poster_promo' | 'poster_pop'
+  | 'fresh_daily' | 'market_board'
+  | 'price_board' | 'single_hero' | 'gift_set';
 
 export interface TemplateRecommendation {
   templateCode: EngineCode;
@@ -45,13 +47,21 @@ export interface TemplateRecommendation {
 // 점수 매트릭스 (휴리스틱)
 // ============================================================
 
+// ★ 1025: 추천 후보 = 살아 있는 엔진만. 폐기 2코드(magazine_zine·catalog_swipe)는 점수는 남지만(옛 가중치 보존)
+//   고를 수 없다 — 16번 통합 뒤에도 폐기 코드가 추천·저장되던 결함 차단.
 const ENGINES: EngineCode[] = [
-  'magazine', 'magazine_zine',
+  'magazine',
   'deal_feed', 'deal_bento',
   'grid_hero', 'grid_muji',
-  'catalog_swipe', 'catalog_dark',
+  'catalog_dark',
   'poster_promo', 'poster_pop',
+  'price_board', 'single_hero', 'gift_set',
 ];
+const zeroScores = (): Record<EngineCode, number> => ({
+  magazine: 0, magazine_zine: 0, deal_feed: 0, deal_bento: 0, grid_hero: 0, grid_muji: 0,
+  catalog_swipe: 0, catalog_dark: 0, poster_promo: 0, poster_pop: 0,
+  fresh_daily: 0, market_board: 0, price_board: 0, single_hero: 0, gift_set: 0,
+});
 
 interface ScoreContext {
   itemCount: number;
@@ -66,6 +76,10 @@ interface ScoreContext {
   avgPrice: number;
   maxDiscount: number;       // 0~100
   maxItemsPerCategory: number;
+  /** 사진 있는 상품 비율 0~1 */
+  photoRatio: number;
+  /** 선물세트 상품 비율 0~1 (카테고리 「선물」 또는 이름에 선물·세트) */
+  giftRatio: number;
 }
 
 function buildContext(data: FlyerRenderData): ScoreContext {
@@ -95,25 +109,17 @@ function buildContext(data: FlyerRenderData): ScoreContext {
     avgPrice: items.length > 0 ? totalPrice / items.length : 0,
     maxDiscount: maxDisc,
     maxItemsPerCategory,
+    photoRatio: items.length > 0 ? items.filter(i => i.imageUrl).length / items.length : 0,
+    giftRatio: items.length > 0
+      ? data.categories.reduce((n, c) => n + c.items.filter(i => /선물/.test(c.name) || /선물|세트/.test(i.name)).length, 0) / items.length
+      : 0,
   };
 }
 
 /** 각 엔진의 점수 계산 (휴리스틱 규칙 매트릭스, D155: 10 엔진) */
 function scoreEngines(ctx: ScoreContext): { scores: Record<EngineCode, number>; reasons: Record<EngineCode, string[]> } {
-  const scores: Record<EngineCode, number> = {
-    magazine: 0, magazine_zine: 0,
-    deal_feed: 0, deal_bento: 0,
-    grid_hero: 0, grid_muji: 0,
-    catalog_swipe: 0, catalog_dark: 0,
-    poster_promo: 0, poster_pop: 0,
-  };
-  const reasons: Record<EngineCode, string[]> = {
-    magazine: [], magazine_zine: [],
-    deal_feed: [], deal_bento: [],
-    grid_hero: [], grid_muji: [],
-    catalog_swipe: [], catalog_dark: [],
-    poster_promo: [], poster_pop: [],
-  };
+  const scores = zeroScores();
+  const reasons = Object.fromEntries(Object.keys(scores).map(k => [k, [] as string[]])) as unknown as Record<EngineCode, string[]>;
 
   // === 기본 점수 (디폴트 grid_hero 우대 + b-variant는 base 70% 정도) ===
   scores.grid_hero += 30;
@@ -231,6 +237,23 @@ function scoreEngines(ctx: ScoreContext): { scores: Record<EngineCode, number>; 
     reasons.grid_muji.push('고가 상품 — 미니멀 프리미엄');
   }
 
+  // === ★ 1025 17번 §3-1 새 엔진 3 — 상품 수 축(현 10종이 못 덮는 자리) ===
+  if (ctx.itemCount >= 1 && ctx.itemCount <= 3) {
+    scores.single_hero += ctx.itemCount === 1 ? 80 : 60;
+    reasons.single_hero.push('상품 ' + ctx.itemCount + '개 — 한 상품 집중');
+  }
+  if (ctx.itemCount >= 30) {
+    scores.price_board += ctx.photoRatio < 0.3 ? 80 : 35;
+    reasons.price_board.push('상품 ' + ctx.itemCount + '개' + (ctx.photoRatio < 0.3 ? '·사진 적음' : '') + ' — 빼곡 가격표');
+  }
+  if ((ctx.hasNewYear || ctx.hasChuseok) && ctx.giftRatio >= 0.4) {
+    scores.gift_set += 90;
+    reasons.gift_set.push('명절 + 선물세트 — 가격대 진열');
+  } else if (ctx.giftRatio >= 0.6) {
+    scores.gift_set += 60;
+    reasons.gift_set.push('선물세트 위주 — 가격대 진열');
+  }
+
   return { scores, reasons };
 }
 
@@ -257,13 +280,7 @@ export function recommendTemplate(
       templateCode: opts.fixedTemplateCode,
       score: 100,
       reasons: ['사장님 수동 선택'],
-      allScores: {
-        magazine: 0, magazine_zine: 0,
-        deal_feed: 0, deal_bento: 0,
-        grid_hero: 0, grid_muji: 0,
-        catalog_swipe: 0, catalog_dark: 0,
-        poster_promo: 0, poster_pop: 0,
-      },
+      allScores: zeroScores(),
     };
   }
 

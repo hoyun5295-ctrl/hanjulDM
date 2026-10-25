@@ -524,6 +524,7 @@ export default function PopPage({ token: _token }: { token: string }) {
         isOpen={showExcelModal}
         onClose={() => setShowExcelModal(false)}
         onComplete={handleExcelComplete}
+        requirePrice
       />
 
       {/* ═══ 이미지 검색 팝업 ═══ */}

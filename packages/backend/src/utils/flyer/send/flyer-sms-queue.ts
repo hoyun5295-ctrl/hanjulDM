@@ -35,9 +35,11 @@ export async function getFlyerCompanySmsTables(companyId: string): Promise<strin
     [companyId]
   );
 
-  const tables = result.rows.length > 0 && result.rows[0].sms_tables?.length > 0
-    ? result.rows[0].sms_tables
-    : BULK_FALLBACK;
+  const hasGroup = result.rows.length > 0 && result.rows[0].sms_tables?.length > 0;
+  const tables = hasGroup ? result.rows[0].sms_tables : BULK_FALLBACK;
+  // ★ 1025 17번 §6-1: 공유 기본 라인으로 떨어지는 순간을 남긴다(캐시 갱신마다 1회 — 5분 TTL).
+  //   한줄로 분리 단계에서 「전단이 아직 공유 라인을 쓰는 회사」를 이 로그로 센다.
+  if (!hasGroup) console.warn(`[flyer] 회선 폴백 — 회사 라인그룹 없음 · 공유 SMS_TABLES 사용 (company=${companyId})`);
 
   cache.set(cacheKey, { tables, expires: Date.now() + TTL });
   return tables;

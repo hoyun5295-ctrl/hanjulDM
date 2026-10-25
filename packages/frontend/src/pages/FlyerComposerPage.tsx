@@ -33,6 +33,10 @@ interface NormItem {
   /** 이미지 출처 — 인쇄 확인 시트 3열(§1-5). manual = 사장님 업로드/카탈로그 저장분 */
   /** 이미지 출처 — 인쇄 확인 시트 3열(§1-5). '네이버'는 자동 매칭분이라 인쇄 시 별도 동의를 받는다 */
   imageSource?: '카탈로그' | 'POS' | '기본 자산' | '네이버' | '없음';
+  /** ★ 1025 F2: 파일에 적힌 카테고리(서버 auto-build가 그대로 쓴다 · 없으면 자동 분류) */
+  category?: string;
+  /** ★ 1025 §2-5: 파일에서 가격을 읽지 못함 — 가격을 고치기 전엔 인쇄 관문 차단 */
+  priceCheck?: boolean;
 }
 interface AutoBuild {
   template: string;
@@ -45,7 +49,16 @@ interface AutoBuild {
   picked?: boolean;
 }
 /** 템플릿 레지스트리(backend TEMPLATE_REGISTRY) — label/desc/color 그대로 화면 카드가 된다 */
-interface TemplateInfo { value: string; label: string; desc: string; color: string; }
+interface TemplateInfo {
+  value: string; label: string; desc: string; color: string;
+  /** ★ 1025 17번 §3-5 갤러리 메타 */
+  scene?: string; itemRange?: string; needsPhoto?: boolean; filter?: GalleryFilter; baseOf?: string;
+}
+type GalleryFilter = 'weekly' | 'deal' | 'fresh' | 'holiday' | 'premium';
+const GALLERY_FILTERS: Array<{ key: GalleryFilter | 'all'; label: string }> = [
+  { key: 'all', label: '전체' }, { key: 'weekly', label: '주간' }, { key: 'deal', label: '특가' },
+  { key: 'fresh', label: '신선' }, { key: 'holiday', label: '명절' }, { key: 'premium', label: '프리미엄' },
+];
 /** 사진 후보(catalog/search-image 응답) — 확정은 select-image에서 사람 탭 1회 */
 interface PickCand { title: string; image: string; match_score: number; }
 interface RecentFlyer {
@@ -100,6 +113,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [pickedTemplate, setPickedTemplate] = useState<string | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryFilter, setGalleryFilter] = useState<GalleryFilter | 'all'>('all');
 
   // 손질 — 상품 편집 시트 하나로(이름·판매가·원가·단위·원산지·뱃지·이미지)
   const [editPop, setEditPop] = useState<{ idx: number; draft: NormItem } | null>(null);
@@ -279,11 +293,14 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
     //   name 으로 읽으면 전 행이 "이름 없음"으로 걸러져 조용히 0건이 된다 — 0820 실사고.
     const next = [...items];
     let added = 0, skipped = 0;
+    // ★ 1025 F2: 같은 상품 = 이름 + 규격(규격만 다른 두 행이 하나로 사라지던 결함)
+    const sameItem = (x: NormItem, nm: string, unit?: string) => x.name === nm && (x.unit || '') === (unit || '');
     for (const p of products) {
       const nm = String(p.productName || (p as any).name || '').trim();
       if (!nm) { skipped++; continue; }
-      if (next.some(x => x.name === nm)) { skipped++; continue; }
+      if (next.some(x => sameItem(x, nm, p.unit))) { skipped++; continue; }
       const img = String(p.imageUrl || '').trim();
+      const cat = String(p.category || '').trim();
       next.push({
         name: nm,
         originalPrice: Number(p.originalPrice) || 0,
@@ -291,6 +308,10 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
         sourcePrice: Number(p.salePrice) || 0,
         unit: p.unit || undefined,
         origin: p.origin || undefined,
+        badge: p.badge || undefined,
+        cardDiscount: p.cardDiscount || undefined,
+        category: cat && cat !== '기타' ? cat : undefined,
+        priceCheck: p.reviewPrice ? true : undefined,
         imageUrl: img || undefined,
         imageSource: img ? '카탈로그' : '없음',
       });
@@ -398,6 +419,8 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       unit: (d.unit || '').trim() || undefined,
       origin: (d.origin || '').trim() || undefined,
       badge: (d.badge || '').trim() || undefined,
+      // 사장님이 가격을 직접 확인·입력했으면 파일 가격 확인 표시를 걷는다
+      priceCheck: Math.floor(Number(d.salePrice) || 0) > 0 ? undefined : it.priceCheck,
     } : it));
     setEditPop(null); setItemsAndBuild(next);
   };
@@ -516,9 +539,12 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
     diff: it.sourcePrice !== undefined && it.sourcePrice > 0 && it.sourcePrice !== it.salePrice,
   })), [items]);
   const hasAutoImage = printRows.some(r => r.src !== '없음' && r.src !== '카탈로그');
+  // ★ 1025 §2-5 인쇄 관문: 가격 미확인(파일에서 못 읽음) · 0원 상품은 인쇄하지 않는다 — 소스 무관
+  const priceBlocked = items.filter(it => it.priceCheck || !(it.salePrice > 0));
   const doPrint = async () => {
     if (printBusy) return;
     if (hasAutoImage && !printAgree) return;
+    if (priceBlocked.length > 0) return;
     setPrintBusy(true);
     try {
       const res = await apiFetch(`${API_BASE}/api/flyer/flyers/print-flyer`, {
@@ -598,7 +624,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
 
             <div className="mt-7 flex flex-wrap gap-x-7 gap-y-2">
               {[
-                { n: String(templates.length || 10), u: '종', l: '전단 디자인' },
+                { n: String(templates.length || 20), u: '종', l: '전단 디자인' },
                 { n: '4', u: '종', l: 'POP·가격표' },
                 { n: '5', u: '종', l: '인쇄 전단' },
                 { n: String(recent.length), u: '건', l: publishedCount ? `만든 전단 · 발행 ${publishedCount}` : '만든 전단' },
@@ -1011,7 +1037,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       {galleryOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center"
           onMouseDown={e => { if (e.target === e.currentTarget) setGalleryOpen(false); }}>
-          <div className="bg-bg w-full sm:max-w-3xl sm:rounded-3xl rounded-t-3xl border border-border max-h-[86vh] flex flex-col overflow-hidden">
+          <div className="bg-bg w-full sm:max-w-4xl sm:rounded-3xl rounded-t-3xl border border-border max-h-[90vh] flex flex-col overflow-hidden">
             <div className="px-6 py-5 bg-surface border-b border-border">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1049,32 +1075,56 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 </div>
               </button>
 
-              <p className="text-[11px] font-bold text-text-muted tracking-wider px-1 mb-2">직접 고르기 · {templates.length}종</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {templates.map((t, i) => {
+              <div className="flex items-center justify-between gap-2 px-1 mb-2">
+                <p className="text-[11px] font-bold text-text-muted tracking-wider shrink-0">직접 고르기 · {templates.length}종</p>
+                <p className="text-[11px] text-text-muted kr truncate">예시 상품으로 그린 모습이에요</p>
+              </div>
+              {/* 행사 성격 걸러보기 */}
+              <div className="flex gap-1.5 overflow-x-auto pb-2 mb-1 -mx-1 px-1">
+                {GALLERY_FILTERS.map(f => {
+                  const n = f.key === 'all' ? templates.length : templates.filter(t => t.filter === f.key).length;
+                  if (n === 0) return null;
+                  const on = galleryFilter === f.key;
+                  return (
+                    <button key={f.key} onClick={() => setGalleryFilter(f.key)}
+                      className={`h-8 px-3 rounded-full text-[12px] font-semibold whitespace-nowrap border transition-colors ${
+                        on ? 'bg-slate-900 text-white border-slate-900' : 'bg-surface text-text-secondary border-border hover:border-border-strong'
+                      }`}>
+                      {f.label} <span className={on ? 'text-white/70' : 'text-text-muted'}>{n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {templates.filter(t => galleryFilter === 'all' || t.filter === galleryFilter).map((t, i) => {
                   const active = pickedTemplate === t.value;
                   const isAiPick = !pickedTemplate && build?.template === t.value;
                   return (
                     <button key={t.value} onClick={() => applyTemplate(t.value)}
                       style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-                      className={`rise text-left rounded-2xl overflow-hidden border-2 transition-all hover:-translate-y-0.5 ${
+                      className={`rise text-left rounded-2xl overflow-hidden border-2 bg-surface transition-all hover:-translate-y-0.5 ${
                         active ? 'border-slate-900 shadow-elevated' : 'border-border hover:border-border-strong'
                       }`}>
-                      {/* 색 견본 — 레지스트리 gradient 그대로 */}
-                      <div className="h-20 relative" style={{ backgroundImage: t.color }}>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="font-poster text-white/95 text-lg drop-shadow">{t.label}</span>
-                        </div>
+                      {/* ★ 1025 §3-5: 목업으로 실제 그린 썸네일(서버 PNG · 템플릿이 바뀌면 자동 재생성) — 색 견본은 불러오기 전 바탕 */}
+                      <div className="relative aspect-[393/560] overflow-hidden" style={{ backgroundImage: t.color }}>
+                        <img src={`${API_BASE}/api/flyer/business-types/templates/${t.value}/sample.png`} alt={`${t.label} 예시`}
+                          loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top" />
                         {(active || isAiPick) && (
-                          <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                            active ? 'bg-white text-slate-900' : 'bg-emerald-500 text-white'
+                          <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold shadow ${
+                            active ? 'bg-slate-900 text-white' : 'bg-emerald-500 text-white'
                           }`}>
                             {active ? '사용 중' : '추천'}
                           </span>
                         )}
                       </div>
-                      <div className="px-3.5 py-3 bg-surface">
-                        <p className="text-[12px] text-text-secondary kr leading-snug">{t.desc}</p>
+                      <div className="px-3 py-2.5 border-t border-border">
+                        <p className="text-[13px] font-bold text-text truncate">{t.label}{t.baseOf ? <span className="ml-1 text-[11px] font-semibold text-text-muted">· {t.baseOf} 판</span> : null}</p>
+                        {t.scene && <p className="text-[11px] text-text-secondary kr truncate mt-0.5">{t.scene}</p>}
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {t.itemRange && <span className="px-1.5 py-0.5 rounded bg-bg text-[10px] font-semibold text-text-secondary">상품 {t.itemRange}</span>}
+                          {t.needsPhoto === false && <span className="px-1.5 py-0.5 rounded bg-bg text-[10px] font-semibold text-text-secondary">사진 없어도 됨</span>}
+                          {t.needsPhoto && <span className="px-1.5 py-0.5 rounded bg-bg text-[10px] font-semibold text-text-secondary">사진 있으면 좋음</span>}
+                        </div>
                       </div>
                     </button>
                   );
@@ -1131,7 +1181,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 <span>상품명</span><span className="text-right">가격</span><span className="text-right">이미지</span>
               </div>
               {printRows.map((r, i) => (
-                <div key={i} className={`grid grid-cols-[1fr_90px_84px] gap-2 items-center px-2 py-2 rounded-lg ${r.diff ? 'bg-amber-50 border border-amber-300' : ''}`}>
+                <div key={i} className={`grid grid-cols-[1fr_90px_84px] gap-2 items-center px-2 py-2 rounded-lg ${r.diff || items[i]?.priceCheck || !(r.price > 0) ? 'bg-amber-50 border border-amber-300' : ''}`}>
                   <span className="text-[13px] text-text truncate">{r.name}</span>
                   <span className="text-[13px] font-bold text-right tabular-nums text-text">{r.price.toLocaleString()}원{r.diff && <span className="block text-[10px] text-amber-600 font-semibold">원래값과 다름</span>}</span>
                   <span className="text-[11px] text-right text-text-muted">{r.src}</span>
@@ -1139,13 +1189,18 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
               ))}
             </div>
             <div className="px-4 py-3 border-t border-border space-y-2">
+              {priceBlocked.length > 0 && (
+                <p className="text-[12px] text-amber-700 font-semibold kr">
+                  가격을 확인하지 않은 상품 {priceBlocked.length}개가 있어 인쇄할 수 없어요 — 「{priceBlocked[0].name}」{priceBlocked.length > 1 ? ` 외 ${priceBlocked.length - 1}개` : ''}의 가격을 눌러 고쳐 주세요.
+                </p>
+              )}
               {hasAutoImage && (
                 <label className="flex items-start gap-2 text-[12px] text-text-secondary cursor-pointer">
                   <input type="checkbox" checked={printAgree} onChange={e => setPrintAgree(e.target.checked)} className="mt-0.5 w-4 h-4 accent-slate-900" />
                   자동으로 붙은 이미지가 포함되어 있습니다. 인쇄 전에 위 목록에서 확인했습니다.
                 </label>
               )}
-              <button className="w-full h-12 rounded-xl btn-ink text-sm" onClick={doPrint} disabled={printBusy || (hasAutoImage && !printAgree)}>
+              <button className="w-full h-12 rounded-xl btn-ink text-sm" onClick={doPrint} disabled={printBusy || (hasAutoImage && !printAgree) || priceBlocked.length > 0}>
                 {printBusy ? '인쇄 PDF 만드는 중...' : '인쇄 PDF 받기'}
               </button>
             </div>
