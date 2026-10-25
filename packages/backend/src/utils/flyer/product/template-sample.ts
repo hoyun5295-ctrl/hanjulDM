@@ -10,17 +10,32 @@ import fs from 'fs';
 import path from 'path';
 import type { Browser } from 'puppeteer';
 import { renderTemplate } from './flyer-templates';
-import { buildMockRenderData } from './template-mocks';
+import { buildMockRenderData, MOCK_PHOTO_BASE } from './template-mocks';
 import { TEMPLATE_REGISTRY } from '../config/flyer-business-types';
+import { PRODUCT_IMAGE_DIR } from '../../product-images';
 
 const SAMPLE_DIR = path.join(process.cwd(), 'uploads', 'template-samples');
 const WIDTH = 393;
 const HEIGHT = 720;
 const inflight = new Map<string, Promise<Buffer>>();
 
-function sampleHtml(code: string): { html: string; key: string } | null {
-  const data = buildMockRenderData(code);
-  if (!data) return null;
+// ★ 1026 Codex: 견본은 about:blank 에서 그린다 → 사진을 주소로 두면 못 불러오거나(상대 경로) 교차 출처로 막힌다.
+//   견본 사진 = 디스크 파일을 data URL 로 넣는다(네트워크 0). 파일이 없으면 사진을 빼고 그림 아이콘.
+//   파일 바이트가 HTML 에 들어가므로 해시 키도 사진 파일이 생기거나 바뀌면 따라 바뀐다.
+//   기억해 두지 않고 요청마다 읽는다 — 파일을 올리거나 고치면 다음 요청에 바로 반영(재시작 불필요).
+const PHOTO_MIME: Record<string, string> = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
+function inlinePhoto(url?: string): string | undefined {
+  if (!url || !url.startsWith(MOCK_PHOTO_BASE)) return url;
+  const file = path.join(PRODUCT_IMAGE_DIR, decodeURIComponent(url.slice(MOCK_PHOTO_BASE.length)));
+  const mime = PHOTO_MIME[path.extname(file).toLowerCase()];
+  return mime && fs.existsSync(file) ? `data:${mime};base64,` + fs.readFileSync(file).toString('base64') : undefined;
+}
+
+/** 견본 렌더 HTML(시험이 원격 사진 주소 0 을 검사한다) */
+export function sampleHtml(code: string): { html: string; key: string } | null {
+  const mock = buildMockRenderData(code);
+  if (!mock) return null;
+  const data = { ...mock, categories: mock.categories.map(c => ({ ...c, items: c.items.map(x => ({ ...x, imageUrl: inlinePhoto(x.imageUrl) })) })) };
   const html = renderTemplate(code, data);
   const key = code + '-' + crypto.createHash('sha1').update(html).digest('hex').slice(0, 12);
   return { html, key };
@@ -47,6 +62,10 @@ export async function templateSamplePng(code: string, getBrowser: () => Promise<
       await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
       await page.setContent(s.html, { waitUntil: 'load', timeout: 15000 });
       await page.evaluate('document.fonts && document.fonts.ready'); // 웹폰트까지 그린 뒤 찍는다
+      // 사진이 다 그려진 뒤 찍는다 — 하나라도 못 그렸으면(디코드 실패 · onerror 로 지워짐) 저장하지 않고 실패(다음 요청에 재시도)
+      const want = (s.html.match(/<img src="/g) || []).length;
+      const drawn = await page.evaluate(`Promise.all([...document.images].map(i => { i.loading = 'eager'; return i.decode().then(() => 1, () => 0); })).then(r => r.reduce((a, b) => a + b, 0))`);
+      if (drawn !== want) throw new Error(`견본 사진 ${want}장 중 ${drawn}장만 그려짐`);
       const buf = Buffer.from(await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } }));
       fs.mkdirSync(SAMPLE_DIR, { recursive: true });
       // 같은 코드의 옛 견본(다른 해시)은 지운다 — 배포마다 쌓이지 않게

@@ -2,7 +2,9 @@
  * ★ CT-F 1025 — 템플릿 갤러리 목업 (17번 설계 §3-3)
  *
  * 갤러리 미리보기는 사장님 데이터가 아니라 이 목업으로 그린다(renderTemplate 실렌더 — 미리보기=발행 같은 길).
- *   - 세트 = 카테고리 장면 하나 · 5~10개 · imageUrl 비움 → 픽토그램이 그림을 대신한다.
+ *   - 세트 = 카테고리 장면 하나 · 5~10개.
+ *   - ★ 1026 Harold: 실제 전단은 상품 사진이 대부분 → 내장 사진 라이브러리와 맞는 상품은 그 사진을 직접 지정(MOCK_PHOTO).
+ *     나머지는 그림 아이콘 그대로(사진 있는 칸 · 없는 칸이 섞인 실제 모습). 이름 자동 찾기는 끈다(noAutoImage · 고추장→고추 같은 오답 차단).
  *   - 세트마다 의무 1개씩: 1+1 · 묶음 · 카드할인 · 한정 · 원가 없음(시험이 검사).
  *   - 날짜·문구 고정(재현성) — 같은 코드 = 같은 그림.
  */
@@ -90,8 +92,24 @@ export const MOCK_SETS: Record<string, { category: string; items: MockItem[] }> 
   ] },
 };
 
+/** 견본 상품명 → 내장 사진 라이브러리 파일(utils/product-images.ts PRODUCT_MAP 의 image 값과 같은 이름) */
+export const MOCK_PHOTO: Record<string, string> = {
+  '한돈 삼겹살': '삼겹살.jpg', '한우 1등급 등심': '한우.jpg', '미국산 척아이롤': '소고기.jpg', '닭가슴살': '닭고기.jpg', '호주산 소 불고기': '소고기.jpg',
+  '노르웨이 고등어': '고등어.jpg', '손질 오징어': '오징어.jpg', '제철 꽃게': '게.jpg', '냉동 새우': '새우.jpg', '국산 바지락': '조개.jpg',
+  '샤인머스캣': '포도.jpg', '부사 사과': '사과.jpg', '제주 감귤': '귤.jpg', '친환경 양파': '양파.jpg', '바나나': '바나나.jpg',
+  '방울토마토': '토마토.jpg', '국산 브로콜리': '브로콜리.jpg', '청양고추': '고추.jpg',
+  '봉지 라면 5입': '라면.jpg', '국산 콩두부': '두부.jpg', '포기김치': '김치.jpg',
+  '1등급 우유': '우유.jpg', '무항생제 특란': '계란.jpg', '슬라이스 치즈': '치즈.jpg',
+  '맥주 6캔': '카스 500ML.jpeg', '한우 정육 선물세트': '한우.jpg', '사과·배 혼합 세트': '사과.jpg',
+};
+export const MOCK_PHOTO_BASE = '/api/flyer/flyers/product-images/';
+
+/** 견본 상품 한 개 복사 + 지정 사진 — 모든 견본 묶음이 이 한 길로 상품을 꺼낸다 */
+const take = (x: MockItem): MockItem =>
+  (MOCK_PHOTO[x.name] ? { ...x, imageUrl: MOCK_PHOTO_BASE + encodeURIComponent(MOCK_PHOTO[x.name]) } : { ...x });
+
 function cats(...keys: string[]): Array<{ name: string; items: MockItem[] }> {
-  return keys.map(k => ({ name: MOCK_SETS[k].category, items: MOCK_SETS[k].items.map(x => ({ ...x })) }));
+  return keys.map(k => ({ name: MOCK_SETS[k].category, items: MOCK_SETS[k].items.map(take) }));
 }
 
 /** mockSet 이름 → 카테고리 묶음 */
@@ -105,7 +123,7 @@ const SET_RECIPES: Record<string, () => Array<{ name: string; items: MockItem[] 
   dairy: () => cats('dairy', 'living'),
   drinks: () => cats('drinks'),
   priceBoard: () => cats('grocery', 'dairy', 'living', 'produce', 'meat').map(c => ({ ...c, items: c.items.slice(0, 7) })),
-  single: () => [{ name: '정육', items: [MOCK_SETS.meat.items[1], MOCK_SETS.meat.items[0]].map(x => ({ ...x })) }],
+  single: () => [{ name: '정육', items: [MOCK_SETS.meat.items[1], MOCK_SETS.meat.items[0]].map(take) }],
 };
 
 /** 템플릿마다 그 장면의 행사 제목 — 같은 구조끼리 썸네일 머리가 똑같아 보이지 않게 */
@@ -131,6 +149,7 @@ export function buildMockRenderData(code: string): FlyerRenderData | null {
     period: '',
     periodStart: '2026-11-02',
     periodEnd: '2026-11-08',
+    noAutoImage: true,
     categories: (SET_RECIPES[set] || SET_RECIPES.mixed)(),
   };
 }

@@ -15,6 +15,8 @@ import { renderQrSection, renderCartScript } from './flyer-page-injections';
 // ★ 2026-08-20 슈퍼버전업 2단계 — 렌더 준비 CT(프로모 분리·밴드·픽토그램) + URL 매체 토큰(13번 설계 §4·§5)
 import { prepareFlyerData, itemCountBand, countItems, bandStyleBlock, categoryPictogram, nameSizeClass, priceScaleClass, priceStyleBlock } from './flyer-render-prep';
 import { generateMediaCssBlock } from './design-tokens';
+// ★ 1026: 사진 주소가 빈 상품은 그릴 때 내장 사진 라이브러리를 한 번 더 찾는다(옛 엔진 동작 복원)
+import { resolveProductImageUrl } from '../../product-images';
 import { variantToStyleBlock, type DesignVariant } from './claude-design-renderer';
 
 // ============================================================
@@ -48,6 +50,8 @@ export interface FlyerRenderData {
   periodEnd?: string | null;
   /** D154 PHASE 0: 단축 코드 (og:image 동적 라우트 /api/flyer/og/{shortCode}.png 생성용) */
   shortCode?: string | null;
+  /** ★ 1026: 상품명 사진 자동 찾기 끔(갤러리 견본 = 사진을 직접 고른 목업이라 이름 매칭 오답을 막는다) */
+  noAutoImage?: boolean;
 }
 
 export interface FlyerRenderItem {
@@ -80,7 +84,7 @@ export function fmtPrice(price: number | null | undefined): string {
 
 export function toAbsUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  if (url.startsWith('http')) return url;
+  if (url.startsWith('http') || url.startsWith('data:image/')) return url; // ★ 1026: 견본 사진(data URL)에 base 를 붙이면 깨진다
   const base = process.env.FLYER_API_BASE_URL || '';
   return base ? base + url : url;
 }
@@ -275,9 +279,8 @@ function scTag(badge?: string): string {
 function scPic(it: FlyerRenderItem, cat: string, withTag: boolean): string {
   const img = toAbsUrl(it.imageUrl || '');
   return '<div class="sc-pic">' +
-    (img
-      ? '<img src="' + esc(img) + '" alt="' + esc(it.name) + '" loading="lazy">'
-      : '<span class="sc-ico">' + categoryPictogram(cat) + '</span>') +
+    '<span class="sc-ico">' + categoryPictogram(cat) + '</span>' +
+    (img ? '<img src="' + esc(img) + '" alt="' + esc(it.name) + '" loading="lazy" onerror="this.remove()">' : '') +
     (withTag ? scTag(it.badge) : '') +
   '</div>';
 }
@@ -296,14 +299,13 @@ function scCard(it: ScItem): string {
 }
 
 function scRow(it: ScItem): string {
-  return '<li class="sc-row"' + productDataAttr(it, it.category) + '>' +
+  return '<li class="sc-row"' + productDataAttr(it, it.category) + '>' + scPic(it, it.category, false) +
     '<div class="sc-rl"><h3 class="sc-nm ' + nameSizeClass(it.name) + '">' + esc(it.name) + scTag(it.badge) + '</h3>' + scSpec(it) + '</div>' +
     scPrice(it, 'row') + '</li>';
 }
 
 function scTile(it: ScItem): string {
-  return '<article class="sc-tile"' + productDataAttr(it, it.category) + '>' +
-    (it.badge ? scTag(it.badge) : '') +
+  return '<article class="sc-tile"' + productDataAttr(it, it.category) + '>' + scPic(it, it.category, true) +
     '<h3 class="sc-nm ' + nameSizeClass(it.name) + '">' + esc(it.name) + '</h3>' + scSpec(it) + scPrice(it, 'tile') + '</article>';
 }
 
@@ -318,6 +320,10 @@ function scCatHead(name: string, count: number, id: string): string {
 
 export function renderShowcardEngine(d: FlyerRenderData, token: SeasonToken, spec: ShowcardSpec): string {
   const th = SC_THEMES[spec.theme] || SC_THEMES.yellow;
+  // 사진 주소가 빈 상품 = 상품명으로 내장 사진 라이브러리를 찾는다(못 찾으면 그림 아이콘)
+  if (!d.noAutoImage) {
+    d = { ...d, categories: d.categories.map(c => ({ ...c, items: c.items.map(x => (x.imageUrl ? x : { ...x, imageUrl: resolveProductImageUrl(x.name) || undefined })) })) };
+  }
   const items: ScItem[] = flattenItems(d);
   const heroN = spec.layout === 'single' ? Math.min(1, items.length)
     : (spec.layout === 'heroGrid' || spec.layout === 'heroList') ? Math.min(spec.heroN, items.length) : 0;
@@ -416,7 +422,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--sc-red);outline-off
 .sc-tag-r{background:var(--sc-red);color:#FFFFFF;border-color:var(--sc-red)}
 .sc-pick{display:inline-flex;align-items:center;height:26px;padding:0 9px;margin-right:6px;border-radius:5px;font-size:14px;font-weight:900;background:var(--sc-chip);color:var(--sc-chip-ink);border:1.5px solid var(--sc-line)}
 .sc-pic{position:relative;background:var(--sc-tint);display:grid;place-items:center;overflow:hidden}
-.sc-pic img{width:100%;height:100%;object-fit:cover;display:block}
+.sc-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:#FFFFFF}
 .sc-ico{display:flex;color:var(--sc-ink);--picto-color:var(--sc-ink)}
 .sc-pic .sc-tag{position:absolute;left:8px;top:8px}
 .sc-nm{font-weight:900;letter-spacing:-0.02em;line-height:1.3;word-break:keep-all}
@@ -452,7 +458,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--sc-red);outline-off
 /* 2열 카드 */
 .sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:6px 12px 4px}
 .sc-card{border:1.5px solid var(--sc-line);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;background:#FFFFFF}
-.sc-card .sc-pic{height:68px;border-bottom:1.5px solid var(--sc-line)}
+.sc-card .sc-pic{height:96px;border-bottom:1.5px solid var(--sc-line)}
 .sc-card .sc-ico{font-size:34px}
 .sc-card .sc-body{padding:9px 11px 11px;display:flex;flex-direction:column;flex:1}
 .sc-card .sc-nm{font-size:17px}.sc-card .sc-nm.nm-m{font-size:16px}.sc-card .sc-nm.nm-l{font-size:16px}
@@ -461,7 +467,9 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--sc-red);outline-off
 .sc-card .sc-was{font-size:14px}.sc-card .sc-save{font-size:14px}
 /* 가격 줄표 */
 .sc-rows{list-style:none;padding:0 14px}
-.sc-row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1.5px dashed var(--sc-dash)}
+.sc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1.5px dashed var(--sc-dash)}
+.sc-row .sc-pic{flex:none;width:68px;height:68px;border:1.5px solid var(--sc-line);border-radius:8px}
+.sc-row .sc-ico{font-size:32px}
 .sc-rl{min-width:0;flex:1}
 .sc-row .sc-nm{font-size:17px;font-weight:800}
 .sc-row .sc-nm .sc-tag{height:22px;font-size:12.5px;padding:0 7px;margin-left:6px;vertical-align:2px}
@@ -471,11 +479,14 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--sc-red);outline-off
 .sc-row .sc-was{font-size:14px}.sc-row .sc-save{font-size:14px}
 /* 두 칸 가격표 */
 .sc-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 12px 4px}
-.sc-tile{border:1.5px solid var(--sc-line);border-radius:8px;padding:10px 11px 11px;display:flex;flex-direction:column;background:#FFFFFF}
-.sc-tile .sc-tag{align-self:flex-start;height:22px;font-size:12.5px;padding:0 7px;margin-bottom:5px}
+.sc-tile{border:1.5px solid var(--sc-line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;background:#FFFFFF}
+.sc-tile .sc-pic{height:84px;border-bottom:1.5px solid var(--sc-line)}
+.sc-tile .sc-ico{font-size:34px}
+.sc-tile .sc-tag{height:22px;font-size:12.5px;padding:0 7px}
+.sc-tile .sc-nm{padding:8px 10px 0}.sc-tile .sc-spec{padding:0 10px}.sc-tile .sc-pr{padding:6px 10px 10px}
 .sc-tile .sc-nm{font-size:16px;font-weight:800}
 .sc-tile .sc-spec{font-size:14px}
-.sc-tile .sc-pr{margin-top:auto;padding-top:6px}
+.sc-tile .sc-pr{margin-top:auto}
 .sc-tile .sc-was{font-size:14px}.sc-tile .sc-save{font-size:14px}
 /* 단일 */
 .sc-single{border:2px solid var(--sc-line);border-radius:12px;overflow:hidden;background:#FFFFFF}

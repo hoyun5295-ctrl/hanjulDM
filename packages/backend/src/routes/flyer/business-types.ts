@@ -63,7 +63,8 @@ router.get('/templates/:code/sample.png', async (req: Request, res: Response) =>
     const buf = await templateSamplePng(String(req.params.code || ''), getOgBrowser);
     if (!buf) return res.status(404).send('Not found');
     res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    // ★ 1026: 주소는 그대로인데 디자인이 바뀌면 그림이 바뀐다 → 매번 서버에 확인(바뀌지 않았으면 ETag 304)
+    res.setHeader('Cache-Control', 'no-cache');
     return res.send(buf);
   } catch (err: any) {
     console.error('[template-sample] 생성 실패:', err?.message || err);
