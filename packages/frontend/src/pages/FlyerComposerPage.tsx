@@ -10,7 +10,7 @@
  *
  * 옛 FlyerPage(목록+폼 1,310줄)를 대체한다 — 이력 관리는 홈의 「최근 전단」 조각이 잇는다.
  */
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE, apiFetch } from '../App';
 import AlertModal from '../components/AlertModal';
 import { Input, ConfirmModal, Toast } from '../components/ui';
@@ -52,7 +52,7 @@ interface AutoBuild {
 interface TemplateInfo {
   value: string; label: string; desc: string; color: string;
   /** ★ 1025 17번 §3-5 갤러리 메타 */
-  scene?: string; itemRange?: string; needsPhoto?: boolean; filter?: GalleryFilter; baseOf?: string;
+  scene?: string; itemRange?: string; needsPhoto?: boolean; filter?: GalleryFilter;
 }
 type GalleryFilter = 'weekly' | 'deal' | 'fresh' | 'holiday' | 'premium';
 const GALLERY_FILTERS: Array<{ key: GalleryFilter | 'all'; label: string }> = [
@@ -65,9 +65,10 @@ interface RecentFlyer {
   id: string; title: string; status: string; short_code: string | null;
   period_start: string | null; period_end: string | null;
   categories: any; template: string; created_at: string;
+  click_count?: number | string;
 }
 type Preset = 'weekly' | 'clearance' | 'seasonal';
-type SheetKind = null | 'pos' | 'last' | 'catalog' | 'excel' | 'pop' | 'print';
+type SheetKind = null | 'pos' | 'last' | 'catalog' | 'excel' | 'pop' | 'print' | 'add';
 
 // ── 날짜 헬퍼: 이번 주 월~일 ──────────────────────────
 function thisWeekRange(): { start: string; end: string } {
@@ -79,7 +80,35 @@ function thisWeekRange(): { start: string; end: string } {
   return { start: f(now), end: f(sun) };
 }
 
-export default function FlyerComposerPage({ token: _token, businessType = 'mart' }: { token: string; businessType?: string }) {
+// 접힘 칸 · 큰 선택 버튼 = 모듈 범위(페이지 함수 안에 두면 렌더마다 타입이 바뀌어 안의 입력이 재마운트된다)
+function Fold({ k, openFold, onToggle, title, badge, children }: { k: string; openFold: string | null; onToggle: (k: string) => void; title: string; badge?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border-[1.5px] border-[#141210] bg-surface">
+      <button type="button" onClick={() => onToggle(k)}
+        className="w-full min-h-[60px] px-5 flex items-center justify-between gap-3 text-left text-[18px] font-extrabold text-text">
+        <span>{title}{badge ? <span className="ml-2 text-[15px] font-bold text-text-secondary">{badge}</span> : null}</span>
+        <span className="text-[16px] font-bold text-text-secondary">{openFold === k ? '접기' : '펼치기'}</span>
+      </button>
+      {openFold === k && <div className="px-5 pb-5">{children}</div>}
+    </section>
+  );
+}
+function BigChoice({ main, title, hint, onClick, icon }: { main?: boolean; title: string; hint: string; onClick: () => void; icon: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`w-full flex items-center gap-4 sm:gap-5 text-left px-5 sm:px-6 rounded-xl border-[#141210] transition-colors ${
+        main ? 'min-h-[96px] border-[2.5px] bg-[#FFE14D] hover:bg-[#FFE866]' : 'min-h-[84px] border-[1.5px] bg-surface hover:bg-[#FFFBE3]'}`}>
+      <span className="shrink-0 text-text" aria-hidden="true">{icon}</span>
+      <span className="flex flex-col gap-0.5 min-w-0">
+        <strong className="text-[19px] sm:text-[22px] font-black tracking-[-0.02em] text-text kr">{title}</strong>
+        <span className="text-[15px] sm:text-[17px] text-text-secondary kr">{hint}</span>
+      </span>
+      <span className="ml-auto text-[32px] font-light leading-none text-text" aria-hidden="true">›</span>
+    </button>
+  );
+}
+
+export default function FlyerComposerPage({ token: _token, businessType = 'mart', onGoSend }: { token: string; businessType?: string; onGoSend?: (flyerId: string) => void }) {
   // ── 상태머신 ──
   const [view, setView] = useState<'home' | 'compose'>('home');
   const [items, setItems] = useState<NormItem[]>([]);
@@ -113,6 +142,8 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [pickedTemplate, setPickedTemplate] = useState<string | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [openFold, setOpenFold] = useState<string | null>(null);
+  const [showRecent, setShowRecent] = useState(false);
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter | 'all'>('all');
 
   // 손질 — 상품 편집 시트 하나로(이름·판매가·원가·단위·원산지·뱃지·이미지)
@@ -424,15 +455,10 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
     } : it));
     setEditPop(null); setItemsAndBuild(next);
   };
-  const reroll = () => {
-    const nextSeed = (seed ?? (build?.design_variant?.variantSeed ?? 0)) + 1;
-    setSeed(nextSeed);
-    requestBuild(items, nextSeed);
-  };
 
   // ── 발행(1버튼 + 쿠폰 토글) ──
-  const publish = async () => {
-    if (!build || items.length === 0 || publishing) return;
+  const publish = async (): Promise<string | null> => {
+    if (!build || items.length === 0 || publishing) return null;
     setPublishing(true);
     try {
       const body = {
@@ -459,7 +485,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
         if (res.status === 503) {
           const e = await res.json().catch(() => null);
           setAlert({ show: true, title: '준비 중', message: e?.error || '서버 마이그레이션 대기 중입니다.', type: 'error' });
-          return;
+          return null;
         }
         if (!res.ok) throw new Error('저장 실패');
         const created = await res.json();
@@ -484,8 +510,10 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
       setPublished({ id: String(flyerId), short_url: d.short_url, short_code: d.short_code });
       setEditingId(String(flyerId));
       loadRecent();
+      return String(flyerId);
     } catch (e: any) {
-      setAlert({ show: true, title: '오류', message: e?.message || '발행에 실패했습니다.', type: 'error' });
+      setAlert({ show: true, title: '오류', message: e?.message || '전단 주소를 만들지 못했습니다.', type: 'error' });
+      return null;
     } finally { setPublishing(false); }
   };
 
@@ -584,397 +612,238 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
   };
 
   // ══════════════════ 렌더 ══════════════════
-  if (view === 'home') {
-    const publishedCount = recent.filter(r => r.status === 'published').length;
-    return (
-      <div className="max-w-5xl mx-auto space-y-7">
-
-        {/* ══ 히어로 ══ */}
-        <section className="relative overflow-hidden rounded-3xl border border-border bg-surface rise">
-          <div className="relative px-6 sm:px-9 py-8 sm:py-10">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[11px] font-bold tracking-wide">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot" />
-                자동 완성
-              </span>
-              <span className="text-[11px] text-text-muted">담는 순간 완성본이 섭니다</span>
-            </div>
-
-            <h1 className="font-poster text-[38px] sm:text-[52px] leading-[1.05] kr text-text">
-              오늘 뭐 파실래요?
-            </h1>
-            <p className="mt-3 text-[15px] text-text-secondary kr max-w-lg">
-              상품만 담으면 전단·POP·인쇄물이 한 번에 나옵니다. 편집은 필요 없습니다.
-            </p>
-
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-              <button onClick={() => startPreset('weekly')}
-                className="px-6 py-3 rounded-2xl bg-slate-900 text-white text-sm font-bold shadow-elevated hover:bg-slate-800 transition-colors">
-                바로 시작하기
-              </button>
-              <button onClick={() => { setView('compose'); openSheet('pos'); }}
-                className="px-4 py-3 rounded-2xl bg-surface border border-border text-sm font-semibold text-text hover:border-slate-900 transition-colors">
-                POS 인기 상품으로
-              </button>
-              <button onClick={() => { setView('compose'); openSheet('excel'); }}
-                className="px-4 py-3 rounded-2xl bg-surface border border-border text-sm font-semibold text-text hover:border-slate-900 transition-colors">
-                엑셀 올리기
-              </button>
-            </div>
-
-            <div className="mt-7 flex flex-wrap gap-x-7 gap-y-2">
-              {[
-                { n: String(templates.length || 20), u: '종', l: '전단 디자인' },
-                { n: '4', u: '종', l: 'POP·가격표' },
-                { n: '5', u: '종', l: '인쇄 전단' },
-                { n: String(recent.length), u: '건', l: publishedCount ? `만든 전단 · 발행 ${publishedCount}` : '만든 전단' },
-              ].map(m => (
-                <div key={m.l}>
-                  <p className="font-poster text-2xl text-text leading-none">
-                    {m.n}<span className="text-sm text-text-muted ml-0.5">{m.u}</span>
-                  </p>
-                  <p className="text-[11px] text-text-muted mt-1">{m.l}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ══ 3 프리셋 ══ */}
-        <section>
-          <div className="flex items-end justify-between mb-3">
-            <h2 className="text-base font-extrabold text-text">무엇부터 만들까요</h2>
-            <span className="text-[11px] text-text-muted">클릭 한 번이면 상품 담기로 넘어갑니다</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {([
-              { key: 'weekly' as Preset, tag: '주간', title: '이번 주 행사',
-                hint: recent.length > 0 ? '지난 전단 그대로, 가격만 새로' : '이번 주 상품으로 새로 만들기',
-                meta: '가장 많이 쓰는 방식', bg: 'linear-gradient(135deg,#F97316,#E11D48)' },
-              { key: 'clearance' as Preset, tag: '오늘', title: '오늘 급처분',
-                hint: '상품 하나면 끝. POP까지 같이',
-                meta: '30초 컷', bg: 'linear-gradient(135deg,#0F172A,#334155)' },
-              { key: 'seasonal' as Preset, tag: '대목', title: '명절 대목',
-                hint: '명절 톤으로, 인쇄까지 한 번에',
-                meta: '인쇄 발주 연결', bg: 'linear-gradient(135deg,#B91C1C,#D97706)' },
-            ]).map((c, i) => (
-              <button key={c.key} onClick={() => startPreset(c.key)}
-                style={{ backgroundImage: c.bg, animationDelay: `${i * 70}ms` }}
-                className="rise group relative overflow-hidden text-left rounded-2xl p-5 min-h-[168px] flex flex-col justify-between text-white shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all">
-                <span className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 group-hover:scale-125 transition-transform" />
-                <span className="relative inline-flex self-start px-2 py-0.5 rounded-md bg-white/20 text-[10px] font-bold tracking-wider">{c.tag}</span>
-                <span className="relative block">
-                  <span className="block font-poster text-2xl leading-tight">{c.title}</span>
-                  <span className="block text-[12px] mt-1.5 text-white/85 kr leading-snug">{c.hint}</span>
-                </span>
-                <span className="relative flex items-center gap-1.5 text-[11px] text-white/70">
-                  <span className="w-1 h-1 rounded-full bg-white/70" />{c.meta}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* ══ 만들어지는 방식 ══ */}
-        <section className="rounded-2xl border border-border bg-surface p-5">
-          {/* 화살표를 칸 안에 absolute 로 띄우면 글줄을 덮는다 — 제 칸을 가진 flex 아이템으로 둔다 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0">
-            {[
-              { n: '01', t: '상품을 담는다', d: 'POS 인기·지난 전단·카탈로그·엑셀에서 체크만' },
-              { n: '02', t: '알아서 구성된다', d: '분류·디자인·시즌 톤까지 자동 구성' },
-              { n: '03', t: '뽑아 쓴다', d: '전단 URL·POP·인쇄물·문자 발송까지' },
-            ].map((st, i) => (
-              <Fragment key={st.n}>
-                <div className="flex-1 min-w-0 flex gap-3">
-                  <span className="font-poster text-2xl text-slate-300 leading-none shrink-0">{st.n}</span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-text">{st.t}</p>
-                    <p className="text-[12px] text-text-muted kr mt-0.5 leading-snug">{st.d}</p>
-                  </div>
-                </div>
-                {i < 2 && (
-                  <div className="hidden sm:flex items-center justify-center w-10 shrink-0" aria-hidden="true">
-                    <svg width="18" height="8" viewBox="0 0 18 8" fill="none" className="text-border-strong">
-                      <path d="M0 4h15M12 1l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                )}
-              </Fragment>
-            ))}
-          </div>
-        </section>
-
-        {/* ══ 최근 전단 ══ */}
-        <section>
-          <div className="flex items-end justify-between mb-3">
-            <h2 className="text-base font-extrabold text-text">최근 전단</h2>
-            {recent.length > 0 && <span className="text-[11px] text-text-muted">누르면 그대로 이어서 만듭니다</span>}
-          </div>
-          {recent.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border-strong bg-surface p-8 text-center">
-              <p className="font-poster text-xl text-text-muted">아직 만든 전단이 없습니다</p>
-              <p className="text-[12px] text-text-muted mt-1.5 kr">위에서 하나 고르면 몇 분 안에 첫 전단이 나옵니다.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {recent.map(f => (
-                <div key={f.id} className="group rounded-2xl border border-border bg-surface p-4 hover:border-slate-900/50 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-14 rounded-lg bg-bg border border-border flex items-center justify-center shrink-0">
-                      <span className="font-poster text-[11px] text-text-muted leading-none">전단</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-text truncate">{f.title}</p>
-                        <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${f.status === 'published' ? 'bg-success-50 text-success-600' : 'bg-bg text-text-muted'}`}>
-                          {f.status === 'published' ? '발행됨' : '초안'}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-text-muted mt-0.5">{String(f.created_at).slice(0, 10)}</p>
-                      <div className="flex items-center gap-1.5 mt-2.5">
-                        <button onClick={() => openAsBase(f)} className="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 transition-colors">
-                          {f.status === 'published' ? '이걸로 새로' : '이어 만들기'}
-                        </button>
-                        {f.short_code && (
-                          <button onClick={() => copyUrl(f.short_code!)} className="px-2.5 py-1.5 rounded-lg bg-surface border border-border text-[11px] text-text-secondary hover:text-text">URL 복사</button>
-                        )}
-                        <button onClick={() => setDeleteModal({ show: true, id: f.id, title: f.title })} className="ml-auto px-2 py-1.5 rounded-lg text-[11px] text-text-muted hover:text-error-500">삭제</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <ConfirmModal show={deleteModal.show}
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6" /></svg>}
-          title="전단지 삭제" message={`"${deleteModal.title}"을(를) 삭제하시겠습니까?`} danger confirmLabel="삭제" onConfirm={() => removeFlyer(deleteModal.id)} onCancel={() => setDeleteModal({ show: false, id: '', title: '' })} />
-        <Toast show={copyToast} message="URL이 복사되었습니다" />
-        <AlertModal alert={alert} onClose={() => setAlert({ ...alert, show: false })} />
-      </div>
-    );
-  }
-
-  // ── compose ──
+  // ★ 1026 18번 — 「한 화면 한 일」(PRODUCT.md 원칙 6 · 사장님 PC 미숙): 처음 = 상품 담기 하나 · 담은 뒤 = 보내기 하나.
+  //   부가 기능(상품 고치기 · 행사 정보 · 쿠폰 · POP·인쇄)은 접힌 줄 안 — 필요할 때만 연다.
+  const showHome = view === 'home' || items.length === 0;
+  const totalSave = items.reduce((s, it) => s + (it.originalPrice > it.salePrice && it.salePrice > 0 ? it.originalPrice - it.salePrice : 0), 0);
+  const liveFlyer = recent.find(r => r.status === 'published');
   const previewCategories = build?.categories?.length ? build.categories : (items.length ? [{ name: '상품', items }] : []);
-  const templateLabel = (code?: string) =>
-    templates.find(t => t.value === code)?.label || code || '자동';
   const noImageIdxs = items.map((it, i) => (!it.imageUrl ? i : -1)).filter(i => i >= 0);
+  const templateLabel = (code?: string) => templates.find(t => t.value === code)?.label || code || '자동';
   const applyTemplate = (code: string | null) => {
     setPickedTemplate(code);
     setGalleryOpen(false);
     setPublished(null); // 디자인이 바뀌면 앞서 발행한 결과는 과거다
     if (items.length > 0) requestBuild(items, seed, code);
   };
+  const goSource = (kind: SheetKind) => { setView('compose'); if (kind === 'excel') setSheet('excel'); else openSheet(kind); };
+  // 보내기 = 발행(주소 만들기) → 발송 화면으로. 이미 발행했으면 바로 발송 화면.
+  // 발행 응답이 오기 전에 화면을 떠났으면(언마운트) 이동하지 않는다. 늦은 응답이 다른 화면의 작업을 덮지 않게.
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  const sendToCustomers = async () => {
+    if (published) { onGoSend?.(published.id); return; }
+    const id = await publish();
+    if (id && mountedRef.current) onGoSend?.(id);
+  };
+  const toggleFold = (k: string) => setOpenFold(o => (o === k ? null : k));
+  const ico = (d: string) => <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
+  const ICON_EXCEL = ico('M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M12 18v-6m0 0-3 3m3-3 3 3');
+  const ICON_AGAIN = ico('M4 12a8 8 0 1 0 2.4-5.7L4 8.5M4 4v4.5h4.5');
+  const ICON_POS = ico('M3 20h18M6 16V9M11 16V5M16 16v-5M21 16v-8');
+  const ICON_LIST = ico('M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01');
+
   return (
-    <div className="max-w-5xl mx-auto pb-24">
-      {/* ══ 상단 툴바 — 돌아가기 + 상품 담기 4소스 ══ */}
-      <div className="sticky top-14 z-30 -mx-4 px-4 py-3 mb-4 bg-bg/90 backdrop-blur border-b border-border">
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setView('home')} className="w-9 h-9 rounded-full btn-quiet" aria-label="처음으로">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-          </button>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {([
-              { k: 'pos' as SheetKind, label: 'POS 인기' },
-              { k: 'last' as SheetKind, label: '지난 전단' },
-              { k: 'catalog' as SheetKind, label: '카탈로그' },
-              { k: 'excel' as SheetKind, label: '엑셀' },
-            ]).map(c => (
-              <button key={String(c.k)} onClick={() => openSheet(c.k)}
-                className="h-9 px-3.5 rounded-full btn-quiet text-[13px]">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-text-muted"><path d="M12 5v14M5 12h14" /></svg>
-                {c.label}
-              </button>
-            ))}
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            {items.length > 0 && (
-              <span className="h-9 inline-flex items-center px-3 rounded-full bg-surface border border-border text-[12px] text-text-secondary tabular-nums">
-                담긴 상품&nbsp;<b className="text-text">{items.length}</b>
-              </span>
-            )}
-            {build && (
-              <button onClick={reroll} disabled={building} className="h-9 px-4 rounded-full btn-ink text-[13px]">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
-                {building ? '만드는 중...' : '다른 느낌으로'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
-        {/* 좌: 미리보기 = 발행본 */}
-        <div>
-          {/* 상태 바 — 결과물이 주인공, 상태는 한 줄로 조용히 */}
-          <div className="rounded-t-2xl border border-b-0 border-border bg-surface px-4 py-2.5 flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-text">
-              <span className={`w-1.5 h-1.5 rounded-full ${building ? 'bg-amber-500 pulse-dot' : build ? 'bg-emerald-500' : 'bg-border-strong'}`} />
-              {building ? '전단을 만드는 중' : build ? '전단 완성' : '상품을 기다리는 중'}
-            </span>
-            {build && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bg text-[11px] font-bold text-text">
-                {templateLabel(build.template)}
-                <span className="text-[10px] font-semibold text-text-muted">{build.picked ? '직접 고름' : '추천'}</span>
-              </span>
-            )}
-            <button onClick={() => setGalleryOpen(true)} className="ml-auto h-8 px-3.5 rounded-full btn-ink text-[11px]">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
-              디자인 바꾸기 {templates.length > 0 ? `(${templates.length})` : ''}
+    <div className="max-w-6xl mx-auto pb-16">
+      {showHome ? (
+        /* ══ 처음 — 할 일 하나: 상품 담기 ══ */
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_440px] rounded-2xl border-2 border-[#141210] bg-surface overflow-hidden rise">
+          <section className="p-6 sm:p-10 lg:border-r-2 border-b-2 lg:border-b-0 border-[#141210] min-w-0">
+            <h1 className="text-[30px] sm:text-[40px] font-black tracking-[-0.035em] leading-[1.15] text-text kr">이번 주 전단을 만들어요</h1>
+            <p className="mt-2.5 text-[17px] sm:text-[19px] text-text-secondary kr">상품만 담으면 전단이 바로 완성됩니다. 아래에서 <b className="text-text">하나만</b> 고르세요.</p>
+            <div className="mt-7 flex flex-col gap-3 max-w-[680px]">
+              <BigChoice main title="엑셀 파일 올리기" hint="상품 목록 파일이 있으면 이걸 누르세요" onClick={() => goSource('excel')} icon={ICON_EXCEL} />
+              <BigChoice title="지난주 전단 그대로 쓰기" hint={recent.length > 0 ? '가격만 바꾸면 됩니다' : '아직 만든 전단이 없어요. 잘 팔리는 상품부터 보여 드려요'} onClick={() => startPreset('weekly')} icon={ICON_AGAIN} />
+              <BigChoice title="잘 팔리는 상품에서 고르기" hint="계산대 판매 순위에서 체크만" onClick={() => goSource('pos')} icon={ICON_POS} />
+            </div>
+            <a href="/samples/hanjul-flyer-sample.xlsx" download
+              className="mt-4 inline-flex items-center gap-2 text-[17px] sm:text-[18px] font-extrabold text-text underline underline-offset-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" /></svg>
+              엑셀 파일이 없으면 → 예시 양식 받기
+            </a>
+            <button type="button" onClick={() => goSource('catalog')}
+              className="mt-3 flex items-center gap-2 min-h-[44px] text-[17px] sm:text-[18px] font-extrabold text-text underline underline-offset-4">
+              등록해 둔 상품 목록에서 고르기
             </button>
-          </div>
-
-          {/* 종이 — 전단은 모바일 393px 기준이라 그 폭 그대로 세우고 바닥을 깐다 */}
-          <div className="rounded-b-2xl border border-border bg-bg p-4 paper">
-            <div className="relative h-[560px] w-full max-w-[393px] mx-auto rounded-xl overflow-hidden bg-surface border border-border shadow-elevated">
-              {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center gap-3 px-6 text-center">
-                  <div className="w-16 h-20 rounded-lg border-2 border-dashed border-border-strong flex items-center justify-center">
-                    <span className="font-poster text-[11px] text-text-muted">전단</span>
-                  </div>
-                  <p className="font-poster text-lg text-text">상품을 담아 주세요</p>
-                  <p className="text-[12px] text-text-muted kr max-w-[240px]">담는 순간 분류·디자인·시즌 톤까지 정해진 완성본이 섭니다.</p>
-                  <button onClick={() => openSheet('pos')} className="mt-1 px-4 py-2 rounded-xl bg-slate-900 text-white text-[12px] font-bold">POS 인기 상품에서 담기</button>
-                </div>
-              ) : (
-                <>
-                  <FlyerPreview
-                    title={title} storeName={storeName}
-                    periodStart={periodStart} periodEnd={periodEnd}
-                    categories={previewCategories as any}
-                    template={build?.template || 'grid_hero'}
-                    designVariant={build?.design_variant || null}
-                  />
-                  {building && (
-                    <div className="absolute inset-x-0 top-0 h-1 sheen bg-border" />
-                  )}
-                </>
-              )}
-            </div>
-            <p className="text-[11px] text-text-muted mt-2.5 text-center inline-flex items-center gap-1.5 w-full justify-center">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-              이 미리보기가 그대로 발행됩니다
-            </p>
-          </div>
-        </div>
-
-        {/* 우: 행사 정보 + 담긴 상품 + 발행 */}
-        <div className="space-y-3">
-          <div className="bg-surface rounded-2xl border border-border p-4 space-y-2.5 field-quiet">
-            <p className="text-[13px] font-bold text-text mb-1">행사 정보</p>
-            <Input label="행사 이름" value={title} onChange={e => setTitle(e.target.value)} placeholder="예: 이번 주 행사" />
-            <Input label="매장 이름" value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="전단에 표시됩니다" />
-            <div className="grid grid-cols-2 gap-2">
-              <Input label="시작일" type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} />
-              <Input label="종료일" type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} />
-            </div>
-          </div>
-
-          <div className="bg-surface rounded-2xl border border-border p-4">
-            <div className="flex items-center justify-between mb-2 gap-2">
-              <p className="text-[13px] font-bold text-text">담긴 상품 <span className="font-semibold text-text-muted">{items.length}</span></p>
-              {noImageIdxs.length > 0 && (
-                <button onClick={() => openPicker(noImageIdxs, false)} className="h-8 px-3 rounded-full btn-ink text-[11px] shrink-0">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
-                  사진 고르기 ({noImageIdxs.length})
-                </button>
-              )}
-            </div>
-            {items.length === 0 ? (
-              <p className="text-xs text-text-muted py-6 text-center">위의 칩에서 상품을 담아 주세요.<br />담는 순간 전단이 만들어집니다.</p>
-            ) : (
-              <>
-                <p className="text-[11px] text-text-muted mb-2">상품을 누르면 이름·가격·원산지·이미지를 고칠 수 있습니다</p>
-                <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
-                  {items.map((it, i) => (
-                    <div key={`${it.name}-${i}`} className="flex items-center gap-2.5 bg-bg rounded-xl px-2 py-1.5 border border-transparent hover:border-border-strong transition-colors">
-                      <button onClick={() => openEdit(i)} className="w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center text-text-muted" aria-label="상품 수정">
-                        {it.imageUrl
-                          ? <img src={it.imageUrl} alt="" className="w-full h-full object-cover" />
-                          : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>}
-                      </button>
-                      <button onClick={() => openEdit(i)} className="flex-1 min-w-0 text-left">
-                        <p className="text-[13px] font-semibold text-text truncate">{it.name}</p>
-                        <p className="text-[11px] text-text-muted truncate">
-                          {[it.origin, it.unit, it.badge].filter(Boolean).join(' · ') || '정보 추가하기'}
-                        </p>
-                      </button>
-                      <button onClick={() => openEdit(i)} className="text-right shrink-0 tabular-nums" aria-label="가격 수정">
-                        {it.originalPrice > it.salePrice && (
-                          <p className="text-[10px] text-text-muted line-through leading-tight">{it.originalPrice.toLocaleString()}원</p>
-                        )}
-                        <p className={`text-[13px] font-extrabold leading-tight ${it.salePrice > 0 ? 'text-text' : 'text-brand-600'}`}>
-                          {it.salePrice > 0 ? `${it.salePrice.toLocaleString()}원` : '가격 입력'}
-                        </p>
-                      </button>
-                      <button onClick={() => openEdit(i)} className="p-1 text-text-muted hover:text-text shrink-0" aria-label="정보 수정">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" /></svg>
-                      </button>
-                      <button onClick={() => removeItem(i)} className="p-1 text-text-muted hover:text-rose-500 shrink-0" aria-label="빼기">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* 발행 카드 */}
-          <div className="bg-surface rounded-2xl border border-border p-4 space-y-3 field-quiet">
-            <div className="flex items-center justify-between">
-              <p className="text-[13px] font-bold text-text">QR 쿠폰 넣기</p>
-              <button onClick={() => setCouponEnabled(!couponEnabled)} className={`w-11 h-6 rounded-full transition-colors relative ${couponEnabled ? 'bg-slate-900' : 'bg-border-strong'}`}>
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow ${couponEnabled ? 'left-[22px]' : 'left-0.5'}`} />
-              </button>
-            </div>
-            {couponEnabled && (
-              <div className="space-y-2">
-                <Input value={couponForm.coupon_name} onChange={e => setCouponForm({ ...couponForm, coupon_name: e.target.value })} placeholder="쿠폰명 (예: 5,000원 할인)" />
-                <div className="grid grid-cols-2 gap-2">
-                  <select className="bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text" value={couponForm.coupon_type} onChange={e => setCouponForm({ ...couponForm, coupon_type: e.target.value })}>
-                    <option value="fixed">정액 (원)</option>
-                    <option value="percent">퍼센트 (%)</option>
-                  </select>
-                  <Input type="number" value={couponForm.discount_value} onChange={e => setCouponForm({ ...couponForm, discount_value: e.target.value })} placeholder="할인값" />
-                </div>
+            {liveFlyer && (
+              <div className="mt-9 max-w-[680px] flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-bg px-5 py-4 text-[16px] sm:text-[17px] text-text">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0" />
+                <span className="flex-1 min-w-0 kr">지금 손님에게 나가 있는 전단 <b>「{liveFlyer.title}」</b>{typeof liveFlyer.click_count !== 'undefined' ? <> · <b>{Number(liveFlyer.click_count || 0).toLocaleString()}명</b>이 봤어요</> : null}</span>
+                {liveFlyer.short_code && <button type="button" onClick={() => copyUrl(liveFlyer.short_code!)} className="font-extrabold underline underline-offset-4 whitespace-nowrap">주소 복사</button>}
               </div>
             )}
+            {recent.length > 0 && (
+              <div className="mt-4 max-w-[680px]">
+                <button type="button" onClick={() => setShowRecent(v => !v)} className="text-[16px] font-bold text-text-secondary underline underline-offset-4">
+                  {showRecent ? '내 전단 접기' : `내 전단 ${recent.length}개 보기`}
+                </button>
+                {showRecent && (
+                  <ul className="mt-3 divide-y divide-border rounded-xl border-[1.5px] border-[#141210] bg-surface">
+                    {recent.map(f => (
+                      <li key={f.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                        <div className="flex-1 min-w-[160px]">
+                          <p className="text-[16px] font-extrabold text-text truncate">{f.title}</p>
+                          <p className="text-[14px] text-text-secondary">{String(f.created_at).slice(0, 10)} · {f.status === 'published' ? '보낸 전단' : '만드는 중'}</p>
+                        </div>
+                        <button type="button" onClick={() => openAsBase(f)} className="h-11 px-4 rounded-lg bg-[#141210] text-white text-[15px] font-extrabold">{f.status === 'published' ? '이걸로 새로' : '이어 만들기'}</button>
+                        <button type="button" onClick={() => setDeleteModal({ show: true, id: f.id, title: f.title })} className="h-11 px-3 rounded-lg border-[1.5px] border-border text-[15px] font-bold text-text-secondary">삭제</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </section>
+          <aside className="bg-bg px-5 py-7 flex flex-col items-center gap-3" aria-label="전단 예시">
+            <p className="text-[15px] font-bold text-text-secondary">상품을 담으면 이런 전단이 됩니다</p>
+            <div className="relative w-full max-w-[360px] rounded-[26px] border-[1.5px] border-[#141210] overflow-hidden bg-surface shadow-elevated">
+              <img src={`${API_BASE}/api/flyer/business-types/templates/grid_hero/sample.png`} alt="전단 예시" className="w-full block opacity-60"
+                onError={e => { const a = e.currentTarget.closest('aside'); if (a) a.hidden = true; }} />
+              <span className="absolute left-1/2 -translate-x-1/2 bottom-5 px-4 py-1 rounded-full bg-[#141210] text-white text-[15px] font-extrabold">예시</span>
+            </div>
+          </aside>
+        </div>
+      ) : (
+        /* ══ 담은 뒤 — 할 일 하나: 보내기 ══ */
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_440px] rounded-2xl border-2 border-[#141210] bg-surface overflow-hidden rise">
+          <section className="p-6 sm:p-10 lg:border-r-2 border-b-2 lg:border-b-0 border-[#141210] min-w-0">
+            <button type="button" onClick={() => setView('home')} className="inline-flex items-center gap-1.5 text-[16px] font-bold text-text-secondary mb-4">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>처음으로
+            </button>
+            <h1 className="text-[30px] sm:text-[40px] font-black tracking-[-0.035em] leading-[1.15] text-text kr">
+              {published ? '전단 주소가 만들어졌어요' : building || !build ? '전단을 만드는 중이에요' : '전단이 완성됐어요'}
+            </h1>
+            <p className="mt-2.5 text-[17px] sm:text-[19px] text-text-secondary kr">
+              {published ? '아래 버튼을 누르면 손님에게 문자로 보내는 화면으로 넘어갑니다.' : <>오른쪽이 손님 휴대폰에 보이는 모습입니다. 맞으면 <b className="text-text">보내기</b>를 누르세요.</>}
+            </p>
+
+            <div className="mt-7 max-w-[680px] grid grid-cols-1 sm:grid-cols-[1fr_1.6fr] rounded-xl border-2 border-[#141210] overflow-hidden bg-[#FFE14D]">
+              <div className="px-5 py-4 sm:border-r-2 border-b-2 sm:border-b-0 border-[#141210]">
+                <p className="text-[16px] font-bold text-text-secondary">담은 상품</p>
+                <p className="font-poster text-[40px] leading-tight text-text tabular-nums">{items.length}개</p>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-[16px] font-bold text-text-secondary">손님이 아끼는 돈</p>
+                <p className="font-poster text-[40px] leading-tight text-[#D7191C] tabular-nums">{totalSave.toLocaleString()}원</p>
+              </div>
+            </div>
+
+            {priceBlocked.length > 0 && (
+              <div className="mt-4 max-w-[680px] rounded-xl border-[1.5px] border-amber-500 bg-amber-50 px-5 py-4">
+                <p className="text-[17px] font-extrabold text-amber-900 kr">가격을 확인할 상품이 {priceBlocked.length}개 있어요</p>
+                <p className="mt-1 text-[15px] text-amber-900 kr">「{priceBlocked[0].name}」{priceBlocked.length > 1 ? ` 외 ${priceBlocked.length - 1}개` : ''}의 가격을 고치기 전엔 인쇄할 수 없습니다.</p>
+                <button type="button" onClick={() => setOpenFold('items')} className="mt-3 h-11 px-4 rounded-lg bg-[#141210] text-white text-[15px] font-extrabold">가격 고치러 가기</button>
+              </div>
+            )}
+
+            <button type="button" onClick={sendToCustomers} disabled={publishing || building || !build}
+              className="mt-7 w-full max-w-[680px] h-[76px] rounded-xl border-2 border-[#141210] bg-[#141210] text-white text-[22px] sm:text-[24px] font-black hover:bg-[#2a2622] disabled:opacity-40 disabled:cursor-not-allowed">
+              {publishing ? '전단 주소를 만드는 중...' : '손님에게 보내기'}
+            </button>
+            {published && (
+              <p className="mt-3 max-w-[680px] text-[16px] text-text-secondary kr">
+                전단 주소 <b className="text-text">{published.short_url.replace('https://', '')}</b>
+                <button type="button" onClick={() => copyUrl(published.short_code)} className="ml-2 font-extrabold text-text underline underline-offset-4">복사</button>
+              </p>
+            )}
+            <div className="mt-3 max-w-[680px] grid grid-cols-2 gap-2.5">
+              <button type="button" onClick={() => setSheet('add')} className="h-[60px] rounded-xl border-[1.5px] border-[#141210] bg-surface text-[18px] sm:text-[19px] font-extrabold text-text hover:bg-[#FFFBE3]">상품 더 담기</button>
+              <button type="button" onClick={() => setGalleryOpen(true)} className="h-[60px] rounded-xl border-[1.5px] border-[#141210] bg-surface text-[18px] sm:text-[19px] font-extrabold text-text hover:bg-[#FFFBE3]">디자인 바꾸기</button>
+            </div>
+
+            <div className="mt-9 max-w-[680px] space-y-2.5">
+              <Fold k="items" openFold={openFold} onToggle={toggleFold} title="담은 상품 고치기" badge={`${items.length}개`}>
+                {noImageIdxs.length > 0 && (
+                  <button type="button" onClick={() => openPicker(noImageIdxs, false)} className="mb-3 h-11 px-4 rounded-lg border-[1.5px] border-[#141210] text-[15px] font-extrabold text-text">사진 고르기 ({noImageIdxs.length})</button>
+                )}
+                <p className="text-[15px] text-text-secondary mb-2 kr">상품을 누르면 이름·가격·원산지·사진을 고칠 수 있습니다</p>
+                <ul className="space-y-2">
+                  {items.map((it, i) => (
+                    <li key={`${it.name}-${i}`} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 border ${it.priceCheck || !(it.salePrice > 0) ? 'border-amber-500 bg-amber-50' : 'border-border bg-bg'}`}>
+                      <button type="button" onClick={() => openEdit(i)} className="flex-1 min-w-0 text-left">
+                        <p className="text-[16px] font-extrabold text-text truncate">{it.name}</p>
+                        <p className="text-[14px] text-text-secondary truncate">{[it.unit, it.origin, it.badge].filter(Boolean).join(' · ') || '정보 추가하기'}</p>
+                      </button>
+                      <button type="button" onClick={() => openEdit(i)} className="text-right shrink-0 tabular-nums">
+                        {it.originalPrice > it.salePrice && <p className="text-[13px] text-text-secondary line-through leading-tight">{it.originalPrice.toLocaleString()}원</p>}
+                        <p className={`text-[17px] font-black leading-tight ${it.salePrice > 0 ? 'text-text' : 'text-amber-800'}`}>{it.salePrice > 0 ? `${it.salePrice.toLocaleString()}원` : '가격 입력'}</p>
+                      </button>
+                      <button type="button" onClick={() => removeItem(i)} className="h-10 px-3 rounded-lg text-[14px] font-bold text-text-secondary hover:text-rose-600" aria-label={`${it.name} 빼기`}>빼기</button>
+                    </li>
+                  ))}
+                </ul>
+              </Fold>
+              <Fold k="info" openFold={openFold} onToggle={toggleFold} title="행사 이름·기간 바꾸기">
+                <div className="space-y-2.5 field-quiet">
+                  <Input label="행사 이름" value={title} onChange={e => setTitle(e.target.value)} placeholder="예: 이번 주 행사" />
+                  <Input label="매장 이름" value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="전단에 표시됩니다" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input label="시작일" type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} />
+                    <Input label="종료일" type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} />
+                  </div>
+                  <button type="button" onClick={() => requestBuild(items, seed)} className="h-11 px-4 rounded-lg bg-[#141210] text-white text-[15px] font-extrabold">전단에 반영하기</button>
+                </div>
+              </Fold>
+              <Fold k="coupon" openFold={openFold} onToggle={toggleFold} title="QR 쿠폰 넣기" badge={couponEnabled ? '넣음' : undefined}>
+                <label className="flex items-center gap-3 text-[16px] font-bold text-text">
+                  <input type="checkbox" checked={couponEnabled} onChange={e => setCouponEnabled(e.target.checked)} className="w-5 h-5 accent-slate-900" />
+                  보낼 때 쿠폰도 같이 만들기
+                </label>
+                {couponEnabled && (
+                  <div className="mt-3 space-y-2 field-quiet">
+                    <Input value={couponForm.coupon_name} onChange={e => setCouponForm({ ...couponForm, coupon_name: e.target.value })} placeholder="쿠폰 이름 (예: 5,000원 할인)" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className="bg-surface border border-border rounded-lg px-3 py-2 text-[16px] text-text" value={couponForm.coupon_type} onChange={e => setCouponForm({ ...couponForm, coupon_type: e.target.value })}>
+                        <option value="fixed">원 할인</option>
+                        <option value="percent">% 할인</option>
+                      </select>
+                      <Input type="number" value={couponForm.discount_value} onChange={e => setCouponForm({ ...couponForm, discount_value: e.target.value })} placeholder="할인 금액" />
+                    </div>
+                  </div>
+                )}
+              </Fold>
+              <Fold k="print" openFold={openFold} onToggle={toggleFold} title="POP·인쇄 전단도 뽑기">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button type="button" onClick={() => setSheet('pop')} className="h-14 rounded-xl border-[1.5px] border-[#141210] text-[17px] font-extrabold text-text">POP 뽑기</button>
+                  <button type="button" onClick={() => { setSheet('print'); setPrintAgree(false); }} className="h-14 rounded-xl border-[1.5px] border-[#141210] text-[17px] font-extrabold text-text">인쇄 전단 뽑기</button>
+                </div>
+              </Fold>
+            </div>
+          </section>
+
+          <aside className="bg-bg px-4 sm:px-6 py-7 flex flex-col items-center gap-3" aria-label="전단 미리보기">
+            <p className="text-[15px] font-bold text-text-secondary">손님 휴대폰에 이렇게 보입니다</p>
+            <div className="relative w-full max-w-[393px] h-[680px] rounded-[26px] overflow-hidden bg-surface border-[1.5px] border-[#141210] shadow-elevated">
+              <FlyerPreview
+                title={title} storeName={storeName}
+                periodStart={periodStart} periodEnd={periodEnd}
+                categories={previewCategories as any}
+                template={build?.template || 'grid_hero'}
+                designVariant={build?.design_variant || null}
+              />
+              {building && <div className="absolute inset-x-0 top-0 h-1 sheen bg-border" />}
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ── 상품 더 담기 — 어디서 담을지 하나만 고른다 ── */}
+      {sheet === 'add' && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) setSheet(null); }}>
+          <div className="bg-surface w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-border p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[20px] font-black text-text">어디서 상품을 담을까요?</p>
+              <button onClick={() => setSheet(null)} className="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary hover:bg-bg" aria-label="닫기">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <BigChoice main title="엑셀 파일 올리기" hint="상품 목록 파일로 한 번에" onClick={() => setSheet('excel')} icon={ICON_EXCEL} />
+            <BigChoice title="잘 팔리는 상품" hint="계산대 판매 순위에서 체크만" onClick={() => openSheet('pos')} icon={ICON_POS} />
+            <BigChoice title="지난 전단에서" hint="예전 전단의 상품 가져오기" onClick={() => openSheet('last')} icon={ICON_AGAIN} />
+            <BigChoice title="상품 목록(카탈로그)에서" hint="등록해 둔 상품에서 체크만" onClick={() => openSheet('catalog')} icon={ICON_LIST} />
           </div>
         </div>
-      </div>
-
-      {/* 하단 고정 바 — 발행 1버튼 + POP·인쇄 뽑기 */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur border-t border-border">
-        <div className="max-w-5xl mx-auto flex items-center gap-2 px-4 py-3">
-          {published ? (
-            <>
-              <button onClick={() => copyUrl(published.short_code)}
-                className="flex-1 h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-colors inline-flex items-center justify-center gap-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                발행 완료 · URL 복사 ({published.short_url.replace('https://', '')})
-              </button>
-              <button onClick={() => setSheet('pop')} className="h-12 px-5 rounded-2xl btn-quiet text-sm">POP 뽑기</button>
-              <button onClick={() => { setSheet('print'); setPrintAgree(false); }} className="h-12 px-5 rounded-2xl btn-quiet text-sm">인쇄 뽑기</button>
-            </>
-          ) : (
-            <>
-              <button onClick={publish} disabled={publishing || !build || items.length === 0}
-                className="flex-1 h-12 rounded-2xl btn-ink text-[15px]">
-                {publishing ? '발행 중...' : couponEnabled ? '발행하기 (쿠폰 포함)' : '발행하기'}
-                {!publishing && (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
-                )}
-              </button>
-              <button onClick={() => setSheet('pop')} disabled={items.length === 0} className="h-12 px-5 rounded-2xl btn-quiet text-sm">POP 뽑기</button>
-              <button onClick={() => { setSheet('print'); setPrintAgree(false); }} disabled={items.length === 0} className="h-12 px-5 rounded-2xl btn-quiet text-sm">인쇄 뽑기</button>
-            </>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* ── 바텀시트: 소스 선택(체크만) ── */}
       {(sheet === 'pos' || sheet === 'catalog' || sheet === 'last') && (
@@ -1042,7 +911,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="font-poster text-2xl text-text leading-tight">디자인 고르기</p>
-                  <p className="text-[12px] text-text-muted mt-1 kr">
+                  <p className="text-[15px] text-text-muted mt-1 kr">
                     누르면 바로 그 디자인으로 다시 섭니다. 담긴 상품은 그대로예요.
                   </p>
                 </div>
@@ -1064,10 +933,10 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-text">알아서 고르기</p>
-                      {pickedTemplate === null && <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold">사용 중</span>}
+                      <p className="text-[16px] font-bold text-text">알아서 고르기</p>
+                      {pickedTemplate === null && <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white text-[13px] font-bold">사용 중</span>}
                     </div>
-                    <p className="text-[12px] text-text-muted kr mt-0.5">
+                    <p className="text-[15px] text-text-muted kr mt-0.5">
                       담긴 상품 수·카테고리·시즌을 보고 매번 가장 어울리는 디자인을 고릅니다
                       {build?.recommended_template ? ` — 지금은 「${templateLabel(build.recommended_template)}」` : ''}
                     </p>
@@ -1076,8 +945,8 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
               </button>
 
               <div className="flex items-center justify-between gap-2 px-1 mb-2">
-                <p className="text-[11px] font-bold text-text-muted tracking-wider shrink-0">직접 고르기 · {templates.length}종</p>
-                <p className="text-[11px] text-text-muted kr truncate">예시 상품으로 그린 모습이에요</p>
+                <p className="text-[14px] font-bold text-text-muted tracking-wider shrink-0">직접 고르기 · {templates.length}종</p>
+                <p className="text-[14px] text-text-muted kr truncate">예시 상품으로 그린 모습이에요</p>
               </div>
               {/* 행사 성격 걸러보기 */}
               <div className="flex gap-1.5 overflow-x-auto pb-2 mb-1 -mx-1 px-1">
@@ -1087,7 +956,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                   const on = galleryFilter === f.key;
                   return (
                     <button key={f.key} onClick={() => setGalleryFilter(f.key)}
-                      className={`h-8 px-3 rounded-full text-[12px] font-semibold whitespace-nowrap border transition-colors ${
+                      className={`h-8 px-3 rounded-full text-[15px] font-semibold whitespace-nowrap border transition-colors ${
                         on ? 'bg-slate-900 text-white border-slate-900' : 'bg-surface text-text-secondary border-border hover:border-border-strong'
                       }`}>
                       {f.label} <span className={on ? 'text-white/70' : 'text-text-muted'}>{n}</span>
@@ -1110,7 +979,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                         <img src={`${API_BASE}/api/flyer/business-types/templates/${t.value}/sample.png`} alt={`${t.label} 예시`}
                           loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top" />
                         {(active || isAiPick) && (
-                          <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold shadow ${
+                          <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[13px] font-bold shadow ${
                             active ? 'bg-slate-900 text-white' : 'bg-emerald-500 text-white'
                           }`}>
                             {active ? '사용 중' : '추천'}
@@ -1118,12 +987,12 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                         )}
                       </div>
                       <div className="px-3 py-2.5 border-t border-border">
-                        <p className="text-[13px] font-bold text-text truncate">{t.label}{t.baseOf ? <span className="ml-1 text-[11px] font-semibold text-text-muted">· {t.baseOf} 판</span> : null}</p>
-                        {t.scene && <p className="text-[11px] text-text-secondary kr truncate mt-0.5">{t.scene}</p>}
+                        <p className="text-[16px] font-extrabold text-text truncate">{t.label}</p>
+                        {t.scene && <p className="text-[14px] text-text-secondary kr truncate mt-0.5">{t.scene}</p>}
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {t.itemRange && <span className="px-1.5 py-0.5 rounded bg-bg text-[10px] font-semibold text-text-secondary">상품 {t.itemRange}</span>}
-                          {t.needsPhoto === false && <span className="px-1.5 py-0.5 rounded bg-bg text-[10px] font-semibold text-text-secondary">사진 없어도 됨</span>}
-                          {t.needsPhoto && <span className="px-1.5 py-0.5 rounded bg-bg text-[10px] font-semibold text-text-secondary">사진 있으면 좋음</span>}
+                          {t.itemRange && <span className="px-1.5 py-0.5 rounded bg-bg text-[13px] font-semibold text-text-secondary">상품 {t.itemRange}</span>}
+                          {t.needsPhoto === false && <span className="px-1.5 py-0.5 rounded bg-bg text-[13px] font-semibold text-text-secondary">사진 없어도 됨</span>}
+                          {t.needsPhoto && <span className="px-1.5 py-0.5 rounded bg-bg text-[13px] font-semibold text-text-secondary">사진 있으면 좋음</span>}
                         </div>
                       </div>
                     </button>
@@ -1131,7 +1000,7 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
                 })}
               </div>
               {templates.length === 0 && (
-                <p className="text-sm text-text-muted text-center py-10">디자인 목록을 불러오는 중입니다...</p>
+                <p className="text-[16px] text-text-muted text-center py-10">디자인 목록을 불러오는 중입니다...</p>
               )}
             </div>
           </div>
@@ -1360,7 +1229,9 @@ export default function FlyerComposerPage({ token: _token, businessType = 'mart'
         );
       })()}
 
-      <Toast show={copyToast} message="URL이 복사되었습니다" />
+      <ConfirmModal show={deleteModal.show}
+        title="전단 삭제" message={`"${deleteModal.title}"을(를) 삭제할까요?`} danger confirmLabel="삭제" onConfirm={() => removeFlyer(deleteModal.id)} onCancel={() => setDeleteModal({ show: false, id: '', title: '' })} />
+      <Toast show={copyToast} message="주소가 복사되었습니다" />
       <AlertModal alert={alert} onClose={() => setAlert({ ...alert, show: false })} />
     </div>
   );

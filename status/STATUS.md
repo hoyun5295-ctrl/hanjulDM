@@ -2,6 +2,12 @@
 
 > **업데이트:** 2026-10-26 (1차 강화 — 파일 등록형 제작 · 템플릿 20종 목업 미리보기 · 한줄로 완전 분리) — 그 아래 절은 당시 기록 원문 보존
 
+## ★ 2026-10-26 2차 — 매대 가격표 카드 규칙(20종) + 제작 화면 단순화 — **구현 완료 · Codex 적대 approve(3R) · 배포 대기**
+
+**SoT = `status/hanjul-flyer-revamp/18_showcard_cards_and_simple_composer.md`** (Harold 승인 1026 · 시안 `.impeccable/prototype/showcard.html` · 원칙 `PRODUCT.md`).
+한 줄 요약 = 20종을 엔진 하나 + 사양표로 · 카드 = 정가 취소선 → 행사가 빨강 최대 + 할인율 → N원 싸게 / 제작 화면 = 큰 선택 3개 → 손님에게 보내기 하나(발송 화면 자동 연결).
+검증 = backend tsc 0 · vitest 316 · frontend build 성공 · DDL 0. 축 밖 = 장바구니 innerHTML 이스케이프(18번 §5).
+
 ## ★ 2026-10-26 1차 강화 — 파일 등록 · 템플릿 20 · 한줄로 분리 — **구현 완료 · Codex 적대 approve(3R) · 배포 대기**
 
 **SoT = `status/hanjul-flyer-revamp/17_file_register_templates20_separation.md`** (5역할 브레인스토밍 수렴 · Harold 승인 1025 · 구현 반영 = §11).

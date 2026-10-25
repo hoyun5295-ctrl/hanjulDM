@@ -271,8 +271,8 @@ describe('F2 — 파일 칸 → 묶기 → 렌더', () => {
     expect(groups[0].name).toBe('정육');
   });
 
-  // 1025 실측: 6엔진이 뱃지·카드할인을 카드에서 버리고 있었다(fresh_daily 뱃지 0/6 · magazine·catalog_dark 둘 다 0/6 …)
-  for (const eng of ['grid_hero', 'fresh_daily', 'market_board', 'deal_feed', 'deal_bento', 'grid_muji', 'poster_promo', 'poster_pop', 'magazine', 'catalog_dark']) {
+  // 1025 실측: 6엔진이 뱃지·카드할인을 카드에서 버리고 있었다 → 1026 매대 가격표 엔진 하나로 20종 전부 검사
+  for (const eng of Object.keys(TEMPLATE_REGISTRY)) {
     it(`${eng} — 상품마다 규격·행사 뱃지·카드할인·원산지가 렌더된다`, () => {
       const items = Array.from({ length: 6 }, (_, i) => ({
         name: `시험상품${i + 1}`, originalPrice: 5000, salePrice: 3001 + i,
@@ -310,8 +310,6 @@ describe('F2 — 파일 칸 → 묶기 → 렌더', () => {
   });
 });
 
-const ENGINES_ALL = ['grid_hero', 'fresh_daily', 'market_board', 'deal_feed', 'deal_bento', 'grid_muji', 'poster_promo', 'poster_pop', 'magazine', 'catalog_dark', 'story'];
-
 function noImageData(count: number): FlyerRenderData {
   const items = Array.from({ length: count }, (_, i) => ({
     name: `상품 ${i + 1}`, originalPrice: 3000, salePrice: 1990 + i, unit: '1팩',
@@ -323,46 +321,25 @@ function noImageData(count: number): FlyerRenderData {
   };
 }
 
-describe('F1 — 무이미지 픽토그램은 요소로 그린다', () => {
-  for (const eng of ENGINES_ALL) {
+describe('F1 — 무이미지 픽토그램은 요소로 그린다(20종)', () => {
+  for (const code of Object.keys(TEMPLATE_REGISTRY)) {
     for (const count of [1, 6, 21]) {
-      it(`${eng} × ${count} — 속성 값·CSS 변수 안에 <svg 0건 · 요소 svg 1건 이상`, () => {
-        const html = renderTemplate(eng, noImageData(count));
-        expect(html, '속성 값 안 svg — 큰따옴표에 속성이 끊긴다').not.toMatch(/="[^"]*<svg/);
-        expect(html, 'CSS 변수 안 svg — content 는 마크업을 그리지 못한다').not.toMatch(/--[\w-]+\s*:\s*'<svg/);
+      it(`${code} × ${count} — 속성 값·CSS 변수 안 <svg 0건 · 요소 svg 있음`, () => {
+        const html = renderTemplate(code, noImageData(count));
+        expect(html, '속성 값 안 svg').not.toMatch(/="[^"]*<svg/);
+        expect(html, 'CSS 변수 안 svg').not.toMatch(/--[\w-]+\s*:\s*'<svg/);
+        expect(html).toMatch(/<span class="sc-(ico|cico)"><svg width="1em"/);
       });
     }
   }
-
-  // 그림을 정적 요소로 그리는 3엔진(1025 정정 대상) — 요소 svg가 실제로 나온다.
-  //   (나머지는 클라이언트 스크립트 데이터·스펙 슬랩으로 그린다 — 게이트 6 소유)
-  for (const eng of ['deal_bento', 'grid_muji', 'poster_pop']) {
-    it(`${eng} — 요소 <span class="em"><svg 가 렌더된다`, () => {
-      expect(renderTemplate(eng, noImageData(6))).toMatch(/<span class="em"><svg width="1em"/);
-    });
-  }
-
-  it('클라이언트 폴백 스크립트가 픽토그램을 글자로 넣지 않는다(textContent 금지)', () => {
-    const html = renderTemplate('story', noImageData(6));
-    expect(html).not.toMatch(/\.textContent\s*=\s*it\.emoji/);
-  });
 });
 
 // ────────────────────────────────────────────────────
-// §3 템플릿 20 · 목업 · 판 구조 · 추천기
+// §3 · 18번 — 템플릿 20 · 목업 · 매대 가격표 카드 규칙
 // ────────────────────────────────────────────────────
-import { TEMPLATE_REGISTRY, PAN_TABLE } from '../flyer/config/flyer-business-types';
+import { TEMPLATE_REGISTRY, TEMPLATE_SPEC } from '../flyer/config/flyer-business-types';
 import { MOCK_SETS, buildMockRenderData } from '../flyer/product/template-mocks';
 import { recommendTemplate } from '../flyer/product/template-recommender';
-
-/** 판 구조 표지 — DOM 요소·속성 값(문자열 수가 아니라 엔진이 그린 대표 요소 수 · 열 값 · 밴드) */
-function markers(html: string) {
-  return {
-    hero: (html.match(/\sdata-hero[\s>]/g) || []).length,
-    cols: [...new Set((html.match(/data-cols="(\d)"/g) || []))].sort().join(','),
-    band: (html.match(/data-band="(\w+)"/) || [])[1],
-  };
-}
 
 describe('§3-3 목업 세트', () => {
   for (const [key, set] of Object.entries(MOCK_SETS)) {
@@ -380,23 +357,93 @@ describe('§3-3 목업 세트', () => {
   }
 });
 
+describe('18 — 20종 사양 = 한 엔진 · 조합 고유', () => {
+  it('사양 키 = 레지스트리 키(20종)', () => {
+    expect(Object.keys(TEMPLATE_SPEC).sort()).toEqual(Object.keys(TEMPLATE_REGISTRY).sort());
+    expect(Object.keys(TEMPLATE_SPEC)).toHaveLength(20);
+  });
+  it('(구조, 대표 수, 테마) 조합이 템플릿마다 다르다 — 색만 다른 복제 금지', () => {
+    const keys = Object.values(TEMPLATE_SPEC).map(s => `${s.layout}/${s.heroN}/${s.theme}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+  it('렌더 표지 = 사양(data-template · data-layout · data-theme · 대표 수)', () => {
+    for (const [code, spec] of Object.entries(TEMPLATE_SPEC)) {
+      const data = buildMockRenderData(code)!;
+      const html = renderTemplate(code, data);
+      expect(html, code).toContain(`data-template="${code}"`);
+      expect(html, code).toContain(`data-layout="${spec.layout}"`);
+      expect(html, code).toContain(`data-theme="${spec.theme}"`);
+      const heroes = (html.match(/\sdata-hero[\s>]/g) || []).length;
+      const want = spec.layout === 'single' ? 1 : (spec.layout === 'heroGrid' || spec.layout === 'heroList') ? spec.heroN : 0;
+      expect(heroes, code).toBe(want);
+    }
+  });
+  it('폐기·옛 코드(story·magazine_zine·catalog_swipe·grid·없는 코드·constructor)는 20종 중 하나로 렌더된다', () => {
+    for (const old of ['story', 'magazine_zine', 'catalog_swipe', 'grid', 'season_chuseok', 'nope', 'constructor', '__proto__']) {
+      const html = renderTemplate(old, noImageData(6));
+      const m = html.match(/data-template="([^"]+)"/);
+      expect(m && Object.prototype.hasOwnProperty.call(TEMPLATE_SPEC, m[1]), old).toBe(true);
+    }
+  });
+});
+
+describe('18 — 매대 가격표 카드 규칙(40~60대 판독 기준)', () => {
+  const tpl = fs.readFileSync(path.resolve(BACKEND_SRC, 'utils/flyer/product/flyer-templates.ts'), 'utf-8');
+  const css = tpl.slice(tpl.indexOf('export function renderShowcardEngine'), tpl.indexOf('export function renderTemplate'));
+  const sizes = (sel: RegExp) => [...css.matchAll(sel)].map(m => Number(m[1]));
+
+  it('행사가 28px 이상(모든 형태)', () => {
+    const now = sizes(/\.sc-pr-\w+ \.sc-now(?:\.pr-\w)?\{font-size:(\d+)px/g);
+    expect(now.length).toBeGreaterThanOrEqual(5);
+    expect(Math.min(...now)).toBeGreaterThanOrEqual(28);
+  });
+  it('상품명 16px 이상 · 정상가·아끼는 금액·규격 14px 이상', () => {
+    const nm = sizes(/\.sc-nm(?:\.nm-\w)?\{font-size:(\d+)px/g);
+    expect(nm.length).toBeGreaterThan(5);
+    expect(Math.min(...nm)).toBeGreaterThanOrEqual(16);
+    for (const cls of ['sc-was', 'sc-save', 'sc-spec']) {
+      const v = sizes(new RegExp('\\.' + cls + '\\{[^}]*font-size:(\\d+)px', 'g')).concat(sizes(new RegExp('\\.' + cls + '\\{font-size:(\\d+)px', 'g')));
+      expect(v.length, cls).toBeGreaterThan(0);
+      expect(Math.min(...v), cls).toBeGreaterThanOrEqual(14);
+    }
+  });
+  it('기울인 글씨·애니메이션 0', () => {
+    expect(css).not.toMatch(/rotate\(/);
+    expect(css).not.toMatch(/@keyframes/);
+  });
+
+  for (const code of Object.keys(TEMPLATE_REGISTRY)) {
+    it(`${code} — 할인 상품마다 정상가 취소선 · 할인율 딱지 · 「N원 싸게」 · 전단 머리 「다 사면 아껴요」 · 영문 장식 0`, () => {
+      const data = buildMockRenderData(code)!;
+      const html = renderTemplate(code, data);
+      const all = data.categories.flatMap(c => c.items);
+      const discounted = all.filter(i => i.originalPrice > i.salePrice && i.salePrice > 0).length;
+      expect((html.match(/class="sc-off"/g) || []).length, 'sc-off').toBe(discounted);
+      expect((html.match(/class="sc-was"/g) || []).length, 'sc-was').toBe(discounted);
+      expect((html.match(/원 싸게<\/span>/g) || []).length, 'save').toBe(discounted);
+      expect(html).toMatch(/이번 전단 다 사면 <b>[\d,]+원<\/b> 아껴요/);
+      const text = html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ');
+      expect(text.match(/[A-Za-z]{4,}/g) || [], '영문 장식 문구').toEqual([]);
+    });
+  }
+});
+
 describe('§3-6 전 20종 — 목업 실렌더 스모크', () => {
   const codes = Object.keys(TEMPLATE_REGISTRY);
   it('레지스트리 20종', () => expect(codes).toHaveLength(20));
   for (const code of codes) {
-    it(`${code} — 렌더 · 상품 수만큼 data-product · 머리 3요소 · 픽토그램 · 속성 안 svg 0 · 갤러리 메타`, () => {
+    it(`${code} — 렌더 · 상품 수만큼 data-product · 머리 3요소 · 속성 안 svg 0 · 갤러리 메타`, () => {
       const data = buildMockRenderData(code)!;
       const html = renderTemplate(code, data);
       const n = data.categories.reduce((s, c) => s + c.items.length, 0);
       expect(html.length).toBeGreaterThan(2000);
       expect(html).toContain('data-media-css');
       expect(html).toMatch(/data-band="(small|mid|large)"/);
-      const products = html.includes("setAttribute('data-product'") ? n : (html.match(/\sdata-product=/g) || []).length;
-      expect(products, '상품 누락').toBe(n);
+      expect((html.match(/\sdata-product=/g) || []).length, '상품 누락·중복').toBe(n);
       expect(html).toContain(data.storeName);
       expect(html).toContain(data.title);
+      expect(html).toContain('11.02 ~ 11.08');
       expect(html).not.toMatch(/="[^"]*<svg/);
-      expect(html, '픽토그램(정적 요소 또는 스크립트 데이터)').toMatch(/<svg width="1em"|\\u003csvg width=\\"1em\\"/); // 스크립트 데이터는 < 를 < 로 이스케이프
       const meta = TEMPLATE_REGISTRY[code];
       expect(meta.scene && meta.itemRange && meta.filter, '갤러리 메타').toBeTruthy();
     });
@@ -404,56 +451,14 @@ describe('§3-6 전 20종 — 목업 실렌더 스모크', () => {
   it('같은 코드 = 같은 그림(재현성)', () => {
     for (const code of codes) expect(renderTemplate(code, buildMockRenderData(code)!)).toBe(renderTemplate(code, buildMockRenderData(code)!));
   });
-});
-
-describe('§3-1 새 엔진 3 — 베스트10 골격 계약', () => {
-  const data: FlyerRenderData = { storeName: '실측마트', title: '이번 주 행사', period: '', periodStart: '2026-11-02', periodEnd: '2026-11-08',
-    categories: [{ name: '선물세트', items: [{ name: '한우 세트', salePrice: 99000, originalPrice: 129000, badge: '한정 5' }, { name: '김 세트', salePrice: 19900, originalPrice: 0 }] }] };
-  for (const eng of ['price_board', 'single_hero', 'gift_set']) {
-    const html = renderTemplate(eng, data);
-    it(`${eng} — 매장·행사·기간 · 매장명 재노출 · 무이미지 픽토그램 · data-product`, () => {
-      expect(html).toContain('실측마트');
-      expect(html).toContain('이번 주 행사');
-      expect(html).toContain('11.02');
-      expect(html.split('실측마트').length - 1).toBeGreaterThanOrEqual(2);
-      expect(html).toMatch(/<svg width="1em"/);
-      expect((html.match(/\sdata-product=/g) || []).length).toBe(2);
-      expect(html).not.toMatch(/더\s*보기/);
+  it('가격대 묶음(gift_set) — 판매가 기준 · 빈 가격대는 그리지 않는다', () => {
+    const html = renderTemplate('gift_set', {
+      storeName: 'M', title: 'T', period: '', categories: [{ name: '선물세트', items: [
+        { name: '한우 세트', salePrice: 99000, originalPrice: 129000 }, { name: '김 세트', salePrice: 19900, originalPrice: 0 }] }],
     });
-  }
-  it('gift_set — 가격대 묶음(판매가 기준)', () => {
-    const html = renderTemplate('gift_set', data);
     expect(html).toContain('3만원 이하');
     expect(html).toContain('10만원 이하');
-    expect(html).not.toContain('5만원 이하'); // 빈 가격대는 그리지 않는다
-  });
-});
-
-describe('§3-2 판 7 — 구조 차이 · 저장 코드 재현', () => {
-  it('판 = 레지스트리 코드 · 기반 엔진은 살아 있는 엔진', () => {
-    for (const [code, pan] of Object.entries(PAN_TABLE)) {
-      expect(TEMPLATE_REGISTRY[code], code).toBeTruthy();
-      expect(TEMPLATE_REGISTRY[code].baseOf, code).toBeTruthy();
-      const html = renderTemplate(code, buildMockRenderData(code)!);
-      expect(html, code).toContain(`data-engine="${pan.engine}"`);
-      expect(html, code).toContain(`data-template="${code}"`);
-    }
-  });
-  for (const [code, pan] of Object.entries(PAN_TABLE)) {
-    it(`${code} — 같은 목업의 기반 엔진 렌더와 구조 표지 2개 이상 다르다`, () => {
-      const data = buildMockRenderData(code)!;
-      const a = markers(renderTemplate(code, data));
-      const b = markers(renderTemplate(pan.engine, data));
-      const diff = (['hero', 'cols', 'band'] as const).filter(k => a[k] !== b[k]);
-      expect(diff.length, `${code} ${JSON.stringify(a)} vs ${pan.engine} ${JSON.stringify(b)}`).toBeGreaterThanOrEqual(2);
-      expect(a.hero, '대표 수 = 판 정의').toBe(pan.layout.hero * (pan.engine === 'poster_pop' ? data.categories.length : 1));
-    });
-  }
-  it('판 시즌이 시즌 토큰을 정한다', () => {
-    for (const [code, pan] of Object.entries(PAN_TABLE)) {
-      if (!pan.season) continue;
-      expect(renderTemplate(code, buildMockRenderData(code)!), code).toContain(`data-season="${pan.season}"`);
-    }
+    expect(html).not.toContain('5만원 이하');
   });
 });
 

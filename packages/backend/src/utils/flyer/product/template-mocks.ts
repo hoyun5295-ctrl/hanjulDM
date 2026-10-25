@@ -7,7 +7,7 @@
  *   - 날짜·문구 고정(재현성) — 같은 코드 = 같은 그림.
  */
 import type { FlyerRenderData, FlyerRenderItem } from './flyer-templates';
-import { PAN_TABLE, TEMPLATE_REGISTRY } from '../config/flyer-business-types';
+import { TEMPLATE_SPEC, TEMPLATE_REGISTRY } from '../config/flyer-business-types';
 
 type MockItem = FlyerRenderItem;
 const it = (name: string, salePrice: number, originalPrice: number, extra: Partial<MockItem> = {}): MockItem =>
@@ -68,6 +68,14 @@ export const MOCK_SETS: Record<string, { category: string; items: MockItem[] }> 
     it('물티슈 10팩', 9900, 0, { unit: '100매×10', badge: '한정 60' }),
     it('대용량 세탁세제', 16900, 21900, { unit: '3L' }),
   ] },
+  drinks: { category: '음료', items: [
+    it('탄산음료 1.5L', 5000, 6600, { unit: '2개 · 1.5L', badge: '1+1' }),
+    it('보리차 티백', 3980, 4980, { unit: '50입', cardDiscount: 'KB카드 10%' }),
+    it('캔커피 24입', 12900, 16800, { unit: '175ml×24', badge: '한정 40' }),
+    it('생수 2L 6입', 3990, 0, { unit: '2L×6' }),
+    it('오렌지 주스', 4480, 5980, { unit: '1.5L' }),
+    it('맥주 6캔', 9900, 12000, { unit: '500ml×6' }),
+  ] },
   gift: { category: '선물세트', items: [
     it('한우 정육 선물세트', 129000, 159000, { unit: '불고기·국거리 1.2kg', origin: '국내산', badge: '한정 20' }),
     it('사과·배 혼합 세트', 49900, 59900, { unit: '사과6·배4', origin: '국내산', cardDiscount: 'KB카드 10%' }),
@@ -95,30 +103,22 @@ const SET_RECIPES: Record<string, () => Array<{ name: string; items: MockItem[] 
   gift: () => cats('gift'),
   mixed: () => cats('meat', 'produce').map(c => ({ ...c, items: c.items.slice(0, 5) })),
   dairy: () => cats('dairy', 'living'),
+  drinks: () => cats('drinks'),
   priceBoard: () => cats('grocery', 'dairy', 'living', 'produce', 'meat').map(c => ({ ...c, items: c.items.slice(0, 7) })),
   single: () => [{ name: '정육', items: [MOCK_SETS.meat.items[1], MOCK_SETS.meat.items[0]].map(x => ({ ...x })) }],
 };
 
-/** 엔진 코드 → 대표 장면 목업 세트(판은 PAN_TABLE.mockSet) */
-const ENGINE_MOCK: Record<string, string> = {
-  grid_hero: 'mixed', fresh_daily: 'produce', market_board: 'grocery', deal_feed: 'mixed', deal_bento: 'dairy',
-  grid_muji: 'gift', poster_promo: 'meat', poster_pop: 'mixed', magazine: 'seafood', catalog_dark: 'meat',
-  price_board: 'priceBoard', single_hero: 'single', gift_set: 'gift',
-};
-
+/** 템플릿마다 그 장면의 행사 제목 — 같은 구조끼리 썸네일 머리가 똑같아 보이지 않게 */
 const TITLES: Record<string, string> = {
-  gift: '명절 선물 대전', single: '오늘 딱 하나', priceBoard: '이번 주 알뜰 가격표', seafood: '오늘 들어온 바다',
-  produce: '제철 산지 직송', meat: '정육 특가 주간', grocery: '생필품 장보기', dairy: '아침 식탁 특가', mixed: '이번 주 행사',
-};
-
-/** 판은 장면을 제목이 말한다 — 같은 기반 디자인끼리 썸네일 머리가 똑같아 보이지 않게 */
-const PAN_TITLES: Record<string, string> = {
-  fd_produce: '산지에서 온 과일·채소', fd_seafood: '새벽 수산 입고', mb_seol: '설 장보기 한마당', mb_dense: '생필품 빼곡 장터',
-  pp_opening: '그랜드 오픈 축하', pp_chuseok: '추석 선물 대목', pp_weekend: '주말 타임세일',
+  grid_hero: '이번 주 알뜰 장보기', fresh_daily: '제철 신선 코너', market_board: '이번 주 가격판', deal_feed: '오늘만 이 가격',
+  deal_bento: '아침 식탁 특가', grid_muji: '한우·선물 프리미엄', poster_promo: '11월 대형 행사', poster_pop: '여름 시원 특가',
+  magazine: '정육 특선 주간', catalog_dark: '음료·주류 묶음 할인', price_board: '이번 주 알뜰 가격표', single_hero: '오늘 딱 하나',
+  gift_set: '명절 선물 대전', fd_produce: '제철 과일·채소', fd_seafood: '오늘 들어온 생선', mb_seol: '설 장보기 한마당',
+  mb_dense: '생필품 대량 특가', pp_opening: '그랜드 오픈 축하', pp_chuseok: '추석 제수용품', pp_weekend: '주말 특가',
 };
 
 export function mockSetOf(code: string): string {
-  return PAN_TABLE[code]?.mockSet || ENGINE_MOCK[code] || 'mixed';
+  return Object.prototype.hasOwnProperty.call(TEMPLATE_SPEC, code) ? TEMPLATE_SPEC[code].mockSet : 'mixed';
 }
 
 /** 갤러리 미리보기 렌더 데이터 — 레지스트리에 없는 코드는 null */
@@ -127,11 +127,10 @@ export function buildMockRenderData(code: string): FlyerRenderData | null {
   const set = mockSetOf(code);
   return {
     storeName: '한줄마트',
-    title: PAN_TITLES[code] || TITLES[set] || '이번 주 행사',
+    title: TITLES[code] || '이번 주 행사',
     period: '',
     periodStart: '2026-11-02',
     periodEnd: '2026-11-08',
     categories: (SET_RECIPES[set] || SET_RECIPES.mixed)(),
-    noAutoImage: true,
   };
 }

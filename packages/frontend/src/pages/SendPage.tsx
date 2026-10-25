@@ -39,7 +39,7 @@ function calcBytes(text: string): number {
   return b;
 }
 
-export default function SendPage({ token }: { token: string }) {
+export default function SendPage({ token, initialFlyerId }: { token: string; initialFlyerId?: string }) {
   // ★ D158 알림톡 발송 — 1차 분류 채널 모드 (문자/알림톡)
   const [channelMode, setChannelMode] = useState<ChannelMode>('sms');
   const [alimtalkProfiles, setAlimtalkProfiles] = useState<AlimtalkProfile[]>([]);
@@ -64,7 +64,8 @@ export default function SendPage({ token }: { token: string }) {
   const [message, setMessage] = useState('');
   const [isAd, setIsAd] = useState(true);
   const [flyers, setFlyers] = useState<Flyer[]>([]);
-  const [selectedFlyer, setSelectedFlyer] = useState('');
+  // ★ 1026: 제작 화면 「손님에게 보내기」가 방금 만든 전단을 골라 둔 채 연다
+  const [selectedFlyer, setSelectedFlyer] = useState(initialFlyerId || '');
   const [showFlyerPreview, setShowFlyerPreview] = useState(false);
   const [senderNumbers, setSenderNumbers] = useState<string[]>([]);
   const [callback, setCallback] = useState('');
@@ -143,7 +144,7 @@ export default function SendPage({ token }: { token: string }) {
       const url = `https://hanjul-flyer.kr/${f.short_code}`;
       if (!message.includes(url)) setMessage(prev => prev ? `${prev}\n${url}` : url);
     }
-  }, [selectedFlyer]);
+  }, [selectedFlyer, flyers]); // 목록이 늦게 와도 골라 둔 전단 주소가 들어간다(중복은 includes 가 막는다)
 
   // ★ D158 알림톡: channelMode='alimtalk' 진입 시 발신프로필 + 카테고리 로딩
   useEffect(() => {

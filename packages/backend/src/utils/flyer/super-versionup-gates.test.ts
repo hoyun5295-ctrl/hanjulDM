@@ -146,16 +146,16 @@ describe('게이트 2 — 렌더 재현성·실렌더 스모크', () => {
     expect(html).toContain('해태 홈런볼');
   });
 
-  it('poster_promo 무이미지 = 스펙 조판 슬랩(이모지 폴백 폐기)', () => {
+  // ★ 1026 18번 — 옛 엔진 고유 마크업(slab-typo·nmc) 시험은 엔진 폐기로 대체: 같은 계약을 매대 가격표 엔진에서 본다
+  it('무이미지 = 카테고리 픽토그램 요소(이모지 폴백 폐기)', () => {
     const html = renderTemplate('poster_promo', makeData(3, false));
-    expect(html).toContain('slab-typo');
-    expect(html).toContain('<svg'); // 픽토그램
+    expect(html).toContain('<span class="sc-ico"><svg');
   });
 
-  it('grid_hero — 이름·가격 계급 클래스가 데이터로 내려간다(판정 = 서버 한 곳)', () => {
+  it('이름·가격 계급 클래스가 데이터로 내려간다(판정 = 서버 한 곳)', () => {
     const html = renderTemplate('grid_hero', makeData(3, false));
-    expect(html).toContain('"nmc"');
-    expect(html).toContain('"prc"');
+    expect(html).toMatch(/class="sc-nm nm-(s|m|l)"/);
+    expect(html).toMatch(/class="sc-now pr-(s|m|l)"/);
   });
 });
 
@@ -292,14 +292,14 @@ describe('게이트 5 — 제작 화면 경계 계약', () => {
     expect(route).toContain('<base href=');
   });
 
-  it('신규 엔진 2종 — 계급 클래스는 CT가 실제로 돌려주는 이름을 쓴다', () => {
+  it('엔진 CSS 의 계급 클래스는 CT가 실제로 돌려주는 이름을 쓴다(유령 클래스 0)', () => {
     const tpl = fs.readFileSync(path.resolve(BACKEND_SRC, 'utils/flyer/product/flyer-templates.ts'), 'utf-8');
-    const marketBoard = tpl.slice(tpl.indexOf('renderMarketBoardEngine'), tpl.indexOf('renderFreshDailyEngine'));
+    const engine = tpl.slice(tpl.indexOf('export function renderShowcardEngine'), tpl.indexOf('export function renderTemplate'));
     for (const ghost of ['.long{', '.xlong{', '.p-lg{', '.p-xl{']) {
-      expect(marketBoard.includes(ghost), `유령 클래스 ${ghost}`).toBe(false);
+      expect(engine.includes(ghost), `유령 클래스 ${ghost}`).toBe(false);
     }
-    expect(marketBoard).toContain('nm-m');
-    expect(marketBoard).toContain('pr-m');
+    expect(engine).toContain('nm-m');
+    expect(engine).toContain('pr-l');
   });
 });
 

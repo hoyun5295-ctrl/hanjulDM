@@ -92,6 +92,9 @@ function App() {
     return saved ? JSON.parse(saved) : null;
   });
   const [currentPage, setCurrentPage] = useState<Page>('flyer');
+  const [sendFlyerId, setSendFlyerId] = useState<string | undefined>(undefined);
+  // 제작 화면이 넘긴 전단은 그 한 번의 진입에만 쓴다. 발송 화면을 떠나면(메뉴 이동 · 로그아웃) 비운다
+  useEffect(() => { if (currentPage !== 'send') setSendFlyerId(undefined); }, [currentPage]);
   const [showMore, setShowMore] = useState(false);
 
   const handleLogin = (t: string, u: any) => { setToken(t); setUser(u); };
@@ -221,9 +224,9 @@ function App() {
             </div>
           </div>
         )}
-        {currentPage === 'flyer' && <FlyerComposerPage token={token} businessType={user?.businessType || 'mart'} />}
+        {currentPage === 'flyer' && <FlyerComposerPage token={token} businessType={user?.businessType || 'mart'} onGoSend={id => { setSendFlyerId(id); setCurrentPage('send'); }} />}
         {currentPage === 'pop' && <PopPage token={token} />}
-        {currentPage === 'send' && <SendPage token={token} />}
+        {currentPage === 'send' && <SendPage token={token} initialFlyerId={sendFlyerId} />}
         {currentPage === 'customers' && <CustomerPage token={token} />}
         {currentPage === 'catalog' && <CatalogPage token={token} />}
         {currentPage === 'coupons' && <CouponPage token={token} />}

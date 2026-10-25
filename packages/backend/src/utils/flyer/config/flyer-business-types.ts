@@ -29,40 +29,54 @@ export interface TemplateInfo {
   label: string;
   desc: string;
   color: string; // ★ D114: CSS gradient (인라인 스타일용) — Tailwind 동적 클래스는 purge됨
-  /** ★ 1025 17번 §3-5 갤러리 — 장면 한 줄 · 상품 수 범위 · 사진 필요 · 행사 성격 걸러보기 · 판이면 기반 디자인 */
+  /** ★ 1025 17번 §3-5 갤러리 — 장면 한 줄 · 상품 수 범위 · 사진 필요 · 행사 성격 걸러보기 */
   scene?: string;
   itemRange?: string;
   needsPhoto?: boolean;
   filter?: TemplateFilter;
-  baseOf?: string;
 }
 
 export type TemplateFilter = 'weekly' | 'deal' | 'fresh' | 'holiday' | 'premium';
 
-/** ★ 1025 17번 §3-2 — 판 = 기존 엔진 + 구조 차이(DOM). 템플릿 코드로 저장돼 다시 열어도 같은 판이다. */
-export interface PanLayout {
-  /** 대표(크게) 상품 수 */
-  hero: 0 | 1 | 2;
-  /** 목록 열 수 */
-  cols: 1 | 2 | 3;
-  /** dense = 상품 수와 무관하게 빼곡 밴드 */
-  band: 'auto' | 'dense';
-}
-export interface PanSpec {
-  engine: string;
-  layout: PanLayout;
-  season?: 'grand_open' | 'urgent' | 'newyear' | 'chuseok' | 'christmas' | 'summer' | 'winter';
+/**
+ * ★ 1026 18번 — 「매대 가격표」 한 엔진(renderShowcardEngine) + 템플릿마다 사양 하나.
+ *   구조(layout) 7 · 대표 상품 수(heroN) · 색 테마(theme) · 갤러리 목업(mockSet).
+ *   카드·가격 규칙(행사가 최대 · 할인율 딱지 · 정상가 취소선 · 아끼는 금액)은 엔진 공용 — 20종 모두 같은 가독성.
+ *   (layout, heroN, theme) 조합은 템플릿마다 달라야 한다(시험이 검사).
+ */
+export type ShowcardLayout = 'heroGrid' | 'grid' | 'list' | 'tiles' | 'single' | 'tiers' | 'heroList';
+export type ShowcardTheme =
+  | 'yellow' | 'paper' | 'red' | 'green' | 'leaf' | 'navy' | 'sky' | 'aqua'
+  | 'pink' | 'orange' | 'brown' | 'gold' | 'seol' | 'harvest' | 'premium' | 'gray';
+export interface ShowcardSpec {
+  layout: ShowcardLayout;
+  /** 대표(크게) 상품 수 — heroGrid·heroList·single 에서만 쓴다 */
+  heroN: 0 | 1 | 2;
+  theme: ShowcardTheme;
   /** 갤러리 미리보기 목업 세트(template-mocks.ts) */
   mockSet: string;
 }
-export const PAN_TABLE: Record<string, PanSpec> = {
-  fd_produce: { engine: 'fresh_daily',  layout: { hero: 0, cols: 3, band: 'auto' },  season: 'summer',     mockSet: 'produce' },
-  fd_seafood: { engine: 'fresh_daily',  layout: { hero: 2, cols: 3, band: 'auto' },                       mockSet: 'seafood' },
-  mb_seol:    { engine: 'market_board', layout: { hero: 1, cols: 2, band: 'auto' },  season: 'newyear',    mockSet: 'meat' },
-  mb_dense:   { engine: 'market_board', layout: { hero: 0, cols: 2, band: 'dense' },                      mockSet: 'grocery' },
-  pp_opening: { engine: 'poster_pop',   layout: { hero: 2, cols: 3, band: 'auto' },  season: 'grand_open', mockSet: 'mixed' },
-  pp_chuseok: { engine: 'poster_pop',   layout: { hero: 0, cols: 3, band: 'auto' },  season: 'chuseok',    mockSet: 'gift' },
-  pp_weekend: { engine: 'poster_pop',   layout: { hero: 2, cols: 2, band: 'dense' }, season: 'urgent',     mockSet: 'mixed' },
+export const TEMPLATE_SPEC: Record<string, ShowcardSpec> = {
+  grid_hero:    { layout: 'heroGrid', heroN: 1, theme: 'yellow',  mockSet: 'mixed' },
+  fresh_daily:  { layout: 'heroGrid', heroN: 1, theme: 'green',   mockSet: 'produce' },
+  market_board: { layout: 'list',     heroN: 0, theme: 'paper',   mockSet: 'grocery' },
+  deal_feed:    { layout: 'heroList', heroN: 1, theme: 'red',     mockSet: 'mixed' },
+  deal_bento:   { layout: 'grid',     heroN: 0, theme: 'sky',     mockSet: 'dairy' },
+  grid_muji:    { layout: 'heroGrid', heroN: 1, theme: 'premium', mockSet: 'gift' },
+  poster_promo: { layout: 'heroGrid', heroN: 2, theme: 'red',     mockSet: 'meat' },
+  poster_pop:   { layout: 'grid',     heroN: 0, theme: 'aqua',    mockSet: 'produce' },
+  magazine:     { layout: 'heroList', heroN: 1, theme: 'brown',   mockSet: 'meat' },
+  catalog_dark: { layout: 'list',     heroN: 0, theme: 'navy',    mockSet: 'drinks' },
+  price_board:  { layout: 'tiles',    heroN: 0, theme: 'yellow',  mockSet: 'priceBoard' },
+  single_hero:  { layout: 'single',   heroN: 1, theme: 'red',     mockSet: 'single' },
+  gift_set:     { layout: 'tiers',    heroN: 0, theme: 'gold',    mockSet: 'gift' },
+  fd_produce:   { layout: 'grid',     heroN: 0, theme: 'leaf',    mockSet: 'produce' },
+  fd_seafood:   { layout: 'heroGrid', heroN: 2, theme: 'navy',    mockSet: 'seafood' },
+  mb_seol:      { layout: 'heroList', heroN: 1, theme: 'seol',    mockSet: 'meat' },
+  mb_dense:     { layout: 'tiles',    heroN: 0, theme: 'gray',    mockSet: 'grocery' },
+  pp_opening:   { layout: 'heroGrid', heroN: 2, theme: 'pink',    mockSet: 'mixed' },
+  pp_chuseok:   { layout: 'list',     heroN: 0, theme: 'harvest', mockSet: 'gift' },
+  pp_weekend:   { layout: 'heroList', heroN: 2, theme: 'orange',  mockSet: 'mixed' },
 };
 
 // ============================================================
@@ -84,29 +98,27 @@ export const PAN_TABLE: Record<string, PanSpec> = {
 // deprecated 22종 발행 전단 안전 렌더: DEPRECATED_FALLBACK_MAP + CT-F14 renderTemplate 분기.
 // ============================================================
 export const TEMPLATE_REGISTRY: Record<string, TemplateInfo> = {
-  // ★ 2026-08-20 베스트 10 (16번 설계 §3) — 각 템플릿이 장사 장면 하나씩을 소유한다.
-  grid_hero:     { value: 'grid_hero',     label: '위클리 메인',     desc: '커머스 그리드 · 주간 행사 기본값 — 어떤 매장이든 안전한 첫 선택',   color: 'linear-gradient(135deg, #7C3AED, #EC4899)', scene: '주간 행사 기본', itemRange: '6~30개', needsPhoto: false, filter: 'weekly' },
-  fresh_daily:   { value: 'fresh_daily',   label: '신선 데일리',     desc: '딥그린 + 큰 사진 + 원산지 먼저 — 청과·수산·축산 신선 소구',        color: 'linear-gradient(135deg, #15803D, #65A30D)', scene: '신선 코너', itemRange: '5~20개', needsPhoto: true, filter: 'fresh' },
-  market_board:  { value: 'market_board',  label: '시장 대자보',     desc: '갱지 + 붉은 인장 + 점선 리더 — 사진 없이도 서는 유일한 판',         color: 'linear-gradient(135deg, #FBF6EA, #C0392B)', scene: '시장 가격판', itemRange: '8~40개', needsPhoto: false, filter: 'weekly' },
-  deal_feed:     { value: 'deal_feed',     label: '오늘의 핫딜',     desc: '카운트다운 + 마감 임박 — 타임세일·급처분의 긴박',                   color: 'linear-gradient(135deg, #0A0A0B, #FF2E2E)', scene: '타임세일', itemRange: '3~15개', needsPhoto: false, filter: 'deal' },
-  deal_bento:    { value: 'deal_bento',    label: '벤또 마켓',       desc: '파스텔 벤또 블록 — 소량 상품·감성 소구에 최강',                     color: 'linear-gradient(135deg, #FFC9A0, #FFE9C6)', scene: '소량 감성', itemRange: '4~12개', needsPhoto: false, filter: 'deal' },
-  grid_muji:     { value: 'grid_muji',     label: '프리미엄 셀렉트', desc: '여백 + 세리프 — 선물세트·고단가 상품의 정갈한 얼굴',               color: 'linear-gradient(135deg, #FAFAFA, #292524)', scene: '고단가·선물', itemRange: '4~16개', needsPhoto: true, filter: 'premium' },
-  poster_promo:  { value: 'poster_promo',  label: '포스터 임팩트',   desc: '인쇄 전단 룩 그대로 — POP·인쇄까지 6매체 정합 본진',               color: 'linear-gradient(135deg, #1C1917, #FBBF24)', scene: '인쇄 전단 룩', itemRange: '6~24개', needsPhoto: false, filter: 'weekly' },
-  poster_pop:    { value: 'poster_pop',    label: '팝 아트',         desc: '멤피스 스티커 + 형광 — 개점·이벤트·젊은 상권',                     color: 'linear-gradient(135deg, #FF3D2E, #FFD300)', scene: '개점·이벤트', itemRange: '5~18개', needsPhoto: false, filter: 'deal' },
-  magazine:      { value: 'magazine',      label: '매거진 스토리',   desc: '세리프 표지 + 챕터 — 사진 좋은 매장의 브랜드 전단',                 color: 'linear-gradient(135deg, #211D19, #B4552D)', scene: '브랜드 전단', itemRange: '6~20개', needsPhoto: true, filter: 'premium' },
-  catalog_dark:  { value: 'catalog_dark',  label: '다크 쇼케이스',   desc: '블랙 무대 + 조명 앰버 — 심야·주류·프리미엄 정육',                   color: 'linear-gradient(135deg, #050505, #FFB020)', scene: '주류·정육 프리미엄', itemRange: '4~16개', needsPhoto: false, filter: 'premium' },
-  // ★ 1025 17번 §3-1 새 엔진 3 — 현 10종이 못 덮는 상품 수 축
-  price_board:   { value: 'price_board',   label: '빼곡 가격표',     desc: '사진 없이 품목·규격·가격 줄표 — 30개 넘는 주간 행사를 한 장에',    color: 'linear-gradient(135deg, #F5F5F4, #DC2626)', scene: '대량 품목 가격표', itemRange: '30개 이상', needsPhoto: false, filter: 'weekly' },
-  single_hero:   { value: 'single_hero',   label: '단일 상품 폭탄',  desc: '한 상품을 화면 가득 — 오늘 딱 하나 밀 때',                         color: 'linear-gradient(135deg, #DC2626, #F59E0B)', scene: '단일 상품 집중', itemRange: '1~3개', needsPhoto: false, filter: 'deal' },
-  gift_set:      { value: 'gift_set',      label: '명절 선물세트',   desc: '세트 카드 + 가격대 묶음(3만·5만·10만) — 설·추석 선물 진열',        color: 'linear-gradient(135deg, #7F1D1D, #CA8A04)', scene: '명절 선물', itemRange: '6~20개', needsPhoto: false, filter: 'holiday' },
-  // ★ 1025 17번 §3-2 판 7 — 기존 디자인 + 구조 차이(PAN_TABLE) · 이름 뒤 「판」 정직 표기
-  fd_produce:    { value: 'fd_produce',    label: '청과 산지판',     desc: '대표 없이 3열 — 과일·채소를 산지·규격과 함께 촘촘히',              color: 'linear-gradient(135deg, #166534, #FACC15)', scene: '청과 진열', itemRange: '9~24개', needsPhoto: false, filter: 'fresh', baseOf: '신선 데일리' },
-  fd_seafood:    { value: 'fd_seafood',    label: '수산 새벽판',     desc: '대표 둘 + 3열 — 오늘 들어온 생선 둘을 크게',                       color: 'linear-gradient(135deg, #0C4A6E, #22D3EE)', scene: '수산 입고', itemRange: '6~18개', needsPhoto: false, filter: 'fresh', baseOf: '신선 데일리' },
-  mb_seol:       { value: 'mb_seol',       label: '설 장터판',       desc: '대표 하나 + 2열 가격판 — 설 장보기 품목을 장터처럼',               color: 'linear-gradient(135deg, #FBF6EA, #B91C1C)', scene: '설 장보기', itemRange: '8~30개', needsPhoto: false, filter: 'holiday', baseOf: '시장 대자보' },
-  mb_dense:      { value: 'mb_dense',      label: '빼곡 장터판',     desc: '2열 빼곡 가격판 — 공산품·생필품 대량 행사',                        color: 'linear-gradient(135deg, #FBF6EA, #1F2937)', scene: '생필품 대량', itemRange: '12~40개', needsPhoto: false, filter: 'weekly', baseOf: '시장 대자보' },
-  pp_opening:    { value: 'pp_opening',    label: '개점 축하판',     desc: '대표 둘 + 3칸 묶음 — 개점·리뉴얼 첫 주의 들뜬 얼굴',               color: 'linear-gradient(135deg, #DB2777, #FFD300)', scene: '개점·리뉴얼', itemRange: '6~18개', needsPhoto: false, filter: 'deal', baseOf: '팝 아트' },
-  pp_chuseok:    { value: 'pp_chuseok',    label: '추석 대목판',     desc: '3칸 묶음 진열 — 추석 선물·제수용품 대목',                         color: 'linear-gradient(135deg, #92400E, #FCD34D)', scene: '추석 대목', itemRange: '6~18개', needsPhoto: false, filter: 'holiday', baseOf: '팝 아트' },
-  pp_weekend:    { value: 'pp_weekend',    label: '주말 타임세일판', desc: '대표 둘 + 빼곡 밴드 — 금토일 한정 특가',                          color: 'linear-gradient(135deg, #111827, #EF4444)', scene: '주말 한정', itemRange: '6~16개', needsPhoto: false, filter: 'deal', baseOf: '팝 아트' },
+  // ★ 1026 18번 — 20종 모두 「매대 가격표」 카드 규칙. 코드는 그대로(저장된 전단 호환) · 이름·장면은 새 구성.
+  grid_hero:    { value: 'grid_hero',    label: '이번 주 행사',     desc: '대표 상품 하나를 크게, 나머지는 두 줄 카드 — 주간 행사 기본',     color: 'linear-gradient(135deg, #FFE14D, #F5C800)', scene: '주간 행사 기본', itemRange: '6~30개', needsPhoto: false, filter: 'weekly' },
+  fresh_daily:  { value: 'fresh_daily',  label: '신선 코너',        desc: '초록 머리 · 대표 하나 + 두 줄 카드 — 청과·채소 위주',           color: 'linear-gradient(135deg, #1F7A3A, #2F9A4F)', scene: '신선 상품', itemRange: '5~20개', needsPhoto: false, filter: 'fresh' },
+  market_board: { value: 'market_board', label: '시장 가격판',      desc: '줄마다 상품 · 가격 — 사진 없이도 읽기 쉬운 가격표',            color: 'linear-gradient(135deg, #F3EAD3, #E2D3AE)', scene: '가격판', itemRange: '8~40개', needsPhoto: false, filter: 'weekly' },
+  deal_feed:    { value: 'deal_feed',    label: '오늘 특가',        desc: '빨간 머리 · 대표 하나 + 가격 줄표 — 오늘만·급처분',            color: 'linear-gradient(135deg, #C8161A, #E43A3D)', scene: '오늘 특가', itemRange: '3~15개', needsPhoto: false, filter: 'deal' },
+  deal_bento:   { value: 'deal_bento',   label: '아침 식탁',        desc: '하늘색 머리 · 두 줄 카드 — 우유·계란·빵 같은 생활 식품',        color: 'linear-gradient(135deg, #CFE6FB, #A9D2F7)', scene: '생활 식품', itemRange: '4~16개', needsPhoto: false, filter: 'weekly' },
+  grid_muji:    { value: 'grid_muji',    label: '프리미엄 상품',    desc: '흰 머리 + 금색 선 · 대표 하나 + 두 줄 카드 — 한우·고급 상품',    color: 'linear-gradient(135deg, #FFFFFF, #D9B76A)', scene: '고급 상품', itemRange: '4~16개', needsPhoto: false, filter: 'premium' },
+  poster_promo: { value: 'poster_promo', label: '대형 행사',        desc: '빨간 머리 · 대표 둘 + 두 줄 카드 — 큰 행사 주간',              color: 'linear-gradient(135deg, #C8161A, #FFE14D)', scene: '대형 행사', itemRange: '8~30개', needsPhoto: false, filter: 'deal' },
+  poster_pop:   { value: 'poster_pop',   label: '여름 시원 특가',   desc: '청록 머리 · 두 줄 카드 — 여름 과일·음료',                       color: 'linear-gradient(135deg, #BDEBE6, #7FD6CB)', scene: '여름 시즌', itemRange: '6~20개', needsPhoto: false, filter: 'deal' },
+  magazine:     { value: 'magazine',     label: '정육 특선',        desc: '갈색 머리 · 대표 하나 + 가격 줄표 — 정육 코너 행사',             color: 'linear-gradient(135deg, #5A3A22, #8A5A36)', scene: '정육', itemRange: '5~20개', needsPhoto: false, filter: 'premium' },
+  catalog_dark: { value: 'catalog_dark', label: '음료·주류',        desc: '남색 머리 · 가격 줄표 — 음료·주류·간식 묶음',                   color: 'linear-gradient(135deg, #17335E, #2B5290)', scene: '음료·주류', itemRange: '6~30개', needsPhoto: false, filter: 'weekly' },
+  price_board:  { value: 'price_board',  label: '빼곡 가격표',      desc: '사진 없이 두 칸 가격표 — 30개 넘는 주간 행사를 한 장에',        color: 'linear-gradient(135deg, #FFE14D, #FFFFFF)', scene: '대량 품목', itemRange: '20개 이상', needsPhoto: false, filter: 'weekly' },
+  single_hero:  { value: 'single_hero',  label: '오늘 딱 하나',     desc: '한 상품을 화면 가득 · 나머지는 줄표 — 하나를 세게 밀 때',        color: 'linear-gradient(135deg, #C8161A, #FFE14D)', scene: '단일 상품', itemRange: '1~5개', needsPhoto: false, filter: 'deal' },
+  gift_set:     { value: 'gift_set',     label: '명절 선물세트',    desc: '가격대별 묶음(3만·5만·10만) — 설·추석 선물 진열',               color: 'linear-gradient(135deg, #7E1A1A, #E2B34A)', scene: '명절 선물', itemRange: '6~20개', needsPhoto: false, filter: 'holiday' },
+  fd_produce:   { value: 'fd_produce',   label: '제철 과일·채소',   desc: '연두 머리 · 두 줄 카드 — 산지·규격을 함께',                     color: 'linear-gradient(135deg, #CDEBB8, #9ED37F)', scene: '제철 청과', itemRange: '6~24개', needsPhoto: false, filter: 'fresh' },
+  fd_seafood:   { value: 'fd_seafood',   label: '수산 입고',        desc: '남색 머리 · 대표 둘 + 두 줄 카드 — 오늘 들어온 생선',            color: 'linear-gradient(135deg, #17335E, #3B6FB6)', scene: '수산', itemRange: '6~18개', needsPhoto: false, filter: 'fresh' },
+  mb_seol:      { value: 'mb_seol',      label: '설 장보기',        desc: '빨강·금색 머리 · 대표 하나 + 가격 줄표 — 설 장보기 품목',        color: 'linear-gradient(135deg, #B3121A, #E2B34A)', scene: '설 장보기', itemRange: '8~30개', needsPhoto: false, filter: 'holiday' },
+  mb_dense:     { value: 'mb_dense',     label: '생필품 대량',      desc: '회색 머리 · 두 칸 가격표 — 휴지·세제 같은 생필품',              color: 'linear-gradient(135deg, #3F4A57, #6B7785)', scene: '생필품', itemRange: '12~40개', needsPhoto: false, filter: 'weekly' },
+  pp_opening:   { value: 'pp_opening',   label: '개점·리뉴얼',      desc: '분홍 머리 · 대표 둘 + 두 줄 카드 — 개점 첫 주 행사',             color: 'linear-gradient(135deg, #C42E66, #FFE14D)', scene: '개점', itemRange: '6~20개', needsPhoto: false, filter: 'deal' },
+  pp_chuseok:   { value: 'pp_chuseok',   label: '추석 제수용품',    desc: '갈색·금색 머리 · 가격 줄표 — 추석 장보기·제수용품',              color: 'linear-gradient(135deg, #6B4423, #F2D27A)', scene: '추석 장보기', itemRange: '8~30개', needsPhoto: false, filter: 'holiday' },
+  pp_weekend:   { value: 'pp_weekend',   label: '주말 특가',        desc: '주황 머리 · 대표 둘 + 가격 줄표 — 금토일 한정',                 color: 'linear-gradient(135deg, #C8500E, #FFB070)', scene: '주말 한정', itemRange: '6~16개', needsPhoto: false, filter: 'deal' },
 };
 
 // ============================================================
@@ -121,6 +133,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateInfo> = {
 export const DEPRECATED_FALLBACK_MAP: Record<string, string> = {
   // ★ 2026-08-20 16번 설계 §3 — 베스트 10 통합으로 폐기된 2코드
   magazine_zine:    'magazine',
+  story:            'grid_hero', // ★ 1026: 옛 STORY 엔진 폐기 — 옛 발행 전단은 기본형으로
   catalog_swipe:    'catalog_dark',
   // 기본 5 → 신규
   grid:             'grid_hero',
