@@ -40,3 +40,12 @@
 - 검증: backend tsc 0 · vitest 380 · 사진 넣은 20종 393폭 렌더 가로 넘침 0 · 로컬 사진 24장으로 견본 생성 끝까지 실측(기준 주소 설정 유무 둘 다).
 - Codex 적대: 1R 2건(견본 사진 차단 · 미완 저장) → 2R 1건(사진 캐시 무효화 · 캐시 제거) + 범위 밖 1건(기준 주소가 data URL 에 붙음 · 이번 수정을 깨뜨려 같이 닫음) → 3R approve.
 - 축 밖(기록만): 상품명 사진 찾기가 부분 일치(배추 → 배 · 고추장 → 고추) · 장바구니 innerHTML 이스케이프(§5, 사진이 많아져 노출 증가) · POS 사진 자동 연동(POS-Agent 범위).
+
+## 7. 정정 — 이름 매칭 사진 전면 삭제 (2026-10-26)
+> 실측(Harold 서버): 내장 사진 라이브러리 파일 0장. Harold 「저작권 때문에 네이버 API 로 가장 맞는 것을 매칭(후보 → 사장님 확정)」. 승인 = 「진행하도록하자」.
+- §6 의 「그릴 때 라이브러리 사진 찾기」 · 「견본 사진 지정(MOCK_PHOTO · data URL 넣기)」는 틀린 전제(파일이 있다)였다 → 삭제. 사진 칸 · 견본 no-cache 는 유지.
+- 같은 뿌리 전수 grep 4곳 모두 닫음: 그릴 때(flyer-templates) · 저장 때 fillMissingImages 2순위(routes/flyer/flyers.ts) · 인쇄 이름 매칭(print/pipeline/image-pipeline.ts) · 견본 지정(template-mocks · template-sample).
+- 사진 = 네이버 이미지 후보 → 사장님 확정(catalog select-image) → flyer_catalog.image_url 한 길뿐. 없으면 그림 아이콘.
+- 인쇄 파이프라인: 화면이 늘 보내던 autoMatchImage 가 3단계(외부 사진 인라인 · 실패 시 없음)를 늘 돌게 하고 있었다 → 옵션 삭제와 함께 조기 반환을 지워 3단계 유지.
+- 계약 시험: 사진 주소 빈 상품 = 20종 img 0 · resolveProductImageUrl/getProductDisplay 호출은 product-images.ts 안에서만(변이로 실패 확인) · 견본 사진 주소 0. vitest 359 · tsc 0 · Codex 적대 1R approve.
+- 축 밖(Codex 기록 · 착수 안 함): print/renderer/slot-filler.ts:474 옛 라이브러리 주소가 남은 상품은 인쇄 사진 칸이 빈다 · frontend CatalogPage.tsx:245 신규 상품에서 고른 사진 주소가 저장 요청에 안 실린다(사진이 들어오는 유일한 길).

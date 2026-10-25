@@ -9,15 +9,13 @@
  *     (외부 URL을 렌더에 직주입하던 옛 동작 폐기 — 핫링크 차단·타임아웃이 인쇄 PDF 빈 칸이 되는 사고 계열).
  *
  * 이미지 소싱 순서:
- *   1. product-images.ts getProductDisplay() — PRODUCT_MAP(로컬 서빙 자산) 매칭
- *   (네이버는 후보 제시 전용 — 확정분은 카탈로그에 로컬 저장돼 imageUrl로 들어온다)
+ *   이름 매칭 없음(★ 1026 · 내장 라이브러리 파일 없음 · 저작권). 사진 = 네이버 후보에서 사장님이 확정해 카탈로그에 로컬 저장된 imageUrl 뿐.
  *
  * 배경제거: 기존 flyer-rembg.ts removeBackground() 재사용
  *   - 결과는 data:image/png;base64 data URL 인라인 (Puppeteer 네트워크 의존 제거)
  */
 
 import { removeBackground } from '../../flyer-rembg';
-import { getProductDisplay } from '../../../../product-images';
 
 // ============================================================
 // 타입
@@ -31,7 +29,6 @@ export interface PipelineProduct {
 
 export interface PipelineOptions {
   autoRembg?: boolean;
-  autoMatchImage?: boolean;
   companyId?: string;
 }
 
@@ -81,13 +78,7 @@ async function processOne(
 ): Promise<PipelineProduct> {
   let imageUrl = product.imageUrl || '';
 
-  // 1. 이미지 없으면 로컬 자산에서만 찾기 (네이버 소싱 제거 — 13번 설계 §0-3)
-  if (!imageUrl && opts.autoMatchImage) {
-    const display = getProductDisplay(product.productName || '');
-    if (display.imageUrl) {
-      imageUrl = display.imageUrl;
-    }
-  }
+  // 1. 이름으로 사진 찾기 없음 — ★ 1026 Harold: 사진은 카탈로그에서 사장님이 확정한 것만(내장 라이브러리 파일 없음 · 저작권)
 
   // 2. rembg 배경제거 (기존 flyer-rembg.ts) → data URL 인라인
   if (imageUrl && opts.autoRembg) {
@@ -128,7 +119,8 @@ export async function processProductImages<T extends PipelineProduct>(
   products: T[],
   opts: PipelineOptions = {},
 ): Promise<T[]> {
-  if (!opts.autoRembg && !opts.autoMatchImage) return products;
+  // ★ 1026: 이름 매칭 옵션이 사라져도 늘 돈다 — 3단계(외부 URL 인라인 · 실패 시 이미지 없음)는 옵션과 무관한 안전 장치다.
+  //   (옛 화면은 autoMatchImage:true 를 늘 보내 이 단계가 늘 돌았다 — 그 동작 유지)
 
   // 동시성 제한 (rembg/네이버API 부하 고려) — 최대 3개 병렬
   const MAX_PARALLEL = 3;

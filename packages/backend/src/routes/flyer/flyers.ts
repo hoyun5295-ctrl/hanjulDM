@@ -38,11 +38,11 @@ import { recommendDesign, coerceDesignVariant } from '../../utils/flyer/product/
 import type { FlyerRenderData } from '../../utils/flyer/product/flyer-templates';
 import { handleDbMigrationError, isDbMigrationError } from '../../utils/flyer/db-migration-error';
 import { resolveSeasonToken } from '../../utils/flyer/product/season-resolver';
-import { resolveProductImageUrl } from '../../utils/product-images';
 
 /**
  * ★ 이미지 없는 상품에 이미지 자동 매칭
- * 우선순위: ① 카탈로그 저장 이미지 → ② Pixabay 기본 이미지(PRODUCT_MAP)
+ * 카탈로그에 사장님이 확정한 사진(네이버 후보에서 고른 것)만 쓴다.
+ * ★ 1026 Harold: 내장 라이브러리(PRODUCT_MAP) 2순위 삭제 — 서버에 파일이 없고(죽은 주소 저장) 저작권상 이름 매칭 사진을 쓰지 않는다.
  */
 async function fillMissingImages(items: any[], companyId: string): Promise<void> {
   for (const item of items) {
@@ -53,11 +53,8 @@ async function fillMissingImages(items: any[], companyId: string): Promise<void>
         `SELECT image_url FROM flyer_catalog WHERE company_id = $1 AND product_name = $2 AND image_url IS NOT NULL AND image_url != '' ORDER BY usage_count DESC LIMIT 1`,
         [companyId, item.name.trim()]
       );
-      if (r.rows[0]?.image_url) { item.imageUrl = r.rows[0].image_url; continue; }
+      if (r.rows[0]?.image_url) item.imageUrl = r.rows[0].image_url;
     } catch {}
-    // 2순위: Pixabay 기본 이미지 (product-images PRODUCT_MAP)
-    const pixabayUrl = resolveProductImageUrl(item.name);
-    if (pixabayUrl) item.imageUrl = pixabayUrl;
   }
 }
 
@@ -1226,7 +1223,7 @@ router.post('/print-flyer', async (req: Request, res: Response) => {
     if (!companyId) return;
     const userId = (req as any).flyerUser?.userId;
 
-    const { title, period, products, paperSize, templateCode, storeName, autoRembg, autoMatchImage, format: reqFormat } = req.body;
+    const { title, period, products, paperSize, templateCode, storeName, autoRembg, format: reqFormat } = req.body;
 
     if (!title || !products || !Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: '제목과 상품 목록이 필요합니다' });
@@ -1269,11 +1266,10 @@ router.post('/print-flyer', async (req: Request, res: Response) => {
     }));
 
     // ★ D129 V2 이미지 파이프라인 — 기존 자산만 재사용
-    //   1) PRODUCT_MAP(getProductDisplay) → 2) 네이버 쇼핑 → 3) rembg 배경제거
+    //   rembg 배경제거만(★ 1026 이름 매칭 사진 삭제 — 사진은 카탈로그 확정본만)
     //   옵션 둘 다 false면 no-op 반환 (원본 그대로)
     const processedProducts = await processProductImages(rawProducts, {
       autoRembg: autoRembg === true,
-      autoMatchImage: autoMatchImage === true,
       companyId,
     }).catch(err => {
       console.warn('[print-flyer] image-pipeline 실패, 원본 사용:', err?.message || err);

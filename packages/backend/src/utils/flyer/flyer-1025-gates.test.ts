@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-import { renderTemplate, toAbsUrl, type FlyerRenderData } from '../flyer/product/flyer-templates';
+import { renderTemplate, type FlyerRenderData } from '../flyer/product/flyer-templates';
 
 const BACKEND_SRC = path.resolve(__dirname, '..', '..');
 function walk(dir: string, out: string[] = []): string[] {
@@ -338,14 +338,12 @@ describe('F1 — 무이미지 픽토그램은 요소로 그린다(20종)', () =>
 // §3 · 18번 — 템플릿 20 · 목업 · 매대 가격표 카드 규칙
 // ────────────────────────────────────────────────────
 import { TEMPLATE_REGISTRY, TEMPLATE_SPEC } from '../flyer/config/flyer-business-types';
-import { MOCK_SETS, MOCK_PHOTO, MOCK_PHOTO_BASE, buildMockRenderData } from '../flyer/product/template-mocks';
-import { getProductDisplay } from '../product-images';
+import { MOCK_SETS, buildMockRenderData } from '../flyer/product/template-mocks';
 import { recommendTemplate } from '../flyer/product/template-recommender';
-import { sampleHtml } from '../flyer/product/template-sample';
 
 describe('§3-3 목업 세트', () => {
   for (const [key, set] of Object.entries(MOCK_SETS)) {
-    it(`${key} — 5~10개 · 의무(1+1·묶음·카드할인·한정·원가 없음) · 사진은 MOCK_PHOTO 로만 · 픽토그램 있는 카테고리`, () => {
+    it(`${key} — 5~10개 · 의무(1+1·묶음·카드할인·한정·원가 없음) · 사진 없음 · 픽토그램 있는 카테고리`, () => {
       expect(set.items.length).toBeGreaterThanOrEqual(5);
       expect(set.items.length).toBeLessThanOrEqual(10);
       expect(set.items.some(i => i.badge === '1+1'), '1+1').toBe(true);
@@ -385,46 +383,19 @@ describe('18-2 사진 칸 = 20종 전부 · 모든 카드 모양', () => {
       expect(p).toContain('onerror="this.remove()"');
     }
   });
-  it('사진 주소가 빈 상품 = 상품명으로 내장 라이브러리 사진을 찾는다(noAutoImage 면 찾지 않는다)', () => {
+  // ★ 1026 Harold: 사진은 저작권 때문에 사장님이 네이버 후보에서 확정한 카탈로그 사진만 — 이름으로 붙이지 않는다
+  it('사진 주소가 빈 상품은 이름이 무엇이든 <img> 가 없다(그림 아이콘)', () => {
     const base: FlyerRenderData = { storeName: '시험마트', title: '시험', period: '', categories: [{ name: '정육', items: [{ name: '국산 삼겹살', salePrice: 1000, originalPrice: 2000 }] }] };
-    const lib = getProductDisplay('국산 삼겹살').imageUrl!;
-    expect(lib).toBeTruthy();
-    expect(renderTemplate('market_board', base)).toContain('src="' + lib.replace(/&/g, '&amp;'));
-    expect(renderTemplate('market_board', { ...base, noAutoImage: true })).not.toContain(lib);
+    for (const code of Object.keys(TEMPLATE_REGISTRY)) expect(renderTemplate(code, base), code).not.toContain('<img ');
   });
-  // ★ 1026 Codex: 견본은 about:blank 에서 찍는다 → 원격 사진 주소가 남으면 못 불러온 그림이 견본으로 굳는다
-  for (const code of Object.keys(TEMPLATE_REGISTRY)) {
-    it(`${code} — 견본 렌더 HTML 에 원격 사진 주소 0(사진은 data URL 이거나 빠짐)`, () => {
-      const html = sampleHtml(code)!.html;
-      expect(html).not.toContain(MOCK_PHOTO_BASE);
-      for (const src of html.match(/<img src="[^"]*"/g) || []) expect(src.startsWith('<img src="data:image/'), src.slice(0, 40)).toBe(true);
-    });
-  }
-  it('사진 주소 바꾸기(toAbsUrl)는 data:image 를 건드리지 않는다(기준 주소가 있어도)', () => {
-    const prev = process.env.FLYER_API_BASE_URL;
-    process.env.FLYER_API_BASE_URL = 'https://api.example.test';
-    try {
-      expect(toAbsUrl('data:image/jpeg;base64,AAAA')).toBe('data:image/jpeg;base64,AAAA');
-      expect(toAbsUrl('/api/x.jpg')).toBe('https://api.example.test/api/x.jpg');
-    } finally {
-      if (prev === undefined) delete process.env.FLYER_API_BASE_URL; else process.env.FLYER_API_BASE_URL = prev;
-    }
-  });
-  it('견본 사진 = 견본에 있는 상품 · 라이브러리에 있는 파일만(오타 · 없는 파일 0)', () => {
-    const names = new Set(Object.values(MOCK_SETS).flatMap(s => s.items.map(i => i.name)));
-    const lib = fs.readFileSync(path.join(BACKEND_SRC, 'utils', 'product-images.ts'), 'utf-8');
-    for (const [name, file] of Object.entries(MOCK_PHOTO)) {
-      expect(names.has(name), name).toBe(true);
-      expect(lib.includes(`image: '${file}'`), file).toBe(true);
-    }
+  it('이름으로 사진을 찾는 함수를 사진 경로에서 부르지 않는다(그리기 · 저장 · 인쇄)', () => {
+    const callers = SRC.filter(f => !f.file.endsWith('utils/product-images.ts') && /resolveProductImageUrl\(|getProductDisplay\(/.test(f.text));
+    expect(callers.map(f => f.file)).toEqual([]);
   });
   for (const code of Object.keys(TEMPLATE_REGISTRY)) {
-    it(`${code} — 견본은 이름 자동 찾기를 끄고, MOCK_PHOTO 상품은 빠짐없이 사진이 붙는다`, () => {
-      const d = buildMockRenderData(code)!;
-      expect(d.noAutoImage).toBe(true);
-      const items = d.categories.flatMap(c => c.items);
-      expect(items.some(i => i.imageUrl?.startsWith(MOCK_PHOTO_BASE))).toBe(true);
-      for (const i of items) expect(!!i.imageUrl, i.name).toBe(!!MOCK_PHOTO[i.name]);
+    it(`${code} — 견본(목업)에 사진 주소 0`, () => {
+      const items = buildMockRenderData(code)!.categories.flatMap(c => c.items);
+      expect(items.filter(i => i.imageUrl).map(i => i.name)).toEqual([]);
     });
   }
 });

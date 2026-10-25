@@ -142,7 +142,7 @@ export function renderProductImage(productName: string, size: number = 48, gener
 // DALL-E 3 이미지 생성 + 서버 저장
 // ============================================================
 
-export const PRODUCT_IMAGE_DIR = process.env.PRODUCT_IMAGE_PATH || path.resolve('./uploads/product-images');
+const PRODUCT_IMAGE_DIR = process.env.PRODUCT_IMAGE_PATH || path.resolve('./uploads/product-images');
 
 // 디렉토리 자동 생성
 if (!fs.existsSync(PRODUCT_IMAGE_DIR)) {

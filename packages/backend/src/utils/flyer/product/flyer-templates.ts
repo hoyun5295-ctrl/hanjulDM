@@ -15,8 +15,6 @@ import { renderQrSection, renderCartScript } from './flyer-page-injections';
 // ★ 2026-08-20 슈퍼버전업 2단계 — 렌더 준비 CT(프로모 분리·밴드·픽토그램) + URL 매체 토큰(13번 설계 §4·§5)
 import { prepareFlyerData, itemCountBand, countItems, bandStyleBlock, categoryPictogram, nameSizeClass, priceScaleClass, priceStyleBlock } from './flyer-render-prep';
 import { generateMediaCssBlock } from './design-tokens';
-// ★ 1026: 사진 주소가 빈 상품은 그릴 때 내장 사진 라이브러리를 한 번 더 찾는다(옛 엔진 동작 복원)
-import { resolveProductImageUrl } from '../../product-images';
 import { variantToStyleBlock, type DesignVariant } from './claude-design-renderer';
 
 // ============================================================
@@ -50,8 +48,6 @@ export interface FlyerRenderData {
   periodEnd?: string | null;
   /** D154 PHASE 0: 단축 코드 (og:image 동적 라우트 /api/flyer/og/{shortCode}.png 생성용) */
   shortCode?: string | null;
-  /** ★ 1026: 상품명 사진 자동 찾기 끔(갤러리 견본 = 사진을 직접 고른 목업이라 이름 매칭 오답을 막는다) */
-  noAutoImage?: boolean;
 }
 
 export interface FlyerRenderItem {
@@ -84,7 +80,7 @@ export function fmtPrice(price: number | null | undefined): string {
 
 export function toAbsUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  if (url.startsWith('http') || url.startsWith('data:image/')) return url; // ★ 1026: 견본 사진(data URL)에 base 를 붙이면 깨진다
+  if (url.startsWith('http')) return url;
   const base = process.env.FLYER_API_BASE_URL || '';
   return base ? base + url : url;
 }
@@ -320,10 +316,7 @@ function scCatHead(name: string, count: number, id: string): string {
 
 export function renderShowcardEngine(d: FlyerRenderData, token: SeasonToken, spec: ShowcardSpec): string {
   const th = SC_THEMES[spec.theme] || SC_THEMES.yellow;
-  // 사진 주소가 빈 상품 = 상품명으로 내장 사진 라이브러리를 찾는다(못 찾으면 그림 아이콘)
-  if (!d.noAutoImage) {
-    d = { ...d, categories: d.categories.map(c => ({ ...c, items: c.items.map(x => (x.imageUrl ? x : { ...x, imageUrl: resolveProductImageUrl(x.name) || undefined })) })) };
-  }
+  // ★ 1026 Harold: 사진은 저작권 때문에 사장님이 네이버 후보에서 고른 사진(카탈로그 image_url)만 쓴다 — 이름으로 자동 매칭하지 않는다
   const items: ScItem[] = flattenItems(d);
   const heroN = spec.layout === 'single' ? Math.min(1, items.length)
     : (spec.layout === 'heroGrid' || spec.layout === 'heroList') ? Math.min(spec.heroN, items.length) : 0;
