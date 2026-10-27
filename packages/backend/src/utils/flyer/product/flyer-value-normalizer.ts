@@ -3,7 +3,7 @@
  *
  * 원칙: 값은 규칙만 만든다 — AI가 가격·수량을 쓰는 경로 0.
  *       못 읽으면 null + 사유(0으로 바꾸지 않는다 — 「2개 5000원」이 2원이 되던 결함).
- * 소비처: flyer-excel-mapper.ts(applyFlyerMapping) 1곳.
+ * 소비처: flyer-excel-mapper.ts(applyFlyerMapping) · sheetDateToYmd = routes/flyer/customers.ts(고객 엑셀 업로드 생일).
  */
 
 /** 셀 원문 → 비교용 문자열(공백 정리) */
@@ -65,4 +65,22 @@ export function normalizeBadge(raw: unknown): { value: string | null; empty: boo
 /** 대표 상품 표시 — 「○」「O」「Y」「예」「대표」「1」「V」「✓」 */
 export function isMarked(raw: unknown): boolean {
   return /^(○|◯|O|o|Y|y|예|대표|1|V|v|✓|✔|TRUE|true)$/.test(cellText(raw));
+}
+
+/**
+ * 엑셀 날짜 칸(Date) · 날짜 글자 → YYYY-MM-DD · 못 읽으면 null
+ * ★ 1027: SheetJS 0.20.3 은 날짜 칸을 프로세스 시각대의 그날 자정으로 준다 → 그 시각대로 읽는다(UTC 로 읽으면 한국 시각대에서 하루 앞)
+ */
+export function sheetDateToYmd(v: any): string | null {
+  if (!v) return null;
+  if (v instanceof Date) {
+    const y = v.getFullYear();
+    const m = String(v.getMonth() + 1).padStart(2, '0');
+    const d = String(v.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const s = String(v).trim();
+  const match = s.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/);
+  if (match) return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+  return null;
 }

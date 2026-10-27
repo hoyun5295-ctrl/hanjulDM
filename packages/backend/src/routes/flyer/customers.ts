@@ -18,6 +18,7 @@ import {
   FlyerFilterInput,
 } from '../../utils/flyer/send/flyer-customer-filter';
 import { normalizePhone } from '../../utils/normalize-phone';
+import { sheetDateToYmd } from '../../utils/flyer/product/flyer-value-normalizer';
 
 const router = Router();
 
@@ -144,7 +145,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
       const name = row['이름'] || row['성명'] || row['name'] || null;
       const gender = normalizeGender(row['성별'] || row['gender']);
-      const birthDate = parseDateValue(row['생일'] || row['생년월일'] || row['birth_date']);
+      const birthDate = sheetDateToYmd(row['생일'] || row['생년월일'] || row['birth_date']);
       const email = row['이메일'] || row['email'] || null;
       const address = row['주소'] || row['address'] || null;
 
@@ -230,20 +231,6 @@ function normalizeGender(v: any): string | null {
   const s = String(v).trim();
   if (s === '남' || s === '남자' || s === 'M' || s === 'm' || s === 'male') return 'M';
   if (s === '여' || s === '여자' || s === 'F' || s === 'f' || s === 'female') return 'F';
-  return null;
-}
-
-function parseDateValue(v: any): string | null {
-  if (!v) return null;
-  if (v instanceof Date) {
-    const y = v.getUTCFullYear();
-    const m = String(v.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(v.getUTCDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-  const s = String(v).trim();
-  const match = s.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/);
-  if (match) return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
   return null;
 }
 

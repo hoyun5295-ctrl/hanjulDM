@@ -17,6 +17,7 @@ import {
   generateFlyerSuperToken,
   FlyerSuperJwtPayload,
 } from '../../middlewares/super-auth';
+import { loginLimiter } from '../../middlewares/login-limiter';
 import {
   generateTotpSecret,
   buildOtpAuthUrl,
@@ -32,7 +33,7 @@ import {
 
 const router = Router();
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const loginId: string = String(req.body.login_id || req.body.loginId || '').trim();
     const { password } = req.body;
@@ -135,7 +136,7 @@ router.post('/login', async (req: Request, res: Response) => {
 /**
  * TOTP 등록 확정 — enrollToken으로 첫 6자리 검증 후 totp_enabled=true + 자동 로그인.
  */
-router.post('/confirm-totp', async (req: Request, res: Response) => {
+router.post('/confirm-totp', loginLimiter, async (req: Request, res: Response) => {
   try {
     const enrollToken = String(req.body.enrollToken || '');
     const code = String(req.body.code || '').trim();
@@ -197,7 +198,7 @@ router.get('/session-check', flyerSuperAuthenticate, async (req: Request, res: R
 /**
  * 비밀번호 변경 — must_change_password 시 진입 또는 일반 변경.
  */
-router.post('/change-password', flyerSuperAuthenticate, async (req: Request, res: Response) => {
+router.post('/change-password', loginLimiter, flyerSuperAuthenticate, async (req: Request, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword || newPassword.length < 8) {

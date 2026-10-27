@@ -2,6 +2,16 @@
 
 > **업데이트:** 2026-10-26 (1차 강화 — 파일 등록형 제작 · 템플릿 20종 목업 미리보기 · 한줄로 완전 분리) — 그 아래 절은 당시 기록 원문 보존
 
+## ★ 2026-10-27 API 의존성 보안판 + 로그인 요청 제한 + 렌더 크롬 샌드박스 — **구현 완료 · Codex 적대 approve(2R) · 배포 대기**
+
+근거 = 한줄로 매일 보안 감시(1027 첫 실행) 경보 「hanjuldm 의존성 치명 1 · 높음 19」 · Harold 「설계안대로 의존성 묶음 + W2 + W3 전부」(1027).
+- 의존성 = 운영 audit 0(치명 1 · 높음 19 → 0) · puppeteer 25(ESM 전용 · isConnected() → connected) · xlsx = SheetJS 공식 tgz 0.20.3 · 쓰지 않는 zod 제거 · npm 11 설치 스크립트 허용 = puppeteer@25.16.0 만.
+- W3 = 렌더 크롬 기동 한 곳 `utils/flyer/product/render-browser.ts` · --no-sandbox 0 · 크롬 = 한줄로와 같은 /opt/hanjul-chrome(root 소유 · AppArmor) · 못 뜨면 실패(샌드박스 없이 재시도 0).
+- W2 = 비밀번호 · OTP · 등록 토큰 확인 라우트 5곳 `middlewares/login-limiter.ts`(같은 IP 처리 중 + 1분 안 실패 > 10 = 429 · 들어올 때 세고 성공하면 뺌 · Codex 1R 「동시 정상 11건째 429」는 끝난 실패만 세면 몰아 보내는 추측이 한도 없이 통과해 불수용 · 두 동작을 시험으로 고정).
+- 함께 닫음 = 0.20.3 이 날짜 칸을 서버 시각대 자정으로 주어 고객 엑셀 업로드 생일이 KST 에서 하루 앞(엑셀은 옛 판부터 · csv 는 새 판에서 새로) → CT `sheetDateToYmd`(flyer-value-normalizer) 로 옮겨 서버 시각대로 읽음.
+- 검증 = backend tsc 0 · vitest 375 · 변이 5종 실패 확인 · 로컬 실기동(샌드박스 켠 채 PDF · PNG) · xlsx 전후 덤프(상품 시트 같음).
+- 범위 밖(기록만) = 고객 화면(CustomerPage · SendPage)이 upload-parse · upload 응답의 success · fileId 를 기다리나 백엔드는 그 키를 안 준다(파일 업로드 흐름 계약 불일치) · pdfkit 선언만 있고 안 씀.
+
 ## ★ 2026-10-26 2차 — 매대 가격표 카드 규칙(20종) + 제작 화면 단순화 — **구현 완료 · Codex 적대 approve(3R) · 배포 대기**
 
 **SoT = `status/hanjul-flyer-revamp/18_showcard_cards_and_simple_composer.md`** (Harold 승인 1026 · 시안 `.impeccable/prototype/showcard.html` · 원칙 `PRODUCT.md`).

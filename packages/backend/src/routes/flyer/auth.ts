@@ -16,12 +16,13 @@ import {
   generateFlyerToken,
   FlyerJwtPayload,
 } from '../../middlewares/flyer-auth';
+import { loginLimiter } from '../../middlewares/login-limiter';
 import { logFlyerAudit } from '../../utils/flyer/audit/flyer-audit-log';
 import { resolveFlyerStoreAccess } from '../../utils/flyer/billing/flyer-payment-status';
 
 const router = Router();
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { login_id, password } = req.body;
     if (!login_id || !password) {
@@ -131,7 +132,7 @@ router.get('/session-check', flyerAuthenticate, async (req: Request, res: Respon
 /**
  * 비밀번호 변경.
  */
-router.post('/change-password', flyerAuthenticate, async (req: Request, res: Response) => {
+router.post('/change-password', loginLimiter, flyerAuthenticate, async (req: Request, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword || newPassword.length < 8) {

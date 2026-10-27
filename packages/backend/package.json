@@ -13,27 +13,26 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@types/pdfkit": "^0.17.4",
     "@types/qrcode": "^1.5.6",
-    "axios": "^1.7.2",
+    "axios": "^1.20.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.1",
-    "express": "^4.18.2",
-    "express-rate-limit": "^8.3.2",
-    "form-data": "^4.0.0",
+    "express": "^4.22.3",
+    "express-rate-limit": "^8.7.1",
+    "form-data": "^4.0.6",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "multer": "^2.0.2",
-    "mysql2": "^3.16.2",
+    "morgan": "^1.12.1",
+    "multer": "^2.5.0",
+    "mysql2": "^3.24.6",
     "openai": "^6.25.0",
     "otplib": "^12.0.1",
     "pdfkit": "^0.17.2",
     "pg": "^8.11.3",
-    "puppeteer": "^24.40.0",
+    "puppeteer": "^25.16.0",
     "qrcode": "^1.5.4",
-    "uuid": "^9.0.1",
-    "xlsx": "^0.18.5",
-    "zod": "^3.22.4"
+    "uuid": "^11.1.1",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -49,5 +48,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
+  },
+  "allowScripts": {
+    "puppeteer@25.16.0": true
   }
 }

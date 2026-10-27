@@ -14,8 +14,9 @@
  */
 
 import { Router } from 'express';
-import puppeteer, { Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer';
 import { query } from '../../config/database';
+import { launchRenderBrowser } from '../../utils/flyer/product/render-browser';
 import { renderOgImageHtml, type FlyerRenderData } from '../../utils/flyer/product/flyer-templates';
 import { resolveSeasonToken } from '../../utils/flyer/product/season-resolver';
 
@@ -28,16 +29,9 @@ const router = Router();
 let _browser: Browser | null = null;
 /** ★ 1025: 템플릿 미리보기(template-sample)도 이 싱글톤을 같이 쓴다 — 브라우저 1개 */
 export async function getOgBrowser(): Promise<Browser> {
-  if (!_browser || !_browser.isConnected()) {
-    _browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-      ],
-    });
+  if (!_browser || !_browser.connected) {
+    // ★ 1027: 샌드박스 켠 렌더 크롬(CT-F render-browser)
+    _browser = await launchRenderBrowser();
   }
   return _browser;
 }

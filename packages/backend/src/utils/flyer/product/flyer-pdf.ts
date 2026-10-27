@@ -9,9 +9,10 @@
  * - 프로세스 종료 시 자동 cleanup
  */
 
-import puppeteer, { Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
+import { launchRenderBrowser } from './render-browser';
 
 // ============================================================
 // ★ 로컬 이미지를 base64 data URL로 인라인 변환
@@ -66,16 +67,9 @@ function inlineLocalImages(html: string): string {
 let browser: Browser | null = null;
 
 async function getBrowser(): Promise<Browser> {
-  if (!browser || !browser.isConnected()) {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-      ],
-    });
+  if (!browser || !browser.connected) {
+    // ★ 1027: 샌드박스 켠 렌더 크롬(CT-F render-browser)
+    browser = await launchRenderBrowser();
   }
   return browser;
 }

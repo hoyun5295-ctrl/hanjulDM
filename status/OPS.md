@@ -11,7 +11,7 @@
 | 서버 디렉토리 | /home/administrator/hanjuldm-app/ |
 | 포트 | 3001 (한줄AI 3000과 분리) |
 | PM2 프로세스명 | hanjuldm-api |
-| Node 버전 | 20 LTS |
+| Node 버전 | 24 LTS(24.22.1 · 2026-10-27 서버 실측 · 한줄로와 같은 NodeSource 패키지) |
 | OS | Ubuntu (한줄AI와 동일) |
 
 ## 빌드·배포 명령
@@ -37,6 +37,13 @@ pm2 restart hanjuldm-api
 # 로그 확인
 pm2 logs hanjuldm-api --lines 100
 ```
+
+### 의존성 설치 · 렌더 크롬 · 로그인 제한 (2026-10-27)
+
+- npm 11(Node 24)은 의존성 설치 스크립트를 기본으로 막는다. 허용 목록 = `packages/backend/package.json` 의 `allowScripts`(puppeteer@25.16.0 만 · 크롬 내려받기). 판을 올리면 목록의 판도 같이 바꾼다.
+- 전단 PDF · OG 이미지 크롬은 샌드박스를 켠 채 뜬다(`utils/flyer/product/render-browser.ts`). 크롬 = `/opt/hanjul-chrome/<판>/chrome-linux64/chrome`(root 소유 · AppArmor userns 프로필이 이 경로에만). 설치 = 한줄로 저장소 `scripts/install-render-chrome.sh`(root · 한줄로 운영 가이드 ⑧). 한줄로와 hanjulDM 의 puppeteer 판이 같으면 같은 크롬을 쓴다.
+- puppeteer 판을 올리면 그 판이 기대하는 크롬을 /opt 에 먼저 설치한다. 없으면 /opt/hanjul-chrome/current 로 뜨고, 그것도 없거나 샌드박스가 안 뜨면 PDF · OG 생성이 실패한다(샌드박스 없이 띄우지 않는다).
+- 로그인 · 비밀번호 확인 5곳 = 같은 IP 기준 처리 중 요청 + 1분 안 실패가 10을 넘으면 429(`middlewares/login-limiter.ts` · 들어올 때 세고 성공하면 뺌 · 몰아 보내는 추측도 10건에서 막음 · 메모리 저장소 · pm2 fork 1개 전제).
 
 ## 인프라 공유 영역 (인스턴스 같음, 코드 독립)
 
